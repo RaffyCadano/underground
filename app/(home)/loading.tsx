@@ -28,16 +28,15 @@ function FeaturedCardSkeleton() {
     <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80">
       <Skeleton className="h-1 w-full rounded-none" />
       <div className="space-y-4 p-4 sm:p-5 md:p-6">
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 flex-1 space-y-2">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-7 w-full max-w-xs sm:h-8" />
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <Skeleton className="h-3 w-24" />
           <Skeleton className="h-6 w-14 shrink-0 rounded-full" />
         </div>
-        <div className="space-y-2">
+        <Skeleton className="h-7 w-full max-w-xs sm:h-8" />
+        <div className="space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/40 px-3 py-2.5 sm:px-4 sm:py-3">
           <Skeleton className="h-4 w-48 max-w-full" />
           <Skeleton className="h-4 w-36 max-w-full" />
+          <Skeleton className="h-4 w-40 max-w-full" />
         </div>
         <Skeleton className="h-10 w-full rounded-lg" />
       </div>

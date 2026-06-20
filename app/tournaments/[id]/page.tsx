@@ -7,6 +7,8 @@ import { TournamentActions } from './tournament-actions';
 import { ParticipantManager } from './participant-manager';
 import { BracketTree } from './bracket-tree';
 import { BracketSwiss } from './bracket-swiss';
+import { BracketDoubleElim } from './bracket-double-elim';
+import { TournamentFormatGuide } from './tournament-format-guide';
 
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: 'Single Elimination',
@@ -69,6 +71,7 @@ export default async function TournamentDetail({
     currentRoundMatches.length > 0 && currentRoundMatches.every((m) => m.status === 'complete');
 
   const canManagePlayers = tournament.status === 'open' && tournament.matches.length === 0;
+  const hasBracket = tournament.matches.length > 0;
 
   const availableUsers =
     isAdmin && canManagePlayers
@@ -117,26 +120,35 @@ export default async function TournamentDetail({
             </div>
           </div>
 
-          <div className="card p-5">
-            <TournamentActions
-              tournamentId={tournament.id}
-              tournamentStatus={tournament.status}
-              tournamentFormat={tournament.format}
-              isJoined={isJoined}
-              isLoggedIn={isLoggedIn}
-              isAdmin={isAdmin}
-              userId={session?.user.id ?? null}
-              pendingMatches={pendingMatches}
-              completedMatches={completedMatches}
-              currentRound={currentRound}
-              allCurrentRoundComplete={allCurrentRoundComplete}
-            />
-            {!isLoggedIn && tournament.status === 'open' && (
-              <p className="mt-3 text-xs text-slate-400">
-                <Link href="/login" className="text-brand-300 hover:text-brand-200">Sign in</Link> to register.
-              </p>
-            )}
-          </div>
+          <TournamentFormatGuide
+            format={tournament.format}
+            status={tournament.status}
+            hasBracket={hasBracket}
+            isAdmin={isAdmin}
+          />
+
+          {tournament.status !== 'complete' && (
+            <div className="card p-5 empty:hidden">
+              <TournamentActions
+                tournamentId={tournament.id}
+                tournamentStatus={tournament.status}
+                tournamentFormat={tournament.format}
+                isJoined={isJoined}
+                isLoggedIn={isLoggedIn}
+                isAdmin={isAdmin}
+                userId={session?.user.id ?? null}
+                pendingMatches={pendingMatches}
+                completedMatches={completedMatches}
+                currentRound={currentRound}
+                allCurrentRoundComplete={allCurrentRoundComplete}
+              />
+              {!isLoggedIn && tournament.status === 'open' && (
+                <p className="mt-3 text-xs text-slate-400">
+                  <Link href="/login" className="text-brand-300 hover:text-brand-200">Sign in</Link> to register.
+                </p>
+              )}
+            </div>
+          )}
         </aside>
 
         <div className="min-w-0 flex-1">
@@ -150,8 +162,20 @@ export default async function TournamentDetail({
                   isAdmin={isAdmin}
                   userId={session?.user.id ?? null}
                 />
+              ) : tournament.format === 'double_elimination' ? (
+                <BracketDoubleElim
+                  matches={tournament.matches}
+                  isAdmin={isAdmin}
+                  userId={session?.user.id ?? null}
+                />
               ) : (
-                <BracketTree rounds={sortedRounds} format={tournament.format} />
+                <BracketTree
+                  rounds={sortedRounds}
+                  format={tournament.format}
+                  isAdmin={isAdmin}
+                  userId={session?.user.id ?? null}
+                  interactive
+                />
               )
             ) : canManagePlayers ? (
               <ParticipantManager

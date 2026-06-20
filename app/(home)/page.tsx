@@ -29,8 +29,9 @@ export default async function HomePage() {
   const [upcomingTournaments, recentMatches, topPlayers, totalPlayers, totalMatches] = await Promise.all([
     prisma.tournament.findMany({
       where: { status: { in: ['open', 'active'] } },
-      orderBy: { date: 'asc' },
+      orderBy: [{ status: 'asc' }, { date: 'asc' }],
       take: 4,
+      include: { _count: { select: { participants: true } } },
     }),
     prisma.match.findMany({
       where: { status: 'complete', score: { not: null } },
@@ -53,7 +54,11 @@ export default async function HomePage() {
     prisma.match.count({ where: { status: 'complete' } }),
   ]);
 
-  const featuredTournament = upcomingTournaments[0] ?? null;
+  const featuredTournament =
+    upcomingTournaments.find((t) => t.status === 'active') ?? upcomingTournaments[0] ?? null;
+  const moreUpcoming = featuredTournament
+    ? upcomingTournaments.filter((t) => t.id !== featuredTournament.id).slice(0, 3)
+    : [];
   const stats = [
     { label: 'Bladers', shortLabel: 'Bladers', value: totalPlayers.toLocaleString(), icon: Users },
     { label: 'Matches', shortLabel: 'Matches', value: totalMatches.toLocaleString(), icon: Swords },
@@ -125,40 +130,49 @@ export default async function HomePage() {
                 <div className="overflow-hidden rounded-2xl border border-brand-500/25 bg-slate-900/80 shadow-lg shadow-brand-950/20">
                   <div className="h-1 bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
                   <div className="p-4 sm:p-5 md:p-6">
-                    <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-400/90 sm:text-[11px]">
-                          Featured event
-                        </p>
-                        <h2 className="mt-1.5 break-words text-lg font-semibold leading-snug text-white sm:mt-2 sm:text-xl md:text-2xl">
-                          {featuredTournament.name}
-                        </h2>
-                      </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-400/90 sm:text-[11px]">
+                        Featured event
+                      </p>
                       <span
-                        className={`w-fit shrink-0 self-start rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${
+                        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${
                           featuredTournament.status === 'active'
                             ? 'border-brand-500/40 bg-brand-500/10 text-brand-300'
-                            : 'border-slate-700 bg-slate-800 text-slate-400'
+                            : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
                         }`}
                       >
+                        {featuredTournament.status === 'active' && (
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-400" />
+                        )}
                         {featuredTournament.status === 'active' ? 'Live' : 'Open'}
                       </span>
                     </div>
-                    <div className="mt-3 space-y-2 text-xs text-slate-400 sm:mt-4 sm:flex sm:flex-wrap sm:gap-x-4 sm:gap-y-2 sm:text-sm">
-                      <span className="flex items-start gap-1.5">
+
+                    <h2 className="mt-2 break-words text-lg font-semibold leading-snug text-white sm:mt-3 sm:text-xl md:text-2xl">
+                      {featuredTournament.name}
+                    </h2>
+
+                    <ul className="mt-3 space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/40 px-3 py-2.5 text-xs text-slate-400 sm:mt-4 sm:px-4 sm:py-3 sm:text-sm">
+                      <li className="flex items-start gap-2">
                         <Calendar size={14} className="mt-0.5 shrink-0 text-slate-500" />
                         <span className="min-w-0 break-words">{formatHeroDate(featuredTournament.date)}</span>
-                      </span>
+                      </li>
                       {featuredTournament.location && (
-                        <span className="flex items-start gap-1.5">
+                        <li className="flex items-start gap-2">
                           <MapPin size={14} className="mt-0.5 shrink-0 text-slate-500" />
                           <span className="min-w-0 break-words">{featuredTournament.location}</span>
-                        </span>
+                        </li>
                       )}
-                    </div>
+                      <li className="flex items-center gap-2">
+                        <Users size={14} className="shrink-0 text-slate-500" />
+                        {featuredTournament._count.participants}{' '}
+                        {featuredTournament._count.participants === 1 ? 'player' : 'players'} registered
+                      </li>
+                    </ul>
+
                     <Link
                       href={`/tournaments/${featuredTournament.id}`}
-                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-brand-500/35 bg-brand-500/10 px-4 py-2.5 text-sm font-semibold text-brand-200 transition hover:border-brand-400/50 hover:bg-brand-500/20 sm:mt-6"
+                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-brand-500/35 bg-brand-500/10 px-4 py-2.5 text-sm font-semibold text-brand-200 transition hover:border-brand-400/50 hover:bg-brand-500/20 sm:mt-5"
                     >
                       View bracket
                       <ArrowRight size={15} />
@@ -178,7 +192,7 @@ export default async function HomePage() {
                 </div>
               )}
 
-              {upcomingTournaments.length > 1 && (
+              {moreUpcoming.length > 0 && (
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:p-5">
                   <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4">
                     <p className="text-sm font-semibold text-white">More upcoming</p>
@@ -190,7 +204,7 @@ export default async function HomePage() {
                     </Link>
                   </div>
                   <div className="space-y-1 sm:space-y-2">
-                    {upcomingTournaments.slice(1, 4).map((t) => (
+                    {moreUpcoming.map((t) => (
                       <Link
                         key={t.id}
                         href={`/tournaments/${t.id}`}

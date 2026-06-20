@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { advanceWinner } from '@/lib/bracket';
+import { advanceDoubleElimMatch } from '@/lib/double-elim';
 import { revalidatePath } from 'next/cache';
 
 export async function reportResult(matchId: string, winnerId: string, score: string) {
@@ -47,7 +48,9 @@ export async function reportResult(matchId: string, winnerId: string, score: str
     where: { id: match.tournamentId },
     select: { format: true },
   });
-  if (tournament?.format === 'single_elimination' || tournament?.format === 'double_elimination') {
+  if (tournament?.format === 'double_elimination') {
+    await advanceDoubleElimMatch(matchId, winnerId);
+  } else if (tournament?.format === 'single_elimination') {
     await advanceWinner(match.tournamentId, match.round, match.matchIndex, winnerId);
   }
 

@@ -9,22 +9,35 @@ datasource db {
 }
 
 model User {
-  id           String                  @id @default(cuid())
-  username     String                  @unique
-  email        String                  @unique
-  password     String
-  avatar       String?
-  role         String                  @default("player")
-  rankPoints   Int                     @default(0)
-  wins         Int                     @default(0)
-  losses       Int                     @default(0)
-  tournaments  TournamentParticipant[]
-  matches1     Match[]                 @relation("player1Matches")
-  matches2     Match[]                 @relation("player2Matches")
-  winsAsWinner Match[]                 @relation("winnerMatches")
-  createdAt    DateTime                @default(now())
+  id                  String                  @id @default(cuid())
+  username            String                  @unique
+  email               String                  @unique
+  password            String
+  avatar              String?
+  role                String                  @default("player")
+  rankPoints          Int                     @default(0)
+  wins                Int                     @default(0)
+  losses              Int                     @default(0)
+  tournaments         TournamentParticipant[]
+  matches1            Match[]                 @relation("player1Matches")
+  matches2            Match[]                 @relation("player2Matches")
+  winsAsWinner        Match[]                 @relation("winnerMatches")
+  passwordResetTokens PasswordResetToken[]
+  createdAt           DateTime                @default(now())
 
   @@index([role, rankPoints(sort: Desc), wins(sort: Desc)])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model CommunityClub {
@@ -70,18 +83,25 @@ model TournamentParticipant {
 }
 
 model Match {
-  id           String     @id @default(cuid())
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  tournamentId String
-  player1      User?      @relation("player1Matches", fields: [player1Id], references: [id])
-  player1Id    String?
-  player2      User?      @relation("player2Matches", fields: [player2Id], references: [id])
-  player2Id    String?
-  winner       User?      @relation("winnerMatches", fields: [winnerId], references: [id])
-  winnerId     String?
-  score        String?
-  round        Int        @default(1)
-  matchIndex   Int        @default(0)
-  status       String     @default("pending")
-  createdAt    DateTime   @default(now())
+  id             String     @id @default(cuid())
+  tournament     Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId   String
+  player1        User?      @relation("player1Matches", fields: [player1Id], references: [id])
+  player1Id      String?
+  player2        User?      @relation("player2Matches", fields: [player2Id], references: [id])
+  player2Id      String?
+  winner         User?      @relation("winnerMatches", fields: [winnerId], references: [id])
+  winnerId       String?
+  score          String?
+  round          Int        @default(1)
+  matchIndex     Int        @default(0)
+  bracketSide    String     @default("winners")
+  winnerNextId   String?
+  winnerNextSlot Int?
+  loserNextId    String?
+  loserNextSlot  Int?
+  status         String     @default("pending")
+  createdAt      DateTime   @default(now())
+
+  @@index([tournamentId, bracketSide, round, matchIndex])
 }

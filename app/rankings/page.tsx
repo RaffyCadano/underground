@@ -330,13 +330,13 @@ export default async function RankingsPage({
           <div className="space-y-10 sm:space-y-12">
             {!isSearching && topThree.length > 0 && (
               <div>
-                <div className="mb-5 sm:mb-6">
+                <div className="mb-5 text-center sm:mb-6">
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Podium</p>
                   <h2 className="mt-1 text-xl font-semibold text-white sm:text-2xl">Top bladers</h2>
                 </div>
 
                 {/* Mobile: rank order 1 → 2 → 3 */}
-                <div className="grid gap-3 sm:hidden">
+                <div className="mx-auto grid max-w-md gap-3 sm:hidden">
                   {topThree.map((p, i) => (
                     <PodiumCard key={p.id} player={p} rank={i + 1} highlight={i === 0} />
                   ))}
@@ -344,7 +344,7 @@ export default async function RankingsPage({
 
                 {/* Tablet+: classic podium layout */}
                 <div
-                  className={`hidden gap-4 sm:grid ${
+                  className={`mx-auto hidden gap-4 sm:grid ${
                     topThree.length === 1
                       ? 'max-w-sm'
                       : topThree.length === 2

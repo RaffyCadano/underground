@@ -138,18 +138,18 @@ export default function RankingsLoading() {
         <div className="space-y-10 sm:space-y-12">
           {/* Podium */}
           <div>
-            <div className="mb-5 sm:mb-6">
-              <Skeleton className="h-3 w-16" />
-              <Skeleton className="mt-2 h-8 w-36 sm:h-9" />
+            <div className="mb-5 text-center sm:mb-6">
+              <Skeleton className="mx-auto h-3 w-16" />
+              <Skeleton className="mx-auto mt-2 h-8 w-36 sm:h-9" />
             </div>
 
-            <div className="grid gap-3 sm:hidden">
+            <div className="mx-auto grid max-w-md gap-3 sm:hidden">
               <PodiumCardSkeleton highlight />
               <PodiumCardSkeleton />
               <PodiumCardSkeleton />
             </div>
 
-            <div className="hidden items-end gap-4 sm:grid sm:grid-cols-3 lg:max-w-4xl">
+            <div className="mx-auto hidden items-end gap-4 sm:grid sm:grid-cols-3 lg:max-w-4xl">
               <PodiumCardSkeleton />
               <PodiumCardSkeleton highlight />
               <PodiumCardSkeleton />

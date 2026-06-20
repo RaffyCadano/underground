@@ -24,7 +24,7 @@ const steps = [
   {
     step: '02',
     title: 'Check your inbox',
-    body: 'We will send a secure link to reset your password when email recovery is enabled.',
+    body: 'We email a secure link that expires in one hour.',
   },
   {
     step: '03',

@@ -31,6 +31,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get('registered');
+  const reset = searchParams.get('reset');
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,6 +71,15 @@ function LoginForm() {
             <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-400" />
             <p className="text-sm text-emerald-300">
               Account created successfully. Sign in below to get started.
+            </p>
+          </div>
+        )}
+
+        {reset && (
+          <div className="mt-4 flex gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 sm:mt-5 sm:px-4">
+            <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-400" />
+            <p className="text-sm text-emerald-300">
+              Password updated. Sign in with your new password.
             </p>
           </div>
         )}

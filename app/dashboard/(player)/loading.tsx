@@ -24,7 +24,7 @@ function ListCardSkeleton({ rows = 3 }: { rows?: number }) {
   );
 }
 
-export default function DashboardLoading() {
+export default function PlayerDashboardLoading() {
   return (
     <section className="container" aria-busy="true" aria-label="Loading dashboard">
       <div className="mb-8">

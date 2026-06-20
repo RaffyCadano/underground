@@ -3,6 +3,17 @@
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { redirect } from 'next/navigation';
+import { sendPasswordResetEmail } from '@/lib/email';
+import {
+  appBaseUrl,
+  createResetToken,
+  findValidResetToken,
+  hashResetToken,
+  resetTokenExpiresAt,
+} from '@/lib/password-reset';
+
+const RESET_SUCCESS_MESSAGE =
+  'If an account exists for that email, we sent password reset instructions. Check your inbox and spam folder.';
 
 export async function registerUser(_prev: { error?: string } | null, formData: FormData) {
   const username = (formData.get('username') as string)?.trim();
@@ -51,9 +62,70 @@ export async function requestPasswordReset(
     return { error: 'Enter a valid email address.' };
   }
 
-  return {
-    success: true,
-    message:
-      'If an account exists for that email, we will send reset instructions when email recovery is enabled. For now, contact an Underground admin for help regaining access.',
-  };
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, email: true },
+  });
+
+  if (user) {
+    const token = createResetToken();
+    const tokenHash = hashResetToken(token);
+    const expiresAt = resetTokenExpiresAt();
+
+    await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+    await prisma.passwordResetToken.create({
+      data: { userId: user.id, tokenHash, expiresAt },
+    });
+
+    const resetUrl = `${appBaseUrl()}/reset-password/${token}`;
+
+    try {
+      await sendPasswordResetEmail(user.email, resetUrl);
+    } catch (err) {
+      console.error('[password-reset] Failed to send email:', err);
+      await prisma.passwordResetToken.deleteMany({ where: { tokenHash } });
+      return { error: 'Could not send reset email. Try again later or contact an admin.' };
+    }
+  }
+
+  return { success: true, message: RESET_SUCCESS_MESSAGE };
+}
+
+export async function resetPassword(
+  _prev: { error?: string } | null,
+  formData: FormData,
+) {
+  const token = (formData.get('token') as string)?.trim();
+  const password = formData.get('password') as string;
+  const confirm = formData.get('confirm') as string;
+
+  if (!token) {
+    return { error: 'Invalid reset link.' };
+  }
+  if (!password || !confirm) {
+    return { error: 'All fields are required.' };
+  }
+  if (password.length < 8) {
+    return { error: 'Password must be at least 8 characters.' };
+  }
+  if (password !== confirm) {
+    return { error: 'Passwords do not match.' };
+  }
+
+  const record = await findValidResetToken(token);
+  if (!record) {
+    return { error: 'This reset link is invalid or has expired. Request a new one.' };
+  }
+
+  const hash = await bcrypt.hash(password, 12);
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: record.userId },
+      data: { password: hash },
+    }),
+    prisma.passwordResetToken.deleteMany({ where: { userId: record.userId } }),
+  ]);
+
+  redirect('/login?reset=1');
 }

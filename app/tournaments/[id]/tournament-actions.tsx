@@ -10,12 +10,27 @@ type Match = {
   id: string;
   round: number;
   matchIndex: number;
+  bracketSide?: string;
   status: string;
   score: string | null;
   player1: Player;
   player2: Player;
   winner: Player;
 };
+
+const BRACKET_LABELS: Record<string, string> = {
+  winners: 'WB',
+  losers: 'LB',
+  grand_final: 'GF',
+  reset: 'Reset',
+};
+
+function matchLabel(m: Match, format: string) {
+  const vs = `${m.player1?.username ?? 'TBD'} vs ${m.player2?.username ?? 'TBD'}`;
+  if (format !== 'double_elimination' || !m.bracketSide) return vs;
+  const tag = BRACKET_LABELS[m.bracketSide] ?? m.bracketSide;
+  return `[${tag}] ${vs}`;
+}
 
 interface Props {
   tournamentId: string;
@@ -121,12 +136,30 @@ export function TournamentActions({
     });
   }
 
-  // Matches where this user is a participant (or all if admin)
+  const inlineBracketFormat =
+    tournamentFormat === 'swiss' ||
+    tournamentFormat === 'round_robin' ||
+    tournamentFormat === 'double_elimination' ||
+    tournamentFormat === 'single_elimination';
+
   const myPendingMatches = isAdmin
     ? pendingMatches
     : pendingMatches.filter(
         (m) => m.player1?.id === userId || m.player2?.id === userId,
       );
+
+  const showJoinLeave = tournamentStatus === 'open' && isLoggedIn;
+  const showGenerate = isAdmin && tournamentStatus === 'open';
+  const showSwissNext =
+    isAdmin &&
+    tournamentStatus === 'active' &&
+    (tournamentFormat === 'swiss' || tournamentFormat === 'round_robin') &&
+    allCurrentRoundComplete;
+  const showReport = myPendingMatches.length > 0 && !inlineBracketFormat;
+  const showEdit = isAdmin && completedMatches.length > 0 && !inlineBracketFormat;
+  const hasContent = showJoinLeave || showGenerate || showSwissNext || showReport || showEdit;
+
+  if (!hasContent && !error) return null;
 
   return (
     <div className="space-y-4">
@@ -186,7 +219,7 @@ export function TournamentActions({
       )}
 
       {/* Report result for pending matches - hidden for Swiss (handled inline in bracket) */}
-      {myPendingMatches.length > 0 && tournamentFormat !== 'swiss' && tournamentFormat !== 'round_robin' && (
+      {myPendingMatches.length > 0 && !inlineBracketFormat && (
         <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
             Report match result
@@ -194,7 +227,7 @@ export function TournamentActions({
           {myPendingMatches.map((m) => (
             <div key={m.id} className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
               <p className="text-sm font-semibold text-white">
-                {m.player1?.username ?? 'TBD'} vs {m.player2?.username ?? 'TBD'}
+                {matchLabel(m, tournamentFormat)}
               </p>
               {reportingMatch === m.id ? (
                 <div className="mt-3 space-y-3">
@@ -245,7 +278,7 @@ export function TournamentActions({
         </div>
       )}
       {/* Admin: Edit scores of completed matches - hidden for Swiss (handled inline in bracket) */}
-      {isAdmin && completedMatches.length > 0 && tournamentFormat !== 'swiss' && tournamentFormat !== 'round_robin' && (
+      {isAdmin && completedMatches.length > 0 && !inlineBracketFormat && (
         <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
             Edit match scores
@@ -254,7 +287,7 @@ export function TournamentActions({
             <div key={m.id} className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-white">
-                  {m.player1?.username ?? '?'} vs {m.player2?.username ?? '?'}
+                  {matchLabel(m, tournamentFormat)}
                 </p>
                 {m.score && <span className="text-xs text-slate-400">{m.score}</span>}
               </div>

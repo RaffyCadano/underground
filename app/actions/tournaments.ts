@@ -66,6 +66,9 @@ export async function generateBracket(tournamentId: string) {
 
   if (tournament.format === 'swiss' || tournament.format === 'round_robin') {
     await generateSwissRound(tournamentId);
+  } else if (tournament.format === 'double_elimination') {
+    const { generateDoubleElimination } = await import('@/lib/double-elim');
+    await generateDoubleElimination(tournamentId);
   } else {
     await generateSingleElimination(tournamentId);
   }
