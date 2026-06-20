@@ -15,6 +15,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import { PasswordInput } from '@/app/components/password-input';
+import { SiteLogo } from '@/app/components/site-logo';
 
 const perks = [
   { icon: Trophy, text: 'Register for open tournaments' },
@@ -51,9 +52,7 @@ function LoginForm() {
 
       <div className="p-5 sm:p-8 lg:p-10">
         <div className="mb-6 flex items-center gap-3 sm:mb-8">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/10 text-base font-bold text-brand-300 sm:h-11 sm:w-11 sm:text-lg">
-            U
-          </span>
+          <SiteLogo size="card" />
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-400/90 sm:text-[11px]">
               Member access
@@ -105,9 +104,17 @@ function LoginForm() {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-medium text-slate-300">
-              Password
-            </label>
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="password" className="text-sm font-medium text-slate-300">
+                Password
+              </label>
+              <Link
+                href="/forgot-password"
+                className="text-xs font-semibold text-brand-300 transition hover:text-brand-200"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <PasswordInput
               id="password"
               required

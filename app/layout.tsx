@@ -4,6 +4,7 @@ import { Space_Grotesk, Space_Mono } from 'next/font/google';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { AppSessionProvider } from '@/app/components/session-provider';
+import { SmoothScrollProvider } from '@/app/components/smooth-scroll-provider';
 import { SiteBrand } from '@/app/components/site-brand';
 import { SiteFooter } from '@/app/components/site-footer';
 import { SiteNav } from '@/app/components/site-nav';
@@ -22,6 +23,10 @@ const spaceMono = Space_Mono({
 export const metadata: Metadata = {
   title: 'Underground',
   description: 'The home of competitive Beyblade X tournaments and rankings.',
+  icons: {
+    icon: '/underground-icon.png',
+    apple: '/underground-icon.png',
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -31,16 +36,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body className={`${spaceGrotesk.variable} ${spaceMono.variable}`}>
         <AppSessionProvider>
-          <div className="flex min-h-screen flex-col text-slate-100">
-            <header className="relative sticky top-0 z-50 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
-              <div className="container flex items-center justify-between gap-6 py-3">
-                <SiteBrand />
-                <SiteNav session={session} />
-              </div>
-            </header>
-            <main className="flex-1">{children}</main>
-            <SiteFooter session={session} />
-          </div>
+          <SmoothScrollProvider>
+            <div className="flex min-h-screen flex-col text-slate-100">
+              <header className="relative sticky top-0 z-50 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+                <div className="container flex items-center justify-between gap-6 py-3">
+                  <SiteBrand />
+                  <SiteNav session={session} />
+                </div>
+              </header>
+              <main className="flex-1">{children}</main>
+              <SiteFooter session={session} />
+            </div>
+          </SmoothScrollProvider>
         </AppSessionProvider>
       </body>
     </html>

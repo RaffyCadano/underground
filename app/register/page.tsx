@@ -14,6 +14,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { PasswordInput } from '@/app/components/password-input';
+import { SiteLogo } from '@/app/components/site-logo';
 
 const steps = [
   { step: '01', title: 'Create your profile', body: 'Pick a blader name and set up your account in seconds.' },
@@ -30,9 +31,7 @@ function RegisterForm() {
 
       <div className="p-5 sm:p-8 lg:p-10">
         <div className="mb-6 flex items-center gap-3 sm:mb-8">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/10 text-base font-bold text-brand-300 sm:h-11 sm:w-11 sm:text-lg">
-            U
-          </span>
+          <SiteLogo size="card" />
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-400/90 sm:text-[11px]">
               Join the circuit

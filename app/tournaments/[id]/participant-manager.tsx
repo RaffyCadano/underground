@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { ChevronDown, Search } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { addPlayerToTournament, removePlayerFromTournament } from '@/app/actions/tournaments';
 
 type Participant = {
@@ -22,6 +23,132 @@ interface Props {
   availableUsers: AvailableUser[];
   isAdmin: boolean;
   canManage: boolean;
+}
+
+/** Searchable player picker for the add-participant form. */
+function PlayerSelectDropdown({
+  users,
+  value,
+  onChange,
+  disabled,
+}: {
+  users: AvailableUser[];
+  value: string;
+  onChange: (id: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const rootRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const filteredUsers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) => u.username.toLowerCase().includes(q));
+  }, [users, query]);
+
+  const selected = users.find((u) => u.id === value);
+
+  useEffect(() => {
+    if (!open) return;
+    searchRef.current?.focus();
+    function onDocClick(e: MouseEvent) {
+      if (!rootRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery('');
+      }
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [open]);
+
+  function close() {
+    setOpen(false);
+    setQuery('');
+  }
+
+  function select(id: string) {
+    onChange(id);
+    close();
+  }
+
+  const emptyLabel =
+    users.length === 0 ? 'All players already added' : 'Select a player…';
+
+  return (
+    <div ref={rootRef} className="relative min-w-0 flex-1">
+      <button
+        type="button"
+        onClick={() => !disabled && setOpen((prev) => !prev)}
+        disabled={disabled}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        className="select flex w-full items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <span className={`min-w-0 truncate ${selected ? 'text-slate-100' : 'text-slate-500'}`}>
+          {selected ? `${selected.username} (${selected.rankPoints} pts)` : emptyLabel}
+        </span>
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-slate-500 transition ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-xl shadow-black/30">
+          <div className="border-b border-slate-800 p-2">
+            <div className="relative">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+              />
+              <input
+                ref={searchRef}
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search players…"
+                className="input w-full py-2 pl-9 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') close();
+                }}
+              />
+            </div>
+          </div>
+
+          <ul className="max-h-48 overflow-y-auto py-1" role="listbox">
+            {filteredUsers.length === 0 ? (
+              <li className="px-3 py-2.5 text-sm text-slate-500">No players match your search</li>
+            ) : (
+              filteredUsers.map((u) => (
+                <li key={u.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={value === u.id}
+                    onClick={() => select(u.id)}
+                    className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition hover:bg-slate-900 ${
+                      value === u.id ? 'bg-brand-500/10 text-brand-200' : 'text-slate-200'
+                    }`}
+                  >
+                    <span className="truncate font-medium">{u.username}</span>
+                    <span className="shrink-0 tabular-nums text-xs text-slate-500">{u.rankPoints} pts</span>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+
+          {query.trim() && filteredUsers.length > 0 && (
+            <p className="border-t border-slate-800 px-3 py-1.5 text-xs text-slate-500">
+              {filteredUsers.length} of {users.length} available
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ParticipantManager({
@@ -81,27 +208,18 @@ export function ParticipantManager({
       {isAdmin && canManage && (
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Add player</p>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <select
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+            <PlayerSelectDropdown
+              users={availableUsers}
               value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
+              onChange={setSelectedUserId}
               disabled={isPending || availableUsers.length === 0}
-              className="select flex-1"
-            >
-              <option value="">
-                {availableUsers.length === 0 ? 'All players already added' : 'Select a player…'}
-              </option>
-              {availableUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.username} ({u.rankPoints} pts)
-                </option>
-              ))}
-            </select>
+            />
             <button
               type="button"
               onClick={handleAdd}
               disabled={isPending || !selectedUserId}
-              className="btn-primary shrink-0 disabled:opacity-60"
+              className="btn-primary w-full shrink-0 disabled:opacity-60 sm:w-auto"
             >
               {isPending ? 'Adding…' : 'Add'}
             </button>

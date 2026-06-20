@@ -35,3 +35,25 @@ export async function registerUser(_prev: { error?: string } | null, formData: F
 
   redirect('/login?registered=1');
 }
+
+export async function requestPasswordReset(
+  _prev: { error?: string; success?: boolean; message?: string } | null,
+  formData: FormData,
+) {
+  const email = (formData.get('email') as string)?.trim().toLowerCase();
+
+  if (!email) {
+    return { error: 'Email is required.' };
+  }
+
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (!emailValid) {
+    return { error: 'Enter a valid email address.' };
+  }
+
+  return {
+    success: true,
+    message:
+      'If an account exists for that email, we will send reset instructions when email recovery is enabled. For now, contact an Underground admin for help regaining access.',
+  };
+}
