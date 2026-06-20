@@ -1,0 +1,559 @@
+'use client';
+
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import Link from 'next/link';
+import {
+  AlertTriangle,
+  ChevronDown,
+  ExternalLink,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { deleteUser, updateUser } from '@/app/actions/users';
+
+export type AccountUser = {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  wins: number;
+  losses: number;
+  rankPoints: number;
+};
+
+function ModalPortal({
+  open,
+  onClose,
+  labelledBy,
+  children,
+  disabled,
+}: {
+  open: boolean;
+  onClose: () => void;
+  labelledBy: string;
+  children: ReactNode;
+  disabled?: boolean;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={labelledBy}
+    >
+      <button
+        type="button"
+        aria-label="Close dialog"
+        onClick={onClose}
+        disabled={disabled}
+        className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
+      />
+      <div className="relative z-10 w-full" onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+export function AccountActionsMenu({
+  user,
+  currentUserId,
+}: {
+  user: AccountUser;
+  currentUserId: string;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState('');
+  const [mounted, setMounted] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+
+  const canDelete = user.id !== currentUserId;
+  const profileHref = `/players/${user.username.toLowerCase()}`;
+
+  const [form, setForm] = useState({
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    wins: String(user.wins),
+    losses: String(user.losses),
+    rankPoints: String(user.rankPoints),
+  });
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function updatePosition() {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+
+      const rect = trigger.getBoundingClientRect();
+      const menuWidth = 188;
+      const gap = 6;
+      const viewportPadding = 8;
+      const estimatedMenuHeight = 132;
+
+      let top = rect.bottom + gap;
+      let left = rect.right - menuWidth;
+
+      if (left < viewportPadding) left = viewportPadding;
+      if (left + menuWidth > window.innerWidth - viewportPadding) {
+        left = window.innerWidth - menuWidth - viewportPadding;
+      }
+
+      if (top + estimatedMenuHeight > window.innerHeight - viewportPadding) {
+        top = rect.top - estimatedMenuHeight - gap;
+      }
+
+      setMenuPosition({ top, left });
+    }
+
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target) || menuPanelRef.current?.contains(target)) return;
+      setMenuOpen(false);
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMenuOpen(false);
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    const modalOpen = editOpen || deleteOpen;
+    if (!modalOpen) return;
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !isPending) {
+        setEditOpen(false);
+        setDeleteOpen(false);
+        setError('');
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [editOpen, deleteOpen, isPending]);
+
+  function openEdit() {
+    setMenuOpen(false);
+    setForm({
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      wins: String(user.wins),
+      losses: String(user.losses),
+      rankPoints: String(user.rankPoints),
+    });
+    setError('');
+    setEditOpen(true);
+  }
+
+  function openDelete() {
+    if (!canDelete) return;
+    setMenuOpen(false);
+    setError('');
+    setDeleteOpen(true);
+  }
+
+  function closeEdit() {
+    if (isPending) return;
+    setEditOpen(false);
+    setError('');
+  }
+
+  function closeDelete() {
+    if (isPending) return;
+    setDeleteOpen(false);
+    setError('');
+  }
+
+  function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+
+    const wins = Number(form.wins);
+    const losses = Number(form.losses);
+    const rankPoints = Number(form.rankPoints);
+
+    if (Number.isNaN(wins) || Number.isNaN(losses) || Number.isNaN(rankPoints)) {
+      setError('Wins, losses, and points must be numbers.');
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        await updateUser({
+          userId: user.id,
+          username: form.username,
+          email: form.email,
+          role: form.role,
+          wins,
+          losses,
+          rankPoints,
+        });
+        setEditOpen(false);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to update account.');
+      }
+    });
+  }
+
+  function confirmDelete() {
+    setError('');
+    startTransition(async () => {
+      try {
+        await deleteUser(user.id);
+        setDeleteOpen(false);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to delete account.');
+      }
+    });
+  }
+
+  const menuItems = [
+    {
+      label: 'View profile',
+      icon: ExternalLink,
+      onClick: () => setMenuOpen(false),
+      href: profileHref,
+      tone: 'default' as const,
+    },
+    {
+      label: 'Edit account',
+      icon: Pencil,
+      onClick: openEdit,
+      tone: 'default' as const,
+    },
+    {
+      label: 'Delete account',
+      icon: Trash2,
+      onClick: openDelete,
+      disabled: !canDelete,
+      disabledReason: 'You cannot delete your own account',
+      tone: 'danger' as const,
+    },
+  ];
+
+  return (
+    <>
+      <div className="relative inline-flex">
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() =>
+            setMenuOpen((v) => {
+              if (v) setMenuPosition(null);
+              return !v;
+            })
+          }
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+            menuOpen
+              ? 'border-brand-500/40 bg-slate-800 text-white'
+              : 'border-slate-700 bg-slate-900/80 text-slate-300 hover:border-slate-600 hover:bg-slate-800 hover:text-white'
+          }`}
+        >
+          <MoreHorizontal size={14} className="text-slate-400" />
+          Actions
+          <ChevronDown
+            size={14}
+            className={`text-slate-500 transition ${menuOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </div>
+
+      {mounted &&
+        menuOpen &&
+        menuPosition &&
+        createPortal(
+          <div
+            ref={menuPanelRef}
+            role="menu"
+            style={{ top: menuPosition.top, left: menuPosition.left }}
+            className="fixed z-[90] min-w-[188px] overflow-hidden rounded-xl border border-slate-800 bg-slate-950 py-1 shadow-xl shadow-black/40"
+          >
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const className = `flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm font-medium transition ${
+                item.disabled
+                  ? 'cursor-not-allowed text-slate-600'
+                  : item.tone === 'danger'
+                  ? 'text-red-300 hover:bg-red-500/10'
+                  : 'text-slate-200 hover:bg-slate-800'
+              }`;
+
+              if (item.href && !item.disabled) {
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    role="menuitem"
+                    onClick={item.onClick}
+                    className={className}
+                  >
+                    <Icon size={15} className="text-slate-400" />
+                    {item.label}
+                  </Link>
+                );
+              }
+
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  role="menuitem"
+                  onClick={item.onClick}
+                  disabled={item.disabled}
+                  title={item.disabled ? item.disabledReason : undefined}
+                  className={className}
+                >
+                  <Icon size={15} className={item.tone === 'danger' ? 'text-red-400' : 'text-slate-400'} />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )}
+
+      <ModalPortal open={editOpen} onClose={closeEdit} labelledBy="edit-user-title" disabled={isPending}>
+        <div className="mx-auto max-w-lg overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-black/50">
+          <div className="border-b border-slate-800 bg-slate-950/80 px-6 py-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/10 text-brand-300">
+                  <Pencil size={20} />
+                </span>
+                <div>
+                  <h2 id="edit-user-title" className="text-lg font-semibold text-white">
+                    Edit account
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-400">Update details for {user.username}.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeEdit}
+                disabled={isPending}
+                className="rounded-lg border border-slate-700 bg-slate-800 p-1.5 text-slate-400 transition hover:text-white disabled:opacity-60"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleEditSubmit} className="space-y-4 px-6 py-5">
+            {error && (
+              <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
+                {error}
+              </p>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-300">Username</label>
+                <input
+                  type="text"
+                  required
+                  minLength={3}
+                  value={form.username}
+                  onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+                  className="input mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  className="input mt-1"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300">Role</label>
+              <select
+                value={form.role}
+                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+                className="select mt-1"
+              >
+                <option value="player">Player</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-300">Wins</label>
+                <input
+                  type="number"
+                  min={0}
+                  required
+                  value={form.wins}
+                  onChange={(e) => setForm((f) => ({ ...f, wins: e.target.value }))}
+                  className="input mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300">Losses</label>
+                <input
+                  type="number"
+                  min={0}
+                  required
+                  value={form.losses}
+                  onChange={(e) => setForm((f) => ({ ...f, losses: e.target.value }))}
+                  className="input mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300">Rank points</label>
+                <input
+                  type="number"
+                  min={0}
+                  required
+                  value={form.rankPoints}
+                  onChange={(e) => setForm((f) => ({ ...f, rankPoints: e.target.value }))}
+                  className="input mt-1"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-800 pt-5 sm:flex-row sm:justify-end">
+              <button type="button" onClick={closeEdit} disabled={isPending} className="btn-secondary disabled:opacity-60">
+                Cancel
+              </button>
+              <button type="submit" disabled={isPending} className="btn-primary disabled:opacity-60">
+                {isPending ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </ModalPortal>
+
+      <ModalPortal open={deleteOpen} onClose={closeDelete} labelledBy="delete-user-title" disabled={isPending}>
+        <div className="mx-auto max-w-md overflow-hidden rounded-2xl border border-red-500/25 bg-slate-900 shadow-2xl shadow-red-950/30">
+          <div className="h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent" />
+
+          <div className="border-b border-slate-800 bg-slate-950/80 px-6 py-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-500/40 bg-red-500/15 text-red-300">
+                  <Trash2 size={20} />
+                </span>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-red-400/90">
+                    Danger zone
+                  </p>
+                  <h2 id="delete-user-title" className="mt-1 text-lg font-semibold text-white">
+                    Delete account?
+                  </h2>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeDelete}
+                disabled={isPending}
+                className="rounded-lg border border-slate-700 bg-slate-800 p-1.5 text-slate-400 transition hover:text-white disabled:opacity-60"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-4 px-6 py-5">
+            <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 px-4 py-3">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sm font-bold text-white">
+                {user.username.charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-white">{user.username}</p>
+                <p className="truncate text-xs text-slate-400">{user.email}</p>
+              </div>
+              <span className="ml-auto shrink-0 rounded-full border border-slate-700 bg-slate-800 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                {user.role}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
+              <div className="flex gap-2.5">
+                <AlertTriangle size={16} className="mt-0.5 shrink-0 text-red-400" />
+                <div className="text-sm text-slate-300">
+                  <p className="font-medium text-red-200">This action cannot be undone.</p>
+                  <ul className="mt-2 list-inside list-disc space-y-1 text-slate-400">
+                    <li>Account and login access removed</li>
+                    <li>Tournament registrations cleared</li>
+                    <li>Match history unlinked from this user</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
+                {error}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col-reverse gap-3 border-t border-slate-800 bg-slate-950/50 px-6 py-4 sm:flex-row sm:justify-end">
+            <button type="button" onClick={closeDelete} disabled={isPending} className="btn-secondary disabled:opacity-60">
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              disabled={isPending}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/50 bg-red-600/20 px-5 py-2.5 text-sm font-semibold text-red-200 transition hover:border-red-400/70 hover:bg-red-600/30 disabled:opacity-60"
+            >
+              <Trash2 size={15} />
+              {isPending ? 'Deleting…' : 'Delete account'}
+            </button>
+          </div>
+        </div>
+      </ModalPortal>
+    </>
+  );
+}
