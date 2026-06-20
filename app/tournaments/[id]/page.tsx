@@ -7,7 +7,7 @@ import { TournamentActions } from './tournament-actions';
 import { ParticipantManager } from './participant-manager';
 import { BracketTree } from './bracket-tree';
 import { BracketSwiss } from './bracket-swiss';
-import { BracketDoubleElim } from './bracket-double-elim';
+import { TournamentDoubleElimTabs } from './tournament-double-elim-tabs';
 import { TournamentFormatGuide } from './tournament-format-guide';
 
 const FORMAT_LABELS: Record<string, string> = {
@@ -133,6 +133,7 @@ export default async function TournamentDetail({
                 tournamentId={tournament.id}
                 tournamentStatus={tournament.status}
                 tournamentFormat={tournament.format}
+                participantCount={tournament.participants.length}
                 isJoined={isJoined}
                 isLoggedIn={isLoggedIn}
                 isAdmin={isAdmin}
@@ -163,8 +164,10 @@ export default async function TournamentDetail({
                   userId={session?.user.id ?? null}
                 />
               ) : tournament.format === 'double_elimination' ? (
-                <BracketDoubleElim
+                <TournamentDoubleElimTabs
                   matches={tournament.matches}
+                  participants={tournament.participants}
+                  tournamentStatus={tournament.status}
                   isAdmin={isAdmin}
                   userId={session?.user.id ?? null}
                 />
