@@ -18,39 +18,6 @@ function TournamentRowSkeleton() {
   );
 }
 
-function CreateFormSkeleton() {
-  return (
-    <div className="card p-6">
-      <Skeleton className="mb-5 h-6 w-40" />
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-12" />
-          <Skeleton className="h-10 w-full rounded-lg" />
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-10" />
-            <Skeleton className="h-10 w-full rounded-lg" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-10 w-full rounded-lg" />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-14" />
-          <Skeleton className="h-10 w-full rounded-lg" />
-        </div>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-16 w-full rounded-lg" />
-        </div>
-        <Skeleton className="h-10 w-full rounded-lg" />
-      </div>
-    </div>
-  );
-}
-
 export default function DashboardTournamentsLoading() {
   return (
     <div aria-busy="true" aria-label="Loading tournament management">
@@ -59,18 +26,17 @@ export default function DashboardTournamentsLoading() {
           <Skeleton className="h-7 w-52" />
           <Skeleton className="h-4 w-64 max-w-full" />
         </div>
-        <Skeleton className="h-4 w-28 shrink-0" />
+        <div className="flex shrink-0 items-center gap-3">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-10 w-36 rounded-lg" />
+        </div>
       </div>
 
-      <div className="grid gap-8 xl:grid-cols-[1fr_340px]">
-        <div className="space-y-3">
-          <TournamentRowSkeleton />
-          <TournamentRowSkeleton />
-          <TournamentRowSkeleton />
-          <TournamentRowSkeleton />
-        </div>
-
-        <CreateFormSkeleton />
+      <div className="space-y-3">
+        <TournamentRowSkeleton />
+        <TournamentRowSkeleton />
+        <TournamentRowSkeleton />
+        <TournamentRowSkeleton />
       </div>
     </div>
   );

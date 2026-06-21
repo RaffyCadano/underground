@@ -57,16 +57,21 @@ model CommunityClub {
 }
 
 model Tournament {
-  id           String                  @id @default(cuid())
-  name         String
-  description  String?
-  date         DateTime
-  location     String?
-  format       String                  @default("single_elimination")
-  status       String                  @default("open")
-  participants TournamentParticipant[]
-  matches      Match[]
-  createdAt    DateTime                @default(now())
+  id                  String                  @id @default(cuid())
+  name                String
+  description         String?
+  date                DateTime
+  location            String?
+  format              String                  @default("single_elimination")
+  status              String                  @default("open")
+  groupStageEnabled   Boolean                 @default(false)
+  groupSize           Int                     @default(4)
+  advancePerGroup     Int                     @default(2)
+  grandFinalsModifier String                  @default("default")
+  phase               String?
+  participants        TournamentParticipant[]
+  matches             Match[]
+  createdAt           DateTime                @default(now())
 }
 
 model TournamentParticipant {
@@ -76,6 +81,7 @@ model TournamentParticipant {
   user         User       @relation(fields: [userId], references: [id])
   userId       String
   seed         Int?
+  groupId      Int?
   placement    Int?
   createdAt    DateTime   @default(now())
 
@@ -96,6 +102,7 @@ model Match {
   round          Int        @default(1)
   matchIndex     Int        @default(0)
   bracketSide    String     @default("winners")
+  groupId        Int?
   winnerNextId   String?
   winnerNextSlot Int?
   loserNextId    String?

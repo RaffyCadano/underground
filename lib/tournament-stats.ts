@@ -3,6 +3,7 @@ export type TournamentMatch = {
   round: number;
   matchIndex: number;
   bracketSide: string | null;
+  groupId?: number | null;
   status: string;
   score: string | null;
   player1Id: string | null;
@@ -16,6 +17,7 @@ export type TournamentMatch = {
 export type TournamentParticipant = {
   userId: string;
   seed: number | null;
+  groupId?: number | null;
   user: { id: string; username: string; rankPoints: number };
 };
 
@@ -93,6 +95,7 @@ const STATUS_ORDER: Record<BracketStatus, number> = {
 function countLosses(matches: TournamentMatch[], userId: string): number {
   let losses = 0;
   for (const m of matches) {
+    if (m.bracketSide === 'group') continue;
     if (m.status !== 'complete' && m.status !== 'bye') continue;
     if (!m.winnerId) continue;
     if (m.player1Id !== userId && m.player2Id !== userId) continue;
@@ -104,6 +107,7 @@ function countLosses(matches: TournamentMatch[], userId: string): number {
 function countWins(matches: TournamentMatch[], userId: string): number {
   let wins = 0;
   for (const m of matches) {
+    if (m.bracketSide === 'group') continue;
     if (m.status !== 'complete' || m.winnerId !== userId) continue;
     if (m.player1Id === userId || m.player2Id === userId) wins++;
   }
@@ -250,6 +254,110 @@ export function computeBracketGroups(
       matches: groupMatches.sort((a, b) => a.round - b.round || a.matchIndex - b.matchIndex),
     };
   });
+}
+
+export type PodiumEntry = {
+  placement: 1 | 2 | 3;
+  userId: string;
+  username: string;
+};
+
+function loserId(match: TournamentMatch): string | null {
+  if (!match.winnerId) return null;
+  if (match.player1Id && match.player1Id !== match.winnerId) return match.player1Id;
+  if (match.player2Id && match.player2Id !== match.winnerId) return match.player2Id;
+  return null;
+}
+
+function usernameFor(matches: TournamentMatch[], userId: string): string {
+  for (const m of matches) {
+    if (m.player1?.id === userId) return m.player1.username;
+    if (m.player2?.id === userId) return m.player2.username;
+    if (m.winner?.id === userId) return m.winner.username;
+  }
+  return 'Unknown';
+}
+
+function findBracketFinal(
+  matches: TournamentMatch[],
+  side: 'winners' | 'losers',
+): TournamentMatch | undefined {
+  const sideMatches = matches.filter((m) => m.bracketSide === side && m.status === 'complete');
+  if (sideMatches.length === 0) return undefined;
+  const maxRound = Math.max(...sideMatches.map((m) => m.round));
+  return sideMatches.find((m) => m.round === maxRound && m.matchIndex === 0);
+}
+
+export function computeTournamentPodium(
+  matches: TournamentMatch[],
+  tournamentStatus: string,
+  format: string,
+  grandFinalsModifier = 'default',
+): PodiumEntry[] {
+  if (tournamentStatus !== 'complete') return [];
+
+  const playoffMatches = matches.filter((m) => m.bracketSide !== 'group');
+  if (playoffMatches.length === 0) return [];
+
+  const podium: PodiumEntry[] = [];
+  const used = new Set<string>();
+
+  const add = (placement: 1 | 2 | 3, userId: string | null | undefined) => {
+    if (!userId || used.has(userId)) return;
+    used.add(userId);
+    podium.push({
+      placement,
+      userId,
+      username: usernameFor(playoffMatches, userId),
+    });
+  };
+
+  if (format === 'double_elimination') {
+    const reset = playoffMatches.find((m) => m.bracketSide === 'reset' && m.status === 'complete');
+    const grandFinal = playoffMatches.find(
+      (m) => m.bracketSide === 'grand_final' && m.status === 'complete',
+    );
+
+    if (reset?.winnerId) {
+      add(1, reset.winnerId);
+      add(2, loserId(reset));
+    } else if (grandFinal?.winnerId) {
+      add(1, grandFinal.winnerId);
+      add(2, loserId(grandFinal));
+    } else if (grandFinalsModifier === 'skip') {
+      const wbFinal = findBracketFinal(playoffMatches, 'winners');
+      add(1, wbFinal?.winnerId);
+      const lbFinal = findBracketFinal(playoffMatches, 'losers');
+      add(2, lbFinal?.winnerId);
+    }
+
+    const lbChampId =
+      grandFinal?.player2Id ??
+      (grandFinalsModifier === 'skip' ? findBracketFinal(playoffMatches, 'losers')?.winnerId : null);
+    if (lbChampId) {
+      const lbFinalMatch = playoffMatches
+        .filter(
+          (m) =>
+            m.bracketSide === 'losers' &&
+            m.status === 'complete' &&
+            m.winnerId === lbChampId &&
+            (m.player1Id === lbChampId || m.player2Id === lbChampId),
+        )
+        .sort((a, b) => b.round - a.round || b.matchIndex - a.matchIndex)[0];
+      if (lbFinalMatch) add(3, loserId(lbFinalMatch));
+    }
+  } else if (format === 'single_elimination') {
+    const sideMatches = playoffMatches.filter((m) => m.status === 'complete' && m.winnerId);
+    if (sideMatches.length === 0) return [];
+    const maxRound = Math.max(...sideMatches.map((m) => m.round));
+    const finalMatch = sideMatches.find((m) => m.round === maxRound && m.matchIndex === 0);
+    if (finalMatch?.winnerId) {
+      add(1, finalMatch.winnerId);
+      add(2, loserId(finalMatch));
+    }
+  }
+
+  return podium.sort((a, b) => a.placement - b.placement);
 }
 
 export function statusBadgeClass(status: BracketStatus): string {

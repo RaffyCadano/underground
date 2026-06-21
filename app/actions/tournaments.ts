@@ -16,11 +16,26 @@ export async function createTournament(_prev: { error?: string } | null, formDat
   const dateStr = formData.get('date') as string;
   const location = (formData.get('location') as string)?.trim() || null;
   const format = (formData.get('format') as string) || 'single_elimination';
+  const groupStageEnabled = formData.get('groupStageEnabled') === 'on';
+  const groupSize = parseInt(formData.get('groupSize') as string, 10) || 4;
+  const advancePerGroup = parseInt(formData.get('advancePerGroup') as string, 10) || 2;
+  const grandFinalsModifier = (formData.get('grandFinalsModifier') as string) || 'default';
 
   if (!name || !dateStr) return { error: 'Name and date are required.' };
 
   const t = await prisma.tournament.create({
-    data: { name, description, date: new Date(dateStr), location, format },
+    data: {
+      name,
+      description,
+      date: new Date(dateStr),
+      location,
+      format,
+      groupStageEnabled: format === 'double_elimination' && groupStageEnabled,
+      groupSize: Math.max(2, groupSize),
+      advancePerGroup: Math.max(1, advancePerGroup),
+      grandFinalsModifier:
+        format === 'double_elimination' ? grandFinalsModifier : 'default',
+    },
   });
 
   revalidatePath('/tournaments');
@@ -73,6 +88,15 @@ export async function generateBracket(tournamentId: string) {
     await generateSingleElimination(tournamentId);
   }
 
+  revalidatePath(`/tournaments/${tournamentId}`);
+}
+
+export async function generatePlayoffs(tournamentId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== 'admin') throw new Error('Unauthorized.');
+
+  const { generatePlayoffsFromGroups } = await import('@/lib/group-stage');
+  await generatePlayoffsFromGroups(tournamentId);
   revalidatePath(`/tournaments/${tournamentId}`);
 }
 

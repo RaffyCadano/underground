@@ -86,9 +86,10 @@ interface Props {
   matches: RawMatch[];
   isAdmin: boolean;
   userId: string | null;
+  view?: 'full' | 'winners' | 'losers';
 }
 
-export function BracketDoubleElim({ matches, isAdmin, userId }: Props) {
+export function BracketDoubleElim({ matches, isAdmin, userId, view = 'full' }: Props) {
   const winnersRounds = useMemo(() => groupRounds(matches, 'winners'), [matches]);
   const losersRounds = useMemo(() => groupRounds(matches, 'losers'), [matches]);
 
@@ -107,13 +108,17 @@ export function BracketDoubleElim({ matches, isAdmin, userId }: Props) {
   const grandFinalVisible = grandFinal && isVisibleMatch(grandFinal);
   const resetVisible = resetMatch && isVisibleMatch(resetMatch);
 
+  const showWinners = view === 'full' || view === 'winners';
+  const showLosers = view === 'full' || view === 'losers';
+  const gfOnWinners = view === 'full' || view === 'winners';
+
   const trailingMatches: BracketMatch[] = [];
   const trailingLabels: string[] = [];
-  if (grandFinalVisible) {
+  if (gfOnWinners && grandFinalVisible) {
     trailingMatches.push(toBracketMatch(grandFinal));
     trailingLabels.push('Grand Final');
   }
-  if (resetVisible) {
+  if (gfOnWinners && resetVisible) {
     trailingMatches.push(toBracketMatch(resetMatch));
     trailingLabels.push('Reset');
   }
@@ -122,26 +127,28 @@ export function BracketDoubleElim({ matches, isAdmin, userId }: Props) {
     <div className="space-y-3">
       <div className="overflow-x-auto rounded-xl border border-slate-700/80 bg-[#0f1419] shadow-xl">
         <div className="min-w-max p-4 md:p-6">
-          <section className="mb-8">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-8 items-center rounded-md bg-gradient-to-r from-sky-600 to-sky-500 px-4 shadow-sm">
-                <span className="text-xs font-bold uppercase tracking-wider text-white">
-                  Winners Bracket
-                </span>
+          {showWinners && (
+            <section className={showLosers ? 'mb-8' : ''}>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-8 items-center rounded-md bg-gradient-to-r from-sky-600 to-sky-500 px-4 shadow-sm">
+                  <span className="text-xs font-bold uppercase tracking-wider text-white">
+                    Winners Bracket
+                  </span>
+                </div>
+                <div className="h-px flex-1 bg-slate-700/60" />
               </div>
-              <div className="h-px flex-1 bg-slate-700/60" />
-            </div>
-            <BracketHqTree
-              rounds={winnersRounds}
-              isAdmin={isAdmin}
-              userId={userId}
-              trailingMatches={trailingMatches.length > 0 ? trailingMatches : undefined}
-              trailingLabels={trailingLabels}
-              minHeight={winnersHeight}
-            />
-          </section>
+              <BracketHqTree
+                rounds={winnersRounds}
+                isAdmin={isAdmin}
+                userId={userId}
+                trailingMatches={trailingMatches.length > 0 ? trailingMatches : undefined}
+                trailingLabels={trailingLabels}
+                minHeight={winnersHeight}
+              />
+            </section>
+          )}
 
-          {losersRounds.length > 0 && (
+          {showLosers && losersRounds.length > 0 && (
             <section>
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-8 items-center rounded-md bg-gradient-to-r from-amber-600 to-orange-500 px-4 shadow-sm">

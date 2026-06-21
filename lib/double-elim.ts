@@ -7,6 +7,13 @@ import {
   updateAdvancementMatch,
   updateAdvancementMatchSlot,
 } from '@/lib/match-advancement';
+import { parseGrandFinalsModifier, type GrandFinalsModifier } from '@/lib/tournament-options';
+import {
+  deleteBracketMatchesExceptGroup,
+  findTournamentDeSettings,
+  findTournamentGrandFinalsModifier,
+  updateTournamentPhase,
+} from '@/lib/tournament-de-settings';
 
 export type BracketSide = 'winners' | 'losers' | 'grand_final' | 'reset';
 
@@ -363,7 +370,10 @@ function processRound1Byes(matches: DeMatch[]) {
   }
 }
 
-function buildDoubleElimStructure(participantIds: string[]): DeMatch[] {
+function buildDoubleElimStructure(
+  participantIds: string[],
+  grandFinalsModifier: GrandFinalsModifier = 'default',
+): DeMatch[] {
   const n = participantIds.length;
   if (n < 2) throw new Error('Need at least 2 participants to generate a bracket.');
 
@@ -396,22 +406,27 @@ function buildDoubleElimStructure(participantIds: string[]): DeMatch[] {
     );
   }
 
-  const grandFinal: DeMatch = {
-    id: idFactory(),
-    round: 1,
-    matchIndex: 0,
-    bracketSide: 'grand_final',
-    player1Id: null,
-    player2Id: null,
-    winnerNextId: null,
-    winnerNextSlot: null,
-    loserNextId: null,
-    loserNextSlot: null,
-  };
+  const includeGrandFinal = grandFinalsModifier !== 'skip';
 
-  wireGrandFinal(winnersMatches, losersMatches, grandFinal, winnersRounds, losersRounds);
+  if (includeGrandFinal) {
+    const grandFinal: DeMatch = {
+      id: idFactory(),
+      round: 1,
+      matchIndex: 0,
+      bracketSide: 'grand_final',
+      player1Id: null,
+      player2Id: null,
+      winnerNextId: null,
+      winnerNextSlot: null,
+      loserNextId: null,
+      loserNextSlot: null,
+    };
 
-  return [...winnersMatches, ...losersMatches, grandFinal];
+    wireGrandFinal(winnersMatches, losersMatches, grandFinal, winnersRounds, losersRounds);
+    return [...winnersMatches, ...losersMatches, grandFinal];
+  }
+
+  return [...winnersMatches, ...losersMatches];
 }
 
 async function placeInSlot(matchId: string, slot: number, playerId: string) {
@@ -499,19 +514,43 @@ export async function resolveSoloByeMatches(tournamentId: string) {
   }
 }
 
-export async function generateDoubleElimination(tournamentId: string) {
-  const participants = await prisma.tournamentParticipant.findMany({
-    where: { tournamentId },
-    orderBy: [{ seed: 'asc' }, { createdAt: 'asc' }],
-  });
+export type GenerateDeOptions = {
+  keepGroupMatches?: boolean;
+  grandFinalsModifier?: string;
+};
 
-  if (participants.length < 2) {
+export async function generateDoubleEliminationBracket(
+  tournamentId: string,
+  participantIds?: string[],
+  options?: GenerateDeOptions,
+) {
+  const tournament = await findTournamentDeSettings(tournamentId);
+  if (!tournament) throw new Error('Tournament not found.');
+
+  let ids = participantIds;
+  if (!ids) {
+    const participants = await prisma.tournamentParticipant.findMany({
+      where: { tournamentId },
+      orderBy: [{ seed: 'asc' }, { createdAt: 'asc' }],
+    });
+    ids = participants.map((p) => p.userId);
+  }
+
+  if (ids.length < 2) {
     throw new Error('Need at least 2 participants to generate a bracket.');
   }
 
-  await prisma.match.deleteMany({ where: { tournamentId } });
+  const modifier = parseGrandFinalsModifier(
+    options?.grandFinalsModifier ?? tournament.grandFinalsModifier,
+  );
 
-  const specs = buildDoubleElimStructure(participants.map((p) => p.userId));
+  if (options?.keepGroupMatches) {
+    await deleteBracketMatchesExceptGroup(tournamentId);
+  } else {
+    await prisma.match.deleteMany({ where: { tournamentId } });
+  }
+
+  const specs = buildDoubleElimStructure(ids, modifier);
   const idMap = new Map<string, string>();
 
   for (const spec of specs) {
@@ -550,7 +589,6 @@ export async function generateDoubleElimination(tournamentId: string) {
     });
   }
 
-  // Advance round-1 bye winners into their next slots
   const byeMatches = await findWinnersRoundOneByes(tournamentId);
   for (const m of byeMatches) {
     if (m.winnerId) await advanceDoubleElimMatch(m.id, m.winnerId);
@@ -558,7 +596,25 @@ export async function generateDoubleElimination(tournamentId: string) {
 
   await resolveSoloByeMatches(tournamentId);
 
-  await prisma.tournament.update({ where: { id: tournamentId }, data: { status: 'active' } });
+  await updateTournamentPhase(tournamentId, {
+    status: 'active',
+    ...(!options?.keepGroupMatches ? { phase: 'playoffs' } : {}),
+  });
+}
+
+export async function generateDoubleElimination(tournamentId: string) {
+  const tournament = await findTournamentDeSettings(tournamentId);
+  if (!tournament) throw new Error('Tournament not found.');
+
+  if (tournament.groupStageEnabled) {
+    const { generateGroupStage } = await import('@/lib/group-stage');
+    await generateGroupStage(tournamentId);
+    return;
+  }
+ 
+  await generateDoubleEliminationBracket(tournamentId, undefined, {
+    grandFinalsModifier: tournament.grandFinalsModifier,
+  });
 }
 
 export async function advanceDoubleElimMatch(
@@ -590,6 +646,18 @@ export async function advanceDoubleElimMatch(
   }
 
   if (match.bracketSide === 'grand_final') {
+    const modifier = parseGrandFinalsModifier(
+      await findTournamentGrandFinalsModifier(match.tournamentId),
+    );
+
+    if (modifier === 'single_match') {
+      await updateTournamentPhase(match.tournamentId, {
+        status: 'complete',
+        phase: 'complete',
+      });
+      return;
+    }
+
     const lbChampWon = match.player2Id === winnerId;
     if (lbChampWon && match.player1Id && match.player2Id) {
       await createAdvancementMatch({
@@ -602,18 +670,36 @@ export async function advanceDoubleElimMatch(
         status: 'pending',
       });
     } else {
-      await prisma.tournament.update({
-        where: { id: match.tournamentId },
-        data: { status: 'complete' },
+      await updateTournamentPhase(match.tournamentId, {
+        status: 'complete',
+        phase: 'complete',
       });
     }
     return;
   }
 
   if (match.bracketSide === 'reset') {
-    await prisma.tournament.update({
-      where: { id: match.tournamentId },
-      data: { status: 'complete' },
+    await updateTournamentPhase(match.tournamentId, {
+      status: 'complete',
+      phase: 'complete',
     });
+    return;
+  }
+
+  // Skip grand finals: tournament ends when losers bracket final completes
+  if (match.bracketSide === 'losers') {
+    if (parseGrandFinalsModifier(await findTournamentGrandFinalsModifier(match.tournamentId)) === 'skip') {
+      const allMatches = await findAdvancementMatches(match.tournamentId);
+      const lbRounds = allMatches.filter((m) => m.bracketSide === 'losers').map((m) => m.round);
+      const maxLbRound = lbRounds.length > 0 ? Math.max(...lbRounds) : 0;
+      const isLbFinal = match.round === maxLbRound && match.matchIndex === 0;
+
+      if (isLbFinal) {
+        await updateTournamentPhase(match.tournamentId, {
+          status: 'complete',
+          phase: 'complete',
+        });
+      }
+    }
   }
 }

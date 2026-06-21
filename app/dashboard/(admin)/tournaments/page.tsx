@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { CreateTournamentForm } from '@/app/admin/create-tournament-form';
 import { DeleteTournamentButton } from '@/app/tournaments/delete-tournament-button';
 
 const FORMAT_LABELS: Record<string, string> = {
@@ -24,24 +23,32 @@ export default async function DashboardTournamentsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-end justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-white">Tournament management</h2>
           <p className="mt-1 text-sm text-slate-400">Create, manage, and delete tournaments.</p>
         </div>
-        <Link href="/tournaments" className="text-sm font-semibold text-brand-300 hover:text-brand-200">
-          View public page
-        </Link>
+        <div className="flex shrink-0 items-center gap-3">
+          <Link href="/tournaments" className="text-sm font-semibold text-brand-300 hover:text-brand-200">
+            View public page
+          </Link>
+          <Link href="/dashboard/tournaments/create" className="btn-primary">
+            Create tournament
+          </Link>
+        </div>
       </div>
 
-      <div className="grid gap-8 xl:grid-cols-[1fr_340px]">
-        <div className="space-y-3">
-          {tournaments.length === 0 ? (
-            <div className="card-muted p-8 text-center text-slate-400">
-              No tournaments yet. Create one using the form.
-            </div>
-          ) : (
-            tournaments.map((t) => (
+      <div className="space-y-3">
+        {tournaments.length === 0 ? (
+          <div className="card-muted p-8 text-center text-slate-400">
+            No tournaments yet.{' '}
+            <Link href="/dashboard/tournaments/create" className="font-semibold text-brand-300 hover:text-brand-200">
+              Create one
+            </Link>{' '}
+            to get started.
+          </div>
+        ) : (
+          tournaments.map((t) => (
               <div
                 key={t.id}
                 className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
@@ -75,10 +82,7 @@ export default async function DashboardTournamentsPage() {
                 </div>
               </div>
             ))
-          )}
-        </div>
-
-        <CreateTournamentForm />
+        )}
       </div>
     </div>
   );

@@ -48,7 +48,10 @@ export async function reportResult(matchId: string, winnerId: string, score: str
     where: { id: match.tournamentId },
     select: { format: true },
   });
-  if (tournament?.format === 'double_elimination') {
+
+  const matchSide = (match as { bracketSide?: string }).bracketSide;
+
+  if (tournament?.format === 'double_elimination' && matchSide !== 'group') {
     await advanceDoubleElimMatch(matchId, winnerId);
   } else if (tournament?.format === 'single_elimination') {
     await advanceWinner(match.tournamentId, match.round, match.matchIndex, winnerId);

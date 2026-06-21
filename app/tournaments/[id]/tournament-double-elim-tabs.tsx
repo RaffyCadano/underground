@@ -2,176 +2,183 @@
 
 import { useMemo, useState } from 'react';
 import { BracketDoubleElim } from './bracket-double-elim';
+import { GroupStagePanel } from './group-stage-panel';
+import { TournamentPodium } from './tournament-podium';
+import { buildGroupStageView } from '@/lib/group-stage';
 import {
-  computeBracketGroups,
+  computeTournamentPodium,
   computeTournamentStandings,
   statusBadgeClass,
   type TournamentMatch,
   type TournamentParticipant,
 } from '@/lib/tournament-stats';
 
-type Tab = 'bracket' | 'groups' | 'rankings';
+type MainTab = 'bracket' | 'groups' | 'rankings';
+type BracketView = 'full' | 'winners' | 'losers';
 
 type Props = {
   matches: TournamentMatch[];
   participants: TournamentParticipant[];
   tournamentStatus: string;
+  phase: string | null;
+  groupStageEnabled: boolean;
+  groupSize: number;
+  advancePerGroup: number;
+  grandFinalsModifier: string;
   isAdmin: boolean;
   userId: string | null;
 };
 
-const TABS: { id: Tab; label: string }[] = [
+const MAIN_TABS: { id: MainTab; label: string }[] = [
   { id: 'bracket', label: 'Bracket' },
   { id: 'groups', label: 'Group Stage' },
-  { id: 'rankings', label: 'Rankings' },
+  { id: 'rankings', label: 'Standings' },
 ];
 
-function matchSideLabel(side: string | null) {
-  switch (side) {
-    case 'winners':
-      return 'WB';
-    case 'losers':
-      return 'LB';
-    case 'grand_final':
-      return 'GF';
-    case 'reset':
-      return 'Reset';
-    default:
-      return '';
-  }
+const BRACKET_VIEWS: { id: BracketView; label: string }[] = [
+  { id: 'full', label: 'Full Bracket' },
+  { id: 'winners', label: 'Winners Bracket' },
+  { id: 'losers', label: 'Losers Bracket' },
+];
+
+function TabBar<T extends string>({
+  tabs,
+  active,
+  onChange,
+  size = 'md',
+}: {
+  tabs: { id: T; label: string }[];
+  active: T;
+  onChange: (id: T) => void;
+  size?: 'sm' | 'md';
+}) {
+  return (
+    <div
+      className={`flex gap-1 overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-1 ${
+        size === 'sm' ? 'mb-4' : 'mb-5'
+      }`}
+    >
+      {tabs.map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onChange(id)}
+          className={`whitespace-nowrap rounded-lg font-semibold transition ${
+            size === 'sm' ? 'px-3 py-1.5 text-xs' : 'min-w-[7rem] flex-1 px-3 py-2.5 text-sm'
+          } ${
+            active === id
+              ? 'bg-slate-800 text-white shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export function TournamentDoubleElimTabs({
   matches,
   participants,
   tournamentStatus,
+  phase,
+  groupStageEnabled,
+  groupSize,
+  advancePerGroup,
+  grandFinalsModifier,
   isAdmin,
   userId,
 }: Props) {
-  const [tab, setTab] = useState<Tab>('bracket');
+  const inGroupPhase = phase === 'group';
+  const hasPlayoffs = matches.some(
+    (m) => m.bracketSide === 'winners' || m.bracketSide === 'losers',
+  );
+
+  const [mainTab, setMainTab] = useState<MainTab>(
+    inGroupPhase ? 'groups' : 'bracket',
+  );
+  const [bracketView, setBracketView] = useState<BracketView>('full');
 
   const standings = useMemo(
     () => computeTournamentStandings(participants, matches, tournamentStatus),
     [participants, matches, tournamentStatus],
   );
 
-  const groups = useMemo(
-    () => computeBracketGroups(participants, matches),
-    [participants, matches],
+  const podium = useMemo(
+    () =>
+      computeTournamentPodium(
+        matches,
+        tournamentStatus,
+        'double_elimination',
+        grandFinalsModifier,
+      ),
+    [matches, tournamentStatus, grandFinalsModifier],
   );
+
+  const groupCount = Math.ceil(participants.length / groupSize);
+  const groups = useMemo(() => {
+    if (!groupStageEnabled) return [];
+    return buildGroupStageView(groupCount, participants, matches);
+  }, [groupStageEnabled, groupCount, participants, matches]);
+
+  const visibleMainTabs = MAIN_TABS.filter((t) => {
+    if (t.id === 'groups') return groupStageEnabled;
+    if (t.id === 'bracket') return hasPlayoffs || !inGroupPhase;
+    return true;
+  });
+
+  const gfLabel =
+    grandFinalsModifier === 'single_match'
+      ? 'Single grand final'
+      : grandFinalsModifier === 'skip'
+        ? 'No grand final (WB champ wins)'
+        : 'Grand final + bracket reset';
 
   return (
     <div>
-      <div className="mb-5 flex gap-1 overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-1">
-        {TABS.map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={`min-w-[7rem] flex-1 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
-              tab === id
-                ? 'bg-slate-800 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'bracket' && (
-        <BracketDoubleElim matches={matches} isAdmin={isAdmin} userId={userId} />
+      {tournamentStatus === 'complete' && podium.length > 0 && (
+        <TournamentPodium entries={podium} />
       )}
 
-      {tab === 'groups' && (
-        <div className="space-y-4">
-          <p className="text-sm text-slate-400">
-            Players grouped by winners bracket quarter — same pool that feeds each side of the tree.
-          </p>
-          {groups.length === 0 ? (
-            <p className="py-10 text-center text-sm text-slate-500">No groups yet.</p>
+      <TabBar tabs={visibleMainTabs} active={mainTab} onChange={setMainTab} />
+
+      {mainTab === 'bracket' && (
+        <>
+          {hasPlayoffs ? (
+            <>
+              <TabBar
+                tabs={BRACKET_VIEWS}
+                active={bracketView}
+                onChange={setBracketView}
+                size="sm"
+              />
+              <p className="mb-4 text-xs text-slate-500">{gfLabel}</p>
+              <BracketDoubleElim
+                matches={matches}
+                isAdmin={isAdmin}
+                userId={userId}
+                view={bracketView}
+              />
+            </>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {groups.map((group) => (
-                <div
-                  key={group.id}
-                  className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50"
-                >
-                  <div className="border-b border-slate-800 bg-gradient-to-r from-slate-800/80 to-slate-900 px-4 py-3">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                      {group.label}
-                    </h3>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {group.players.length} players · {group.matches.filter((m) => m.status === 'complete').length} matches played
-                    </p>
-                  </div>
-
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        <th className="px-4 py-2 text-left">Player</th>
-                        <th className="px-2 py-2 text-center">W</th>
-                        <th className="px-4 py-2 text-center">L</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {group.players.map((p) => (
-                        <tr key={p.userId} className="border-b border-slate-800/80 last:border-0">
-                          <td className="px-4 py-2.5 font-medium text-white">{p.username}</td>
-                          <td className="px-2 py-2.5 text-center font-semibold tabular-nums text-emerald-400">
-                            {p.wins}
-                          </td>
-                          <td className="px-4 py-2.5 text-center tabular-nums text-slate-400">
-                            {p.losses}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {group.matches.length > 0 && (
-                    <div className="border-t border-slate-800 px-4 py-3">
-                      <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        Pool matches
-                      </p>
-                      <ul className="space-y-1.5">
-                        {group.matches.slice(0, 8).map((m) => {
-                          const tag = matchSideLabel(m.bracketSide);
-                          return (
-                            <li
-                              key={m.id}
-                              className="flex items-center justify-between gap-2 text-xs text-slate-300"
-                            >
-                              <span className="min-w-0 truncate">
-                                {tag && (
-                                  <span className="mr-1.5 text-[10px] font-bold text-slate-500">
-                                    [{tag}]
-                                  </span>
-                                )}
-                                {m.player1?.username ?? 'TBD'} vs {m.player2?.username ?? 'TBD'}
-                              </span>
-                              <span className="shrink-0 tabular-nums text-slate-500">
-                                {m.status === 'complete' ? (m.score ?? 'Done') : '—'}
-                              </span>
-                            </li>
-                          );
-                        })}
-                        {group.matches.length > 8 && (
-                          <li className="text-xs text-slate-500">
-                            +{group.matches.length - 8} more matches
-                          </li>
-                        )}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <p className="py-10 text-center text-sm text-slate-500">
+              Playoffs bracket will appear after the group stage completes.
+            </p>
           )}
-        </div>
+        </>
       )}
 
-      {tab === 'rankings' && (
+      {mainTab === 'groups' && groupStageEnabled && (
+        <GroupStagePanel
+          groups={groups}
+          isAdmin={isAdmin}
+          userId={userId}
+          advancePerGroup={advancePerGroup}
+        />
+      )}
+
+      {mainTab === 'rankings' && (
         <div className="overflow-hidden rounded-xl border border-slate-800">
           <table className="w-full text-sm">
             <thead>

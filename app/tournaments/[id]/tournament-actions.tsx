@@ -3,10 +3,10 @@
 import { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Loader2, Swords, X } from 'lucide-react';
-import { joinTournament, leaveTournament, generateBracket, generateNextSwissRound } from '@/app/actions/tournaments';
+import { joinTournament, leaveTournament, generateBracket, generateNextSwissRound, generatePlayoffs } from '@/app/actions/tournaments';
 import { reportResult, correctScore } from '@/app/actions/matches';
 
-type PendingAction = 'join' | 'leave' | 'generate' | 'generate-next' | 'report' | 'edit' | null;
+type PendingAction = 'join' | 'leave' | 'generate' | 'generate-next' | 'playoffs' | 'report' | 'edit' | null;
 
 type Player = { id: string; username: string } | null;
 
@@ -44,6 +44,7 @@ function GenerateBracketConfirmModal({
   error,
   tournamentFormat,
   participantCount,
+  groupStageEnabled = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -52,11 +53,21 @@ function GenerateBracketConfirmModal({
   error: string;
   tournamentFormat: string;
   participantCount: number;
+  groupStageEnabled?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
   const isSwiss = tournamentFormat === 'swiss' || tournamentFormat === 'round_robin';
-  const title = isSwiss ? 'Generate round 1?' : 'Generate bracket?';
-  const confirmLabel = isSwiss ? 'Generate round 1' : 'Generate bracket';
+  const isGroupDe = tournamentFormat === 'double_elimination' && groupStageEnabled;
+  const title = isSwiss
+    ? 'Generate round 1?'
+    : isGroupDe
+      ? 'Start group stage?'
+      : 'Generate bracket?';
+  const confirmLabel = isSwiss
+    ? 'Generate round 1'
+    : isGroupDe
+      ? 'Start group stage'
+      : 'Generate bracket';
 
   useEffect(() => setMounted(true), []);
 
@@ -132,11 +143,17 @@ function GenerateBracketConfirmModal({
           <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
             {(isSwiss
               ? ['Pair round 1 matchups', 'Close registration for new players', 'Start the tournament']
-              : [
-                  'Seed all participants into the bracket',
-                  'Close registration for new players',
-                  'Start the tournament',
-                ]
+              : isGroupDe
+                ? [
+                    'Assign players to round robin groups',
+                    'Close registration for new players',
+                    'Start the group stage — playoffs after groups finish',
+                  ]
+                : [
+                    'Seed all participants into the bracket',
+                    'Close registration for new players',
+                    'Start the tournament',
+                  ]
             ).map((item) => (
               <li key={item} className="flex items-center gap-2">
                 <span className="h-1 w-1 shrink-0 rounded-full bg-brand-400/80" />
@@ -226,6 +243,11 @@ function ActionLoadingModal({
           title: 'Generating round',
           body: `Pairing round ${currentRound + 1}…`,
         };
+      case 'playoffs':
+        return {
+          title: 'Starting playoffs',
+          body: 'Seeding advancers into the double elimination bracket…',
+        };
       default:
         return { title: 'Please wait', body: 'Working…' };
     }
@@ -255,6 +277,9 @@ interface Props {
   tournamentStatus: string;
   tournamentFormat: string;
   participantCount: number;
+  groupStageEnabled?: boolean;
+  phase?: string | null;
+  groupStageComplete?: boolean;
   isJoined: boolean;
   isLoggedIn: boolean;
   isAdmin: boolean;
@@ -270,6 +295,9 @@ export function TournamentActions({
   tournamentStatus,
   tournamentFormat,
   participantCount,
+  groupStageEnabled = false,
+  phase = null,
+  groupStageComplete = false,
   isJoined,
   isLoggedIn,
   isAdmin,
@@ -356,6 +384,20 @@ export function TournamentActions({
     });
   }
 
+  function handleGeneratePlayoffs() {
+    setError('');
+    setPendingAction('playoffs');
+    startTransition(async () => {
+      try {
+        await generatePlayoffs(tournamentId);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Failed to start playoffs.');
+      } finally {
+        setPendingAction(null);
+      }
+    });
+  }
+
   function handleGenerateNextRound() {
     setError('');
     setPendingAction('generate-next');
@@ -396,7 +438,14 @@ export function TournamentActions({
       );
 
   const showJoinLeave = tournamentStatus === 'open' && isLoggedIn;
-  const showGenerate = isAdmin && tournamentStatus === 'open';
+  const showGenerate =
+    isAdmin && tournamentStatus === 'open' && !(groupStageEnabled && phase === 'group');
+  const showStartPlayoffs =
+    isAdmin &&
+    groupStageEnabled &&
+    phase === 'group' &&
+    groupStageComplete &&
+    tournamentFormat === 'double_elimination';
   const showSwissNext =
     isAdmin &&
     tournamentStatus === 'active' &&
@@ -404,7 +453,13 @@ export function TournamentActions({
     allCurrentRoundComplete;
   const showReport = myPendingMatches.length > 0 && !inlineBracketFormat;
   const showEdit = isAdmin && completedMatches.length > 0 && !inlineBracketFormat;
-  const hasContent = showJoinLeave || showGenerate || showSwissNext || showReport || showEdit;
+  const hasContent =
+    showJoinLeave ||
+    showGenerate ||
+    showStartPlayoffs ||
+    showSwissNext ||
+    showReport ||
+    showEdit;
 
   if (!hasContent && !error) return null;
 
@@ -418,12 +473,14 @@ export function TournamentActions({
         error={error}
         tournamentFormat={tournamentFormat}
         participantCount={participantCount}
+        groupStageEnabled={groupStageEnabled}
       />
 
       {pendingAction === 'join' ||
       pendingAction === 'leave' ||
       pendingAction === 'generate' ||
-      pendingAction === 'generate-next' ? (
+      pendingAction === 'generate-next' ||
+      pendingAction === 'playoffs' ? (
         <ActionLoadingModal
           action={pendingAction}
           tournamentFormat={tournamentFormat}
@@ -467,9 +524,21 @@ export function TournamentActions({
         >
           {isPending && pendingAction === 'generate'
             ? 'Generating...'
-            : (tournamentFormat === 'swiss' || tournamentFormat === 'round_robin')
-            ? 'Generate Round 1'
-            : 'Generate bracket'}
+            : groupStageEnabled && tournamentFormat === 'double_elimination'
+              ? 'Start group stage'
+              : tournamentFormat === 'swiss' || tournamentFormat === 'round_robin'
+                ? 'Generate Round 1'
+                : 'Generate bracket'}
+        </button>
+      )}
+
+      {showStartPlayoffs && (
+        <button
+          onClick={handleGeneratePlayoffs}
+          disabled={isPending}
+          className="btn-primary disabled:opacity-60"
+        >
+          {isPending && pendingAction === 'playoffs' ? 'Starting...' : 'Start playoffs'}
         </button>
       )}
 

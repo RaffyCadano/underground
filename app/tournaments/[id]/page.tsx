@@ -9,6 +9,7 @@ import { BracketTree } from './bracket-tree';
 import { BracketSwiss } from './bracket-swiss';
 import { TournamentDoubleElimTabs } from './tournament-double-elim-tabs';
 import { TournamentFormatGuide } from './tournament-format-guide';
+import { isGroupStageComplete } from '@/lib/group-stage';
 
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: 'Single Elimination',
@@ -72,6 +73,7 @@ export default async function TournamentDetail({
 
   const canManagePlayers = tournament.status === 'open' && tournament.matches.length === 0;
   const hasBracket = tournament.matches.length > 0;
+  const groupStageComplete = isGroupStageComplete(tournament.matches);
 
   const availableUsers =
     isAdmin && canManagePlayers
@@ -111,6 +113,40 @@ export default async function TournamentDetail({
                 { label: 'Format', value: FORMAT_LABELS[tournament.format] ?? tournament.format },
                 { label: 'Status', value: tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1) },
                 { label: 'Players', value: `${tournament.participants.length} registered` },
+                ...(tournament.format === 'double_elimination' && tournament.groupStageEnabled
+                  ? [
+                      {
+                        label: 'Structure',
+                        value: `Groups of ${tournament.groupSize} → top ${tournament.advancePerGroup} advance`,
+                      },
+                    ]
+                  : []),
+                ...(tournament.format === 'double_elimination'
+                  ? [
+                      {
+                        label: 'Grand finals',
+                        value:
+                          tournament.grandFinalsModifier === 'single_match'
+                            ? 'Single match'
+                            : tournament.grandFinalsModifier === 'skip'
+                              ? 'Skipped (WB champ wins)'
+                              : 'Default + bracket reset',
+                      },
+                    ]
+                  : []),
+                ...(tournament.phase
+                  ? [
+                      {
+                        label: 'Phase',
+                        value:
+                          tournament.phase === 'group'
+                            ? 'Group stage'
+                            : tournament.phase === 'playoffs'
+                              ? 'Playoffs'
+                              : tournament.phase,
+                      },
+                    ]
+                  : []),
               ].map(({ label, value }) => (
                 <div key={label}>
                   <p className="text-[11px] uppercase tracking-wider text-slate-400">{label}</p>
@@ -125,6 +161,11 @@ export default async function TournamentDetail({
             status={tournament.status}
             hasBracket={hasBracket}
             isAdmin={isAdmin}
+            groupStageEnabled={tournament.groupStageEnabled}
+            phase={tournament.phase}
+            grandFinalsModifier={tournament.grandFinalsModifier}
+            groupSize={tournament.groupSize}
+            advancePerGroup={tournament.advancePerGroup}
           />
 
           {tournament.status !== 'complete' && (
@@ -134,6 +175,9 @@ export default async function TournamentDetail({
                 tournamentStatus={tournament.status}
                 tournamentFormat={tournament.format}
                 participantCount={tournament.participants.length}
+                groupStageEnabled={tournament.groupStageEnabled}
+                phase={tournament.phase}
+                groupStageComplete={groupStageComplete}
                 isJoined={isJoined}
                 isLoggedIn={isLoggedIn}
                 isAdmin={isAdmin}
@@ -168,6 +212,11 @@ export default async function TournamentDetail({
                   matches={tournament.matches}
                   participants={tournament.participants}
                   tournamentStatus={tournament.status}
+                  phase={tournament.phase}
+                  groupStageEnabled={tournament.groupStageEnabled}
+                  groupSize={tournament.groupSize}
+                  advancePerGroup={tournament.advancePerGroup}
+                  grandFinalsModifier={tournament.grandFinalsModifier}
                   isAdmin={isAdmin}
                   userId={session?.user.id ?? null}
                 />
