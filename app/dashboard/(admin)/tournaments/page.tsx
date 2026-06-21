@@ -1,6 +1,14 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import { ListSearch } from '@/app/components/list-search';
+import { Pagination } from '@/app/components/pagination';
 import { DeleteTournamentButton } from '@/app/tournaments/delete-tournament-button';
+import {
+  ADMIN_TOURNAMENTS_PAGE_SIZE,
+  parsePageParam,
+  totalPages,
+} from '@/lib/pagination';
+import { parseSearchQuery, parseStatusFilter, tournamentSearchWhere } from '@/lib/search';
 
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: 'Single Elimination',
@@ -15,18 +23,64 @@ const STATUS_LABELS: Record<string, string> = {
   complete: 'Complete',
 };
 
-export default async function DashboardTournamentsPage() {
+const STATUS_FILTER_OPTIONS = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'open', label: 'Open' },
+  { value: 'active', label: 'In progress' },
+  { value: 'complete', label: 'Complete' },
+];
+
+function statusClass(status: string) {
+  if (status === 'open') return 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300';
+  if (status === 'active') return 'border-brand-500/40 bg-brand-500/10 text-brand-300';
+  return 'border-slate-700 bg-slate-800/60 text-slate-400';
+}
+
+export default async function DashboardTournamentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
+}) {
+  const { q: qParam, status: statusParam, page: pageParam } = await searchParams;
+  const query = parseSearchQuery(qParam);
+  const status = parseStatusFilter(statusParam);
+  const listWhere = tournamentSearchWhere(query, status);
+  const hasFilters = query.length > 0 || status !== 'all';
+
+  const [totalCount, openCount, activeCount, completeCount, filteredCount] = await Promise.all([
+    prisma.tournament.count(),
+    prisma.tournament.count({ where: { status: 'open' } }),
+    prisma.tournament.count({ where: { status: 'active' } }),
+    prisma.tournament.count({ where: { status: 'complete' } }),
+    prisma.tournament.count({ where: listWhere }),
+  ]);
+
+  const pages = totalPages(filteredCount, ADMIN_TOURNAMENTS_PAGE_SIZE);
+  const page = parsePageParam(pageParam, pages);
+
   const tournaments = await prisma.tournament.findMany({
+    where: listWhere,
     orderBy: { date: 'desc' },
+    skip: (page - 1) * ADMIN_TOURNAMENTS_PAGE_SIZE,
+    take: ADMIN_TOURNAMENTS_PAGE_SIZE,
     include: { _count: { select: { participants: true, matches: true } } },
   });
+
+  const stats = [
+    { label: 'Total', value: totalCount },
+    { label: 'Open', value: openCount },
+    { label: 'In progress', value: activeCount },
+    { label: 'Complete', value: completeCount },
+  ];
 
   return (
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-white">Tournament management</h2>
-          <p className="mt-1 text-sm text-slate-400">Create, manage, and delete tournaments.</p>
+          <p className="mt-1 text-sm text-slate-400">
+            Create, manage, and delete tournaments — {totalCount.toLocaleString()} total.
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <Link href="/tournaments" className="text-sm font-semibold text-brand-300 hover:text-brand-200">
@@ -38,52 +92,98 @@ export default async function DashboardTournamentsPage() {
         </div>
       </div>
 
-      <div className="space-y-3">
-        {tournaments.length === 0 ? (
-          <div className="card-muted p-8 text-center text-slate-400">
-            No tournaments yet.{' '}
-            <Link href="/dashboard/tournaments/create" className="font-semibold text-brand-300 hover:text-brand-200">
-              Create one
-            </Link>{' '}
-            to get started.
+      {totalCount > 0 && (
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {stats.map(({ label, value }) => (
+            <div
+              key={label}
+              className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-3"
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{value.toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {totalCount === 0 ? (
+        <div className="card-muted p-8 text-center text-slate-400">
+          No tournaments yet.{' '}
+          <Link href="/dashboard/tournaments/create" className="font-semibold text-brand-300 hover:text-brand-200">
+            Create one
+          </Link>{' '}
+          to get started.
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
+          <div className="border-b border-slate-800 p-4 sm:p-5">
+            <ListSearch
+              action="/dashboard/tournaments"
+              query={query}
+              status={status}
+              statusOptions={STATUS_FILTER_OPTIONS}
+              placeholder="Search by name, location…"
+            />
           </div>
-        ) : (
-          tournaments.map((t) => (
-              <div
-                key={t.id}
-                className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="font-semibold text-white">{t.name}</p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    {t.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    {' · '}
-                    {FORMAT_LABELS[t.format] ?? t.format}
-                    {' · '}
-                    {t._count.participants} players · {t._count.matches} matches
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
-                      t.status === 'open'
-                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                        : t.status === 'active'
-                        ? 'border-brand-500/40 bg-brand-500/10 text-brand-300'
-                        : 'border-slate-700 bg-slate-800/60 text-slate-400'
-                    }`}
+
+          {filteredCount === 0 ? (
+            <div className="px-5 py-12 text-center sm:px-8">
+              <p className="font-semibold text-white">No tournaments match your filters</p>
+              <p className="mt-2 text-sm text-slate-400">Try a different search or clear the filters.</p>
+              <Link href="/dashboard/tournaments" className="btn-secondary mt-5 inline-flex">
+                Clear filters
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="divide-y divide-slate-800">
+                {tournaments.map((t) => (
+                  <div
+                    key={t.id}
+                    className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
                   >
-                    {STATUS_LABELS[t.status] ?? t.status}
-                  </span>
-                  <Link href={`/tournaments/${t.id}`} className="btn-secondary">
-                    Manage
-                  </Link>
-                  <DeleteTournamentButton tournamentId={t.id} tournamentName={t.name} />
-                </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-white">{t.name}</p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {t.date.toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                        {' · '}
+                        {FORMAT_LABELS[t.format] ?? t.format}
+                        {' · '}
+                        {t._count.participants} players · {t._count.matches} matches
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider ${statusClass(t.status)}`}
+                      >
+                        {STATUS_LABELS[t.status] ?? t.status}
+                      </span>
+                      <Link href={`/tournaments/${t.id}`} className="btn-secondary">
+                        Manage
+                      </Link>
+                      <DeleteTournamentButton tournamentId={t.id} tournamentName={t.name} />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))
-        )}
-      </div>
+
+              <Pagination
+                page={page}
+                totalPages={pages}
+                totalItems={filteredCount}
+                pageSize={ADMIN_TOURNAMENTS_PAGE_SIZE}
+                pathname="/dashboard/tournaments"
+                query={hasFilters ? query : undefined}
+                status={hasFilters ? status : undefined}
+              />
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

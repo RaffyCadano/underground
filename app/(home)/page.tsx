@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import {
   ArrowRight,
-  BarChart3,
   Calendar,
   MapPin,
   Swords,
@@ -11,6 +10,8 @@ import {
 } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { rankedPlayerWhere } from '@/lib/rankings';
+import { CircuitSection } from './circuit-section';
+import { HowItWorksSection } from './how-it-works-section';
 
 function formatShortDate(date: Date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -24,6 +25,13 @@ function formatHeroDate(date: Date) {
     year: 'numeric',
   });
 }
+
+const FORMAT_LABELS: Record<string, string> = {
+  single_elimination: 'Single Elimination',
+  double_elimination: 'Double Elimination',
+  swiss: 'Swiss Format',
+  round_robin: 'Round Robin',
+};
 
 export default async function HomePage() {
   const [upcomingTournaments, recentMatches, topPlayers, totalPlayers, totalMatches] = await Promise.all([
@@ -41,7 +49,7 @@ export default async function HomePage() {
         player1: { select: { username: true } },
         player2: { select: { username: true } },
         winner: { select: { username: true } },
-        tournament: { select: { name: true } },
+        tournament: { select: { id: true, name: true } },
       },
     }),
     prisma.user.findMany({
@@ -168,6 +176,10 @@ export default async function HomePage() {
                         {featuredTournament._count.participants}{' '}
                         {featuredTournament._count.participants === 1 ? 'player' : 'players'} registered
                       </li>
+                      <li className="flex items-start gap-2">
+                        <Trophy size={14} className="mt-0.5 shrink-0 text-slate-500" />
+                        <span>{FORMAT_LABELS[featuredTournament.format] ?? featuredTournament.format}</span>
+                      </li>
                     </ul>
 
                     <Link
@@ -212,7 +224,11 @@ export default async function HomePage() {
                       >
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-medium text-slate-200">{t.name}</p>
-                          <p className="text-xs text-slate-500">{formatShortDate(t.date)}</p>
+                          <p className="text-xs text-slate-500">
+                            {formatShortDate(t.date)}
+                            {' · '}
+                            {FORMAT_LABELS[t.format] ?? t.format}
+                          </p>
                         </div>
                         <ArrowRight size={14} className="shrink-0 text-slate-600" />
                       </Link>
@@ -225,173 +241,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="container py-10 sm:py-16">
-        <div className="mb-8 max-w-xl sm:mb-10">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Get started</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">Three steps to the podium</h2>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            {
-              step: '01',
-              title: 'Create an account',
-              body: 'Sign up free and set up your blader profile in seconds.',
-              href: '/register',
-              cta: 'Register',
-            },
-            {
-              step: '02',
-              title: 'Join a tournament',
-              body: 'Browse open events and enter Swiss or single-elim brackets.',
-              href: '/tournaments',
-              cta: 'View events',
-            },
-            {
-              step: '03',
-              title: 'Climb the rankings',
-              body: 'Report match results and earn rank points on the circuit.',
-              href: '/rankings',
-              cta: 'See rankings',
-            },
-          ].map(({ step, title, body, href, cta }) => (
-            <div
-              key={step}
-              className="group relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50 p-5 transition hover:border-slate-700 sm:p-6"
-            >
-              <p className="font-mono text-3xl font-bold text-slate-800 transition group-hover:text-brand-500/30">
-                {step}
-              </p>
-              <h3 className="mt-4 text-lg font-semibold text-white">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">{body}</p>
-              <Link
-                href={href}
-                className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-300 transition hover:text-brand-200"
-              >
-                {cta}
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          ))}
-        </div>
-      </section>
+      <HowItWorksSection />
 
-      {/* Leaderboard + Recent matches */}
-      <section className="border-y border-slate-800 bg-slate-950/40">
-        <div className="container py-10 sm:py-16">
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
-              <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-brand-500/30 bg-brand-500/10 text-brand-300">
-                    <BarChart3 size={18} />
-                  </span>
-                  <div className="min-w-0">
-                    <h2 className="text-base font-semibold text-white sm:text-lg">Top bladers</h2>
-                    <p className="text-xs text-slate-500">Underground leaderboard</p>
-                  </div>
-                </div>
-                <Link href="/rankings" className="shrink-0 text-xs font-semibold text-brand-300 hover:text-brand-200">
-                  Full rankings
-                </Link>
-              </div>
-              {topPlayers.length === 0 ? (
-                <p className="px-4 py-8 text-sm text-slate-400 sm:px-6">No players yet.</p>
-              ) : (
-                <div className="divide-y divide-slate-800">
-                  {topPlayers.map((p, i) => (
-                    <Link
-                      key={p.id}
-                      href={`/players/${p.username.toLowerCase()}`}
-                      className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-slate-900/80 sm:gap-4 sm:px-6 sm:py-4"
-                    >
-                      <span
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                          i === 0
-                            ? 'bg-amber-500/15 text-amber-300'
-                            : i === 1
-                              ? 'bg-slate-700/50 text-slate-300'
-                              : i === 2
-                                ? 'bg-amber-700/15 text-amber-500'
-                                : 'bg-slate-800 text-slate-500'
-                        }`}
-                      >
-                        {i + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold text-white">{p.username}</p>
-                        <p className="text-xs text-slate-500">
-                          {p.wins}-{p.losses} record
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-xs font-semibold tabular-nums text-brand-300 sm:text-sm">
-                        {p.rankPoints.toLocaleString()} pts
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
-              <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-4 sm:px-6 sm:py-5">
-                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300">
-                  <Swords size={18} />
-                </span>
-                <div className="min-w-0">
-                  <h2 className="text-base font-semibold text-white sm:text-lg">Recent matches</h2>
-                  <p className="text-xs text-slate-500">Latest results on the circuit</p>
-                </div>
-              </div>
-              {recentMatches.length === 0 ? (
-                <p className="px-4 py-8 text-sm text-slate-400 sm:px-6">No completed matches yet.</p>
-              ) : (
-                <div className="divide-y divide-slate-800">
-                  {recentMatches.map((m) => {
-                    const scoreParts = m.score ? m.score.split('-') : [];
-                    const p1Score = scoreParts[0] ?? '';
-                    const p2Score = scoreParts[1] ?? '';
-                    const p1Won = m.winner?.username === m.player1?.username;
-                    const p2Won = m.winner?.username === m.player2?.username;
-
-                    return (
-                      <div key={m.id} className="px-4 py-3.5 sm:px-6 sm:py-4">
-                        <p className="mb-2 truncate text-[11px] font-semibold uppercase tracking-wider text-slate-600 sm:mb-3">
-                          {m.tournament.name}
-                        </p>
-                        <div className="flex items-center justify-between gap-3 sm:gap-4">
-                          <div className="min-w-0 flex-1 space-y-1 sm:space-y-1.5">
-                            <p
-                              className={`truncate text-sm font-semibold ${
-                                p1Won ? 'text-white' : 'text-slate-500'
-                              }`}
-                            >
-                              {m.player1?.username ?? '?'}
-                            </p>
-                            <p
-                              className={`truncate text-sm font-semibold ${
-                                p2Won ? 'text-white' : 'text-slate-500'
-                              }`}
-                            >
-                              {m.player2?.username ?? '?'}
-                            </p>
-                          </div>
-                          {m.score && (
-                            <div className="shrink-0 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-center text-sm font-bold tabular-nums sm:px-3 sm:py-2">
-                              <p className={p1Won ? 'text-brand-400' : 'text-slate-600'}>{p1Score}</p>
-                              <p className={p2Won ? 'text-brand-400' : 'text-slate-600'}>{p2Score}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
+      <CircuitSection topPlayers={topPlayers} recentMatches={recentMatches} />
 
       {/* CTA */}
       <section className="container py-10 sm:py-16">
