@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
+import { DraggablePan } from '@/app/components/draggable-pan';
 import { BracketHqTree, type HqBracketRound } from './bracket-hq-tree';
 import type { BracketMatch } from './bracket-tree';
 
@@ -82,6 +83,15 @@ function computeSectionHeight(rounds: HqBracketRound[]): number {
   return Math.max(r1Count * HQ_UNIT - 12, 120);
 }
 
+const BRACKET_SURFACE: CSSProperties = {
+  backgroundColor: '#0f1419',
+  backgroundImage: [
+    'radial-gradient(ellipse 90% 55% at 15% -10%, rgba(56, 189, 248, 0.08), transparent 55%)',
+    'radial-gradient(ellipse 80% 45% at 85% 105%, rgba(251, 146, 60, 0.07), transparent 55%)',
+    'linear-gradient(to bottom, rgba(15, 23, 42, 0.35), transparent 28%, transparent 72%, rgba(15, 23, 42, 0.25))',
+  ].join(', '),
+};
+
 interface Props {
   matches: RawMatch[];
   isAdmin: boolean;
@@ -125,52 +135,57 @@ export function BracketDoubleElim({ matches, isAdmin, userId, view = 'full' }: P
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-xl border border-slate-700/80 bg-[#0f1419] shadow-xl">
-        <div className="min-w-max p-4 md:p-6">
-          {showWinners && (
-            <section className={showLosers ? 'mb-8' : ''}>
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-8 items-center rounded-md bg-gradient-to-r from-sky-600 to-sky-500 px-4 shadow-sm">
-                  <span className="text-xs font-bold uppercase tracking-wider text-white">
-                    Winners Bracket
-                  </span>
+      <div className="overflow-hidden rounded-xl border border-slate-800 bg-[#0f1419] shadow-lg shadow-black/20">
+        <DraggablePan
+          className="relative max-h-[min(75vh,900px)]"
+          style={BRACKET_SURFACE}
+        >
+          <div className="min-w-max p-4 md:p-6">
+            {showWinners && (
+              <section className={showLosers && losersRounds.length > 0 ? 'mb-10' : ''}>
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-8 items-center rounded-md bg-gradient-to-r from-sky-600 to-sky-500 px-4 shadow-sm">
+                    <span className="text-xs font-bold uppercase tracking-wider text-white">
+                      Winners Bracket
+                    </span>
+                  </div>
+                  <div className="h-px flex-1 bg-slate-700/60" />
                 </div>
-                <div className="h-px flex-1 bg-slate-700/60" />
-              </div>
-              <BracketHqTree
-                rounds={winnersRounds}
-                isAdmin={isAdmin}
-                userId={userId}
-                trailingMatches={trailingMatches.length > 0 ? trailingMatches : undefined}
-                trailingLabels={trailingLabels}
-                minHeight={winnersHeight}
-              />
-            </section>
-          )}
+                <BracketHqTree
+                  rounds={winnersRounds}
+                  isAdmin={isAdmin}
+                  userId={userId}
+                  trailingMatches={trailingMatches.length > 0 ? trailingMatches : undefined}
+                  trailingLabels={trailingLabels}
+                  minHeight={winnersHeight}
+                />
+              </section>
+            )}
 
-          {showLosers && losersRounds.length > 0 && (
-            <section>
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-8 items-center rounded-md bg-gradient-to-r from-amber-600 to-orange-500 px-4 shadow-sm">
-                  <span className="text-xs font-bold uppercase tracking-wider text-white">
-                    Losers Bracket
-                  </span>
+            {showLosers && losersRounds.length > 0 && (
+              <section>
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-8 items-center rounded-md bg-gradient-to-r from-amber-600 to-orange-500 px-4 shadow-sm">
+                    <span className="text-xs font-bold uppercase tracking-wider text-white">
+                      Losers Bracket
+                    </span>
+                  </div>
+                  <div className="h-px flex-1 bg-slate-700/60" />
                 </div>
-                <div className="h-px flex-1 bg-slate-700/60" />
-              </div>
-              <BracketHqTree
-                rounds={losersRounds}
-                isAdmin={isAdmin}
-                userId={userId}
-                minHeight={losersHeight}
-              />
-            </section>
-          )}
-        </div>
+                <BracketHqTree
+                  rounds={losersRounds}
+                  isAdmin={isAdmin}
+                  userId={userId}
+                  minHeight={losersHeight}
+                />
+              </section>
+            )}
+          </div>
+        </DraggablePan>
       </div>
 
       <p className="text-center text-xs text-slate-500">
-        Scroll horizontally to view the full bracket · Click a match to report or edit results
+        Drag to pan · Scroll with trackpad or wheel · Click a match to report or edit results
       </p>
     </div>
   );

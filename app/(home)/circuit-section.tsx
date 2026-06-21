@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { ArrowRight, BarChart3, Crown, Medal, Swords } from 'lucide-react';
+import { PlayerAvatar } from '@/app/components/player-avatar';
 
 export type CircuitPlayer = {
   id: string;
   username: string;
+  avatar: string | null;
   rankPoints: number;
   wins: number;
   losses: number;
@@ -59,9 +61,7 @@ function PodiumSpot({ player, rank }: { player: CircuitPlayer; rank: number }) {
       >
         {BadgeIcon ? <BadgeIcon size={14} /> : rank}
       </span>
-      <span className="mt-2 inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sm font-bold text-white transition group-hover:border-brand-500/40 group-hover:text-brand-200 sm:h-11 sm:w-11">
-        {player.username.charAt(0).toUpperCase()}
-      </span>
+      <PlayerAvatar username={player.username} avatar={player.avatar} size="lg" className="mt-2" />
       <p className="mt-2 w-full truncate text-sm font-semibold text-white group-hover:text-brand-200">
         {player.username}
       </p>
@@ -91,9 +91,7 @@ function LeaderboardRow({ player, rank }: { player: CircuitPlayer; rank: number 
         >
           {rank}
         </span>
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sm font-bold text-slate-300 transition group-hover:border-brand-500/30">
-          {player.username.charAt(0).toUpperCase()}
-        </span>
+        <PlayerAvatar username={player.username} avatar={player.avatar} />
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-white group-hover:text-brand-200">{player.username}</p>
           <p className="text-xs tabular-nums text-slate-500">

@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { rankedPlayerWhere } from '@/lib/rankings';
-
 export async function PlayerDashboard({ userId }: { userId: string }) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -60,13 +59,7 @@ export async function PlayerDashboard({ userId }: { userId: string }) {
   });
 
   return (
-    <section className="container">
-      <div className="mb-8">
-        <span className="badge">Dashboard</span>
-        <h1 className="mt-3 text-4xl font-semibold text-white">My arena</h1>
-        <p className="mt-2 text-slate-300">Welcome back, {user.username}.</p>
-      </div>
-
+    <div>
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <div className="card p-6">
           <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Ranking points</p>
@@ -136,6 +129,6 @@ export async function PlayerDashboard({ userId }: { userId: string }) {
           )}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

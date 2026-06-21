@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, Loader2, Swords, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2, Loader2, Swords, UserPlus, X } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { joinTournament, leaveTournament, generateBracket, generateNextSwissRound, generatePlayoffs } from '@/app/actions/tournaments';
 import { reportResult, correctScore } from '@/app/actions/matches';
+import { formatPlayerCapLabel, isTournamentFull } from '@/lib/tournament-registration';
 
 type PendingAction = 'join' | 'leave' | 'generate' | 'generate-next' | 'playoffs' | 'report' | 'edit' | null;
 
@@ -34,6 +36,87 @@ function matchLabel(m: Match, format: string) {
   if (format !== 'double_elimination' || !m.bracketSide) return vs;
   const tag = BRACKET_LABELS[m.bracketSide] ?? m.bracketSide;
   return `[${tag}] ${vs}`;
+}
+
+function getGenerateLabel(
+  tournamentFormat: string,
+  groupStageEnabled: boolean,
+): string {
+  if (groupStageEnabled && tournamentFormat === 'double_elimination') return 'Start group stage';
+  if (tournamentFormat === 'swiss' || tournamentFormat === 'round_robin') return 'Generate Round 1';
+  return 'Generate bracket';
+}
+
+function TournamentActionCard({
+  icon: Icon,
+  eyebrow,
+  title,
+  description,
+  buttonLabel,
+  pendingLabel,
+  onClick,
+  disabled = false,
+  isPending = false,
+  tone = 'brand',
+}: {
+  icon: LucideIcon;
+  eyebrow: string;
+  title: string;
+  description: string;
+  buttonLabel: string;
+  pendingLabel: string;
+  onClick: () => void;
+  disabled?: boolean;
+  isPending?: boolean;
+  tone?: 'brand' | 'admin';
+}) {
+  const panelClass =
+    tone === 'admin'
+      ? 'border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-slate-950/40 to-slate-950'
+      : 'border-brand-500/25 bg-gradient-to-br from-brand-500/10 via-slate-950/40 to-slate-950';
+  const iconClass =
+    tone === 'admin'
+      ? 'border-violet-500/30 bg-violet-500/10 text-violet-300'
+      : 'border-brand-500/30 bg-brand-500/10 text-brand-300';
+  const buttonClass =
+    tone === 'admin'
+      ? 'border border-violet-500/40 bg-violet-500/15 text-violet-100 hover:border-violet-400/50 hover:bg-violet-500/25'
+      : 'bg-brand-500 text-white hover:bg-brand-400';
+
+  return (
+    <div className={`overflow-hidden rounded-xl border p-4 ${panelClass}`}>
+      <div className="flex items-start gap-3">
+        <span
+          className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${iconClass}`}
+        >
+          <Icon size={18} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{eyebrow}</p>
+          <p className="mt-1 text-sm font-semibold text-white">{title}</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">{description}</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled || isPending}
+        className={`mt-4 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold shadow-sm transition disabled:opacity-60 ${buttonClass}`}
+      >
+        {isPending ? (
+          <>
+            <Loader2 size={15} className="animate-spin" />
+            {pendingLabel}
+          </>
+        ) : (
+          <>
+            {buttonLabel}
+            <ArrowRight size={15} className="opacity-80" />
+          </>
+        )}
+      </button>
+    </div>
+  );
 }
 
 function GenerateBracketConfirmModal({
@@ -277,6 +360,8 @@ interface Props {
   tournamentStatus: string;
   tournamentFormat: string;
   participantCount: number;
+  playerCap?: number | null;
+  isRanked?: boolean;
   groupStageEnabled?: boolean;
   phase?: string | null;
   groupStageComplete?: boolean;
@@ -295,6 +380,8 @@ export function TournamentActions({
   tournamentStatus,
   tournamentFormat,
   participantCount,
+  playerCap = null,
+  isRanked = true,
   groupStageEnabled = false,
   phase = null,
   groupStageComplete = false,
@@ -437,7 +524,9 @@ export function TournamentActions({
         (m) => m.player1?.id === userId || m.player2?.id === userId,
       );
 
-  const showJoinLeave = tournamentStatus === 'open' && isLoggedIn;
+  const showJoinLeave = false;
+  const registrationFull = isTournamentFull(participantCount, playerCap);
+  const playerCountLabel = formatPlayerCapLabel(participantCount, playerCap);
   const showGenerate =
     isAdmin && tournamentStatus === 'open' && !(groupStageEnabled && phase === 'group');
   const showStartPlayoffs =
@@ -496,40 +585,89 @@ export function TournamentActions({
       {tournamentStatus === 'open' && isLoggedIn && (
         <div>
           {isJoined ? (
-            <button
-              onClick={handleLeave}
-              disabled={isPending}
-              className="btn-secondary border-red-500/40 text-red-300 hover:border-red-400/60 hover:text-red-200 disabled:opacity-60"
-            >
-              {isPending && pendingAction === 'leave' ? 'Leaving...' : 'Leave tournament'}
-            </button>
+            <div className="overflow-hidden rounded-xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 via-slate-950/40 to-slate-950 p-4">
+              <div className="flex items-start gap-3">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
+                  <CheckCircle2 size={18} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                    Registered
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-white">You&apos;re in the bracket pool</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                    {playerCountLabel} — waiting for the bracket to start.
+                    {!isRanked && ' Unranked event.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleLeave}
+                disabled={isPending}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/35 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200 transition hover:border-red-400/50 hover:bg-red-500/15 disabled:opacity-60"
+              >
+                {isPending && pendingAction === 'leave' ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    Leaving…
+                  </>
+                ) : (
+                  'Leave tournament'
+                )}
+              </button>
+            </div>
+          ) : registrationFull ? (
+            <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950/80 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                Registration full
+              </p>
+              <p className="mt-1 text-sm font-semibold text-white">{playerCountLabel}</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                This event has reached its player cap. Check back if someone drops out.
+              </p>
+            </div>
           ) : (
-            <button
+            <TournamentActionCard
+              icon={UserPlus}
+              eyebrow="Open registration"
+              title="Join this tournament"
+              description={`${playerCountLabel} so far. Claim your spot before the bracket is generated.${!isRanked ? ' Unranked — no rank points.' : ''}`}
+              buttonLabel="Register for this tournament"
+              pendingLabel="Registering…"
               onClick={handleJoin}
               disabled={isPending}
-              className="btn-primary disabled:opacity-60"
-            >
-              {isPending && pendingAction === 'join' ? 'Registering...' : 'Register for this tournament'}
-            </button>
+              isPending={isPending && pendingAction === 'join'}
+              tone="brand"
+            />
           )}
         </div>
       )}
 
       {/* Admin: Generate bracket / Swiss round */}
-      {isAdmin && tournamentStatus === 'open' && (
-        <button
-          onClick={openGenerateConfirm}
-          disabled={isPending}
-          className="btn-secondary disabled:opacity-60"
-        >
-          {isPending && pendingAction === 'generate'
-            ? 'Generating...'
-            : groupStageEnabled && tournamentFormat === 'double_elimination'
-              ? 'Start group stage'
+      {showGenerate && (
+        <TournamentActionCard
+          icon={Swords}
+          eyebrow="Admin"
+          title={
+            groupStageEnabled && tournamentFormat === 'double_elimination'
+              ? 'Ready to start groups?'
               : tournamentFormat === 'swiss' || tournamentFormat === 'round_robin'
-                ? 'Generate Round 1'
-                : 'Generate bracket'}
-        </button>
+                ? 'Ready for Round 1?'
+                : 'Ready to seed the bracket?'
+          }
+          description={
+            participantCount >= 2
+              ? `Seed ${participantCount} player${participantCount !== 1 ? 's' : ''} and close registration. This action cannot be undone.`
+              : 'Add at least 2 players before you can start the tournament.'
+          }
+          buttonLabel={getGenerateLabel(tournamentFormat, groupStageEnabled)}
+          pendingLabel="Generating…"
+          onClick={openGenerateConfirm}
+          disabled={isPending || participantCount < 2}
+          isPending={isPending && pendingAction === 'generate'}
+          tone="admin"
+        />
       )}
 
       {showStartPlayoffs && (

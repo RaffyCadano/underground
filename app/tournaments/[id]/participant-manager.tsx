@@ -1,14 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronDown, Loader2, Search } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Loader2, Search, UserMinus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { addPlayerToTournament, removePlayerFromTournament } from '@/app/actions/tournaments';
+import { createPortal } from 'react-dom';
+import { addGuestPlayerToTournament, addPlayerToTournament, removePlayerFromTournament } from '@/app/actions/tournaments';
+import { normalizeGuestDisplayName } from '@/lib/guest-player';
 
 type Participant = {
   id: string;
   userId: string;
-  user: { id: string; username: string; rankPoints: number };
+  user: { id: string; username: string; rankPoints: number; role: string };
 };
 
 type AvailableUser = {
@@ -128,8 +130,11 @@ function PlayerSelectDropdown({
       </button>
 
       {open && (
-        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-xl shadow-black/30">
-          <div className="border-b border-slate-800 p-2">
+        <div
+          className="absolute z-30 mt-1 flex w-full max-h-[min(20rem,calc(100vh-8rem))] flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-xl shadow-black/30"
+          data-lenis-prevent
+        >
+          <div className="shrink-0 border-b border-slate-800 p-2">
             <div className="relative">
               <Search
                 size={16}
@@ -150,7 +155,7 @@ function PlayerSelectDropdown({
           </div>
 
           {filteredUsers.length > 0 && (
-            <div className="border-b border-slate-800 px-3 py-2">
+            <div className="shrink-0 border-b border-slate-800 px-3 py-2">
               <label className="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-slate-400">
                 <input
                   type="checkbox"
@@ -163,7 +168,13 @@ function PlayerSelectDropdown({
             </div>
           )}
 
-          <ul className="max-h-48 overflow-y-auto py-1" role="listbox" aria-multiselectable="true">
+          <ul
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1"
+            role="listbox"
+            aria-multiselectable="true"
+            data-lenis-prevent
+            onWheel={(e) => e.stopPropagation()}
+          >
             {filteredUsers.length === 0 ? (
               <li className="px-3 py-2.5 text-sm text-slate-500">No players match your search</li>
             ) : (
@@ -193,7 +204,7 @@ function PlayerSelectDropdown({
             )}
           </ul>
 
-          <div className="flex items-center justify-between gap-2 border-t border-slate-800 px-3 py-2">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-800 px-3 py-2">
             <p className="text-xs text-slate-500">
               {selectedUsers.length > 0
                 ? `${selectedUsers.length} selected`
@@ -260,6 +271,162 @@ function AddingPlayersModal({ current, total }: { current: number; total: number
   );
 }
 
+function RemovePlayerConfirmModal({
+  open,
+  playerName,
+  isGuest = false,
+  onClose,
+  onConfirm,
+  isPending,
+  error,
+}: {
+  open: boolean;
+  playerName: string;
+  isGuest?: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+  error: string;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !isPending) onClose();
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, isPending, onClose]);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="remove-player-title"
+      onClick={() => !isPending && onClose()}
+    >
+      <div
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl shadow-black/50"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-red-500/20 bg-gradient-to-br from-red-500/10 to-transparent px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 text-red-400">
+                <UserMinus size={20} />
+              </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-300/80">
+                  Unregister player
+                </p>
+                <h2 id="remove-player-title" className="mt-1 text-lg font-semibold text-white">
+                  Remove from tournament?
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  This only affects registration — the bracket has not started yet.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isPending}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-white disabled:opacity-50"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 px-5 py-4">
+          <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Player</p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="font-semibold text-white">{playerName}</p>
+              {isGuest && (
+                <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  Walk-in
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm text-slate-400">This will:</p>
+            <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+              {[
+                'Remove them from the registered players list',
+                'Free a spot if this event has a player cap',
+                'Let you add them again before you generate the bracket',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-red-400/80" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3.5 py-3">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-400" />
+            <p className="text-xs leading-relaxed text-amber-100/90">
+              Safe to undo — re-add the player from the form above anytime before bracket generation.
+            </p>
+          </div>
+
+          {error && (
+            <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-800 bg-slate-900/40 px-5 py-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="btn-secondary w-full sm:w-auto disabled:opacity-60"
+          >
+            Keep player
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isPending}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-500 disabled:opacity-60 sm:w-auto"
+          >
+            {isPending ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                Removing…
+              </>
+            ) : (
+              <>
+                <UserMinus size={15} />
+                Remove player
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export function ParticipantManager({
   tournamentId,
   participants,
@@ -270,7 +437,14 @@ export function ParticipantManager({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [customName, setCustomName] = useState('');
   const [addProgress, setAddProgress] = useState<{ current: number; total: number } | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{
+    userId: string;
+    username: string;
+    isGuest: boolean;
+  } | null>(null);
+  const [removeError, setRemoveError] = useState('');
 
   function handleAdd() {
     if (selectedUserIds.length === 0) return;
@@ -292,13 +466,47 @@ export function ParticipantManager({
     });
   }
 
-  function handleRemove(userId: string) {
+  function handleAddCustomName() {
+    const name = normalizeGuestDisplayName(customName);
+    if (!name) return;
     setError('');
+    setAddProgress({ current: 0, total: 1 });
     startTransition(async () => {
       try {
-        await removePlayerFromTournament(tournamentId, userId);
+        await addGuestPlayerToTournament(tournamentId, name);
+        setCustomName('');
+        setAddProgress({ current: 1, total: 1 });
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'Failed to remove player.');
+        setError(e instanceof Error ? e.message : 'Failed to add player.');
+      } finally {
+        setAddProgress(null);
+      }
+    });
+  }
+
+  function openRemoveConfirm(userId: string, username: string, isGuest: boolean) {
+    setRemoveError('');
+    setRemoveTarget({ userId, username, isGuest });
+  }
+
+  function closeRemoveConfirm() {
+    if (isPending) return;
+    setRemoveTarget(null);
+    setRemoveError('');
+  }
+
+  function confirmRemove() {
+    if (!removeTarget) return;
+    setError('');
+    setRemoveError('');
+    startTransition(async () => {
+      try {
+        await removePlayerFromTournament(tournamentId, removeTarget.userId);
+        setRemoveTarget(null);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Failed to remove player.';
+        setRemoveError(message);
+        setError(message);
       }
     });
   }
@@ -306,6 +514,16 @@ export function ParticipantManager({
   return (
     <div className="space-y-5">
       {addProgress && <AddingPlayersModal current={addProgress.current} total={addProgress.total} />}
+
+      <RemovePlayerConfirmModal
+        open={removeTarget !== null}
+        playerName={removeTarget?.username ?? ''}
+        isGuest={removeTarget?.isGuest ?? false}
+        onClose={closeRemoveConfirm}
+        onConfirm={confirmRemove}
+        isPending={isPending && removeTarget !== null}
+        error={removeError}
+      />
 
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
@@ -325,9 +543,15 @@ export function ParticipantManager({
       )}
 
       {isAdmin && canManage && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Add players</p>
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Add players</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Pick registered accounts or add a walk-in with a custom name.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <PlayerSelectDropdown
               users={availableUsers}
               value={selectedUserIds}
@@ -346,6 +570,46 @@ export function ParticipantManager({
                   ? `Add ${selectedUserIds.length} players`
                   : 'Add'}
             </button>
+          </div>
+
+          <div className="relative flex items-center gap-3 py-1">
+            <div className="h-px flex-1 bg-slate-800" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">or</span>
+            <div className="h-px flex-1 bg-slate-800" />
+          </div>
+
+          <div>
+            <label htmlFor="custom-player-name" className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Custom name
+            </label>
+            <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end">
+              <input
+                id="custom-player-name"
+                type="text"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder="Walk-in player name"
+                disabled={isPending || addProgress !== null}
+                className="input min-w-0 flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomName();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomName}
+                disabled={isPending || addProgress !== null || !customName.trim()}
+                className="btn-secondary w-full shrink-0 disabled:opacity-60 sm:w-auto"
+              >
+                Add custom
+              </button>
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-600">
+              For players without an Underground account — they won&apos;t appear on rankings.
+            </p>
           </div>
         </div>
       )}
@@ -382,21 +646,32 @@ export function ParticipantManager({
                 <tr key={p.id} className="border-b border-slate-800 last:border-0">
                   <td className="px-4 py-2.5 tabular-nums text-slate-400">{i + 1}</td>
                   <td className="px-4 py-2.5">
-                    <Link
-                      href={`/players/${p.user.username.toLowerCase()}`}
-                      className="font-semibold text-white transition hover:text-brand-300"
-                    >
-                      {p.user.username}
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {p.user.role === 'guest' ? (
+                        <span className="font-semibold text-white">{p.user.username}</span>
+                      ) : (
+                        <Link
+                          href={`/players/${p.user.username.toLowerCase()}`}
+                          className="font-semibold text-white transition hover:text-brand-300"
+                        >
+                          {p.user.username}
+                        </Link>
+                      )}
+                      {p.user.role === 'guest' && (
+                        <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                          Walk-in
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-2.5 text-right tabular-nums text-slate-400">
-                    {p.user.rankPoints}
+                    {p.user.role === 'guest' ? '—' : p.user.rankPoints}
                   </td>
                   {isAdmin && canManage && (
                     <td className="px-4 py-2.5 text-right">
                       <button
                         type="button"
-                        onClick={() => handleRemove(p.userId)}
+                        onClick={() => openRemoveConfirm(p.userId, p.user.username, p.user.role === 'guest')}
                         disabled={isPending}
                         className="text-xs font-semibold text-red-400 transition hover:text-red-300 disabled:opacity-60"
                       >

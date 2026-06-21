@@ -9,6 +9,9 @@ import {
   Trophy,
   User,
 } from 'lucide-react';
+import { getServerSession } from 'next-auth';
+import { PlayerAvatar } from '@/app/components/player-avatar';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { rankedPlayerWhere } from '@/lib/rankings';
 
@@ -26,6 +29,8 @@ export default async function PlayerProfile({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
+
+  const session = await getServerSession(authOptions);
 
   const player = await prisma.user.findFirst({
     where: { username: { equals: username, mode: 'insensitive' } },
@@ -48,6 +53,8 @@ export default async function PlayerProfile({
   });
 
   if (!player) notFound();
+
+  const isOwnProfile = session?.user?.id === player.id;
 
   const total = player.wins + player.losses;
   const winRate = total > 0 ? Math.round((player.wins / total) * 100) : 0;
@@ -104,9 +111,13 @@ export default async function PlayerProfile({
 
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-5">
-              <span className="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-brand-500/30 bg-brand-500/10 text-2xl font-bold text-brand-200">
-                {player.username.charAt(0).toUpperCase()}
-              </span>
+              <PlayerAvatar
+                username={player.username}
+                avatar={player.avatar}
+                size="xl"
+                shape="rounded-xl"
+                className="border-brand-500/30 bg-brand-500/10 text-brand-200"
+              />
               <div>
                 <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
                   <User size={12} />
@@ -131,6 +142,14 @@ export default async function PlayerProfile({
                     </span>
                   )}
                   <span className="text-sm text-slate-500">Joined {formatDate(player.createdAt)}</span>
+                  {isOwnProfile && (
+                    <Link
+                      href="/dashboard/profile"
+                      className="text-sm font-semibold text-brand-300 hover:text-brand-200"
+                    >
+                      Edit profile photo
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>

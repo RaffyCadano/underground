@@ -56,7 +56,7 @@ export default async function HomePage() {
       where: rankedPlayerWhere,
       orderBy: [{ rankPoints: 'desc' }],
       take: 5,
-      select: { id: true, username: true, rankPoints: true, wins: true, losses: true },
+      select: { id: true, username: true, avatar: true, rankPoints: true, wins: true, losses: true },
     }),
     prisma.user.count({ where: rankedPlayerWhere }),
     prisma.match.count({ where: { status: 'complete' } }),

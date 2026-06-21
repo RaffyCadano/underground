@@ -2,37 +2,43 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={`animate-pulse rounded bg-slate-800 ${className ?? ''}`} />;
 }
 
+function SectionSkeleton() {
+  return (
+    <div className="card min-w-0 overflow-hidden">
+      <div className="border-b border-slate-800 px-5 py-4">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="mt-2 h-3 w-48" />
+      </div>
+      <div className="space-y-4 p-5">
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-20 w-full rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
 export default function CreateClubLoading() {
   return (
-    <div aria-busy="true" aria-label="Loading create club">
+    <div className="w-full min-w-0" aria-busy="true" aria-label="Loading create club">
       <Skeleton className="mb-6 h-4 w-28" />
 
-      <div className="mb-6 space-y-3">
+      <div className="mb-8 space-y-3">
         <Skeleton className="h-6 w-16 rounded-full" />
-        <Skeleton className="h-7 w-48" />
+        <Skeleton className="h-8 w-52" />
         <Skeleton className="h-4 w-full max-w-md" />
       </div>
 
-      <div className="card max-w-xl p-6">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-10 w-full rounded-lg" />
+      <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_240px] xl:gap-8">
+        <div className="min-w-0 space-y-5">
+          <SectionSkeleton />
+          <SectionSkeleton />
+          <div className="flex justify-end gap-3">
+            <Skeleton className="h-10 w-24 rounded-lg" />
+            <Skeleton className="h-10 w-32 rounded-lg" />
           </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-14" />
-            <Skeleton className="h-10 w-full rounded-lg" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-16 w-full rounded-lg" />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Skeleton className="h-10 w-full rounded-lg" />
-            <Skeleton className="h-10 w-full rounded-lg" />
-          </div>
-          <Skeleton className="h-10 w-full rounded-lg" />
         </div>
+        <Skeleton className="hidden h-72 rounded-2xl xl:block" />
       </div>
     </div>
   );

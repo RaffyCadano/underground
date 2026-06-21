@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ListSearch } from '@/app/components/list-search';
 import { Pagination } from '@/app/components/pagination';
+import { PlayerAvatar } from '@/app/components/player-avatar';
 import { prisma } from '@/lib/prisma';
 import { parsePageParam, PLAYERS_PAGE_SIZE, totalPages } from '@/lib/pagination';
 import { rankedPlayerOrderBy, rankedPlayerSelect, rankedPlayerWhere } from '@/lib/rankings';
@@ -20,6 +21,7 @@ import { parseSearchQuery, playerSearchWhere } from '@/lib/search';
 type RankedPlayer = {
   id: string;
   username: string;
+  avatar: string | null;
   rankPoints: number;
   wins: number;
   losses: number;
@@ -75,9 +77,7 @@ function SpotlightCard({
             rank
           )}
         </span>
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-white transition group-hover:border-brand-500/40 group-hover:text-brand-200 sm:h-12 sm:w-12 sm:text-lg">
-          {player.username.charAt(0).toUpperCase()}
-        </span>
+        <PlayerAvatar username={player.username} avatar={player.avatar} size="lg" shape="rounded-xl" />
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-white group-hover:text-brand-200">{player.username}</p>
           <p className="mt-0.5 text-sm tabular-nums text-brand-300">{player.rankPoints.toLocaleString()} pts</p>
@@ -105,9 +105,7 @@ function PlayerMobileCard({ player, rank }: { player: RankedPlayer; rank: number
         >
           {rank}
         </span>
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sm font-bold text-slate-300">
-          {player.username.charAt(0).toUpperCase()}
-        </span>
+        <PlayerAvatar username={player.username} avatar={player.avatar} />
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-white">{player.username}</p>
           <p className="text-xs tabular-nums text-slate-500">
@@ -157,9 +155,7 @@ function PlayerTableRow({ player, rank }: { player: RankedPlayer; rank: number }
       </td>
       <td className="px-4 py-4 sm:px-6">
         <Link href={profileHref} className="group inline-flex min-w-0 items-center gap-3">
-          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sm font-bold text-slate-300 transition group-hover:border-brand-500/40 group-hover:text-brand-200">
-            {player.username.charAt(0).toUpperCase()}
-          </span>
+          <PlayerAvatar username={player.username} avatar={player.avatar} />
           <span className="truncate font-semibold text-white transition group-hover:text-brand-300">
             {player.username}
           </span>

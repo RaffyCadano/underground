@@ -1,12 +1,19 @@
 import Link from 'next/link';
-import { MapPin } from 'lucide-react';
+import { MapPin, Mail } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { DeleteClubButton } from '@/app/teams/delete-club-button';
+import { DismissClubRequestButton } from '@/app/teams/dismiss-club-request-button';
 
 export default async function DashboardClubsPage() {
-  const clubs = await prisma.communityClub.findMany({
-    orderBy: [{ memberCount: 'desc' }, { name: 'asc' }],
-  });
+  const [clubs, pendingRequests] = await Promise.all([
+    prisma.communityClub.findMany({
+      orderBy: [{ memberCount: 'desc' }, { name: 'asc' }],
+    }),
+    prisma.clubRequest.findMany({
+      where: { status: 'pending' },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ]);
 
   const totalMembers = clubs.reduce((sum, c) => sum + c.memberCount, 0);
 
@@ -39,12 +46,67 @@ export default async function DashboardClubsPage() {
           <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{totalMembers}</p>
         </div>
         <div className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-3">
-          <p className="text-xs uppercase tracking-wider text-slate-500">Regions</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-white">
-            {new Set(clubs.map((c) => c.region)).size}
-          </p>
+          <p className="text-xs uppercase tracking-wider text-slate-500">Pending requests</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{pendingRequests.length}</p>
         </div>
       </div>
+
+      {pendingRequests.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-sm font-semibold text-white">Club listing requests</h3>
+          <p className="mt-1 text-sm text-slate-400">
+            Submitted from the public teams page. Create the club when approved, then mark reviewed.
+          </p>
+          <div className="mt-4 space-y-3">
+            {pendingRequests.map((request) => (
+              <div
+                key={request.id}
+                className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-5 py-4"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-white">{request.clubName}</p>
+                    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin size={12} />
+                        {request.region}
+                      </span>
+                      {request.captain && <span>Captain: {request.captain}</span>}
+                      {request.memberCount != null && <span>{request.memberCount} members</span>}
+                      <span className="inline-flex items-center gap-1">
+                        <Mail size={12} />
+                        {request.contactEmail}
+                      </span>
+                    </p>
+                    {request.contactName && (
+                      <p className="mt-1 text-xs text-slate-500">From: {request.contactName}</p>
+                    )}
+                    {request.message && (
+                      <p className="mt-2 text-sm leading-relaxed text-slate-400">{request.message}</p>
+                    )}
+                    <p className="mt-2 text-[11px] text-slate-600">
+                      {request.createdAt.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <Link
+                      href="/dashboard/clubs/create"
+                      className="btn-primary inline-flex items-center justify-center px-3 py-1.5 text-xs"
+                    >
+                      Add club
+                    </Link>
+                    <DismissClubRequestButton requestId={request.id} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         {clubs.length === 0 ? (

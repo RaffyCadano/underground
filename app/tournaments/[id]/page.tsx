@@ -10,6 +10,10 @@ import { BracketSwiss } from './bracket-swiss';
 import { TournamentDoubleElimTabs } from './tournament-double-elim-tabs';
 import { TournamentFormatGuide } from './tournament-format-guide';
 import { isGroupStageComplete } from '@/lib/group-stage';
+import { GAME_TYPE_LABELS } from '@/lib/tournament-options';
+import { formatPlayerCapLabel } from '@/lib/tournament-registration';
+import { TournamentDescriptionContent } from '@/app/components/tournament-description-content';
+import { TournamentHero } from './tournament-hero';
 
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: 'Single Elimination',
@@ -31,7 +35,7 @@ export default async function TournamentDetail({
     include: {
       participants: {
         orderBy: [{ seed: 'asc' }, { createdAt: 'asc' }],
-        include: { user: { select: { id: true, username: true, rankPoints: true } } },
+        include: { user: { select: { id: true, username: true, rankPoints: true, role: true } } },
       },
       matches: {
         orderBy: [{ round: 'asc' }, { matchIndex: 'asc' }],
@@ -88,31 +92,45 @@ export default async function TournamentDetail({
 
   return (
     <div className="w-full">
-      <div className="border-b border-slate-800 bg-slate-950/80">
-        <div className="container flex flex-col gap-4 py-6 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <span className="badge">Tournament</span>
-            <h1 className="mt-2 text-2xl font-semibold text-white">{tournament.name}</h1>
-            {tournament.description && (
-              <p className="mt-2 text-sm text-slate-300">{tournament.description}</p>
-            )}
-          </div>
-          <Link href="/tournaments" className="btn-secondary shrink-0">
-            Back to tournaments
-          </Link>
-        </div>
-      </div>
+      <TournamentHero
+        name={tournament.name}
+        status={tournament.status}
+        format={tournament.format}
+        gameType={tournament.gameType}
+        isRanked={tournament.isRanked}
+        date={tournament.date}
+        location={tournament.location}
+        checkInTime={tournament.checkInTime}
+        eventStartTime={tournament.eventStartTime}
+        participantCount={tournament.participants.length}
+        playerCap={tournament.playerCap}
+        entryFee={tournament.entryFee}
+        prizePool={tournament.prizePool}
+        tournamentId={tournament.id}
+        isLoggedIn={isLoggedIn}
+        isJoined={isJoined}
+        isAdmin={isAdmin}
+      />
 
       <div className="container flex min-h-0 flex-col gap-6 pb-10 pt-6 lg:flex-row">
         <aside className="w-full shrink-0 space-y-4 lg:w-72">
           <div className="card p-5">
+            <div className="mb-4 border-b border-slate-800 pb-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Bracket info</p>
+            </div>
             <div className="space-y-4">
               {[
-                { label: 'Date', value: tournament.date.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' }) },
-                { label: 'Location', value: tournament.location ?? 'TBD' },
                 { label: 'Format', value: FORMAT_LABELS[tournament.format] ?? tournament.format },
                 { label: 'Status', value: tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1) },
-                { label: 'Players', value: `${tournament.participants.length} registered` },
+                { label: 'Players', value: formatPlayerCapLabel(tournament.participants.length, tournament.playerCap) },
+                { label: 'Game', value: GAME_TYPE_LABELS[tournament.gameType] ?? tournament.gameType },
+                { label: 'Ranking', value: tournament.isRanked ? 'Ranked' : 'Unranked' },
+                ...(tournament.entryFee
+                  ? [{ label: 'Entry fee', value: tournament.entryFee }]
+                  : []),
+                ...(tournament.prizePool
+                  ? [{ label: 'Prize pool', value: tournament.prizePool }]
+                  : []),
                 ...(tournament.format === 'double_elimination' && tournament.groupStageEnabled
                   ? [
                       {
@@ -169,34 +187,51 @@ export default async function TournamentDetail({
           />
 
           {tournament.status !== 'complete' && (
-            <div className="card p-5 empty:hidden">
-              <TournamentActions
-                tournamentId={tournament.id}
-                tournamentStatus={tournament.status}
-                tournamentFormat={tournament.format}
-                participantCount={tournament.participants.length}
-                groupStageEnabled={tournament.groupStageEnabled}
-                phase={tournament.phase}
-                groupStageComplete={groupStageComplete}
-                isJoined={isJoined}
-                isLoggedIn={isLoggedIn}
-                isAdmin={isAdmin}
-                userId={session?.user.id ?? null}
-                pendingMatches={pendingMatches}
-                completedMatches={completedMatches}
-                currentRound={currentRound}
-                allCurrentRoundComplete={allCurrentRoundComplete}
-              />
-              {!isLoggedIn && tournament.status === 'open' && (
-                <p className="mt-3 text-xs text-slate-400">
-                  <Link href="/login" className="text-brand-300 hover:text-brand-200">Sign in</Link> to register.
+            <div className="card overflow-hidden empty:hidden">
+              <div className="border-b border-slate-800 bg-slate-900/50 px-5 py-3.5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Actions</p>
+                <p className="mt-0.5 text-sm font-semibold text-white">
+                  {tournament.status === 'open' ? 'Registration open' : 'Tournament in progress'}
                 </p>
-              )}
+              </div>
+              <div className="space-y-4 p-5">
+                <TournamentActions
+                  tournamentId={tournament.id}
+                  tournamentStatus={tournament.status}
+                  tournamentFormat={tournament.format}
+                  participantCount={tournament.participants.length}
+                  playerCap={tournament.playerCap}
+                  isRanked={tournament.isRanked}
+                  groupStageEnabled={tournament.groupStageEnabled}
+                  phase={tournament.phase}
+                  groupStageComplete={groupStageComplete}
+                  isJoined={isJoined}
+                  isLoggedIn={isLoggedIn}
+                  isAdmin={isAdmin}
+                  userId={session?.user.id ?? null}
+                  pendingMatches={pendingMatches}
+                  completedMatches={completedMatches}
+                  currentRound={currentRound}
+                  allCurrentRoundComplete={allCurrentRoundComplete}
+                />
+              </div>
             </div>
           )}
         </aside>
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 space-y-6">
+          {tournament.description && (
+            <div className="card overflow-hidden">
+              <div className="border-b border-slate-800 bg-slate-900/50 px-5 py-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">About</p>
+                <h2 className="mt-0.5 text-sm font-semibold text-white">Event details</h2>
+              </div>
+              <div className="p-5 sm:p-6">
+                <TournamentDescriptionContent content={tournament.description} featured />
+              </div>
+            </div>
+          )}
+
           <div className="card p-6">
             {sortedRounds.length > 0 ? (
               tournament.format === 'swiss' || tournament.format === 'round_robin' ? (

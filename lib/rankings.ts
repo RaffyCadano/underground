@@ -13,6 +13,7 @@ export const rankedPlayerOrderBy: Prisma.UserOrderByWithRelationInput[] = [
 export const rankedPlayerSelect = {
   id: true,
   username: true,
+  avatar: true,
   rankPoints: true,
   wins: true,
   losses: true,

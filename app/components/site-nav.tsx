@@ -5,9 +5,9 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Session } from 'next-auth';
-import { LayoutDashboard, LogIn, Menu, UserPlus, X } from 'lucide-react';
+import { LogIn, Menu, UserPlus, X } from 'lucide-react';
 import { HeaderNavLinks, mainNavLinks } from '@/app/components/header-nav-links';
-import { SignOutButton } from '@/app/components/sign-out-button';
+import { ProfileMenu } from '@/app/components/profile-menu';
 
 const navLinks = mainNavLinks.map(({ href, label }) => ({ href, label }));
 
@@ -15,12 +15,17 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function SiteNav({ session }: { session: Session | null }) {
+export function SiteNav({
+  session,
+  avatar = null,
+}: {
+  session: Session | null;
+  avatar?: string | null;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  const dashboardActive = isActive(pathname, '/dashboard');
   const close = () => setOpen(false);
 
   useEffect(() => setMounted(true), []);
@@ -58,21 +63,22 @@ export function SiteNav({ session }: { session: Session | null }) {
   const mobileMenu =
     mounted &&
     createPortal(
-      <div className="md:hidden">
-        {/* Backdrop */}
-        <div
+      <>
+        <button
+          type="button"
+          aria-label="Close navigation"
           aria-hidden={!open}
-          className={`fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-sm transition-opacity duration-300 ease-out ${
+          tabIndex={open ? 0 : -1}
+          onClick={close}
+          className={`fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-sm transition-opacity duration-300 ease-out md:hidden ${
             open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
           }`}
-          onClick={close}
         />
 
-        {/* Drawer */}
         <nav
           id="mobile-nav-drawer"
           aria-hidden={!open}
-          className={`fixed inset-y-0 right-0 z-[110] flex w-[min(100vw,20rem)] flex-col border-l border-slate-800 bg-slate-950 shadow-2xl shadow-black/40 transition-transform duration-300 ease-out will-change-transform ${
+          className={`fixed inset-y-0 right-0 z-[110] flex w-[min(100vw,20rem)] flex-col border-l border-slate-800 bg-slate-950 shadow-2xl shadow-black/40 transition-transform duration-300 ease-out will-change-transform md:hidden ${
             open ? 'pointer-events-auto translate-x-0' : 'pointer-events-none translate-x-full'
           }`}
         >
@@ -88,7 +94,13 @@ export function SiteNav({ session }: { session: Session | null }) {
             </button>
           </div>
 
-          <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 py-4">
+          <div
+            className="flex flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-4 py-4"
+            onClick={(event) => {
+              const anchor = (event.target as HTMLElement).closest('a[href]');
+              if (anchor) close();
+            }}
+          >
             {navLinks.map(({ href, label }) => {
               const active = isActive(pathname, href);
               return (
@@ -110,24 +122,12 @@ export function SiteNav({ session }: { session: Session | null }) {
             })}
 
             {session ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  onClick={close}
-                  tabIndex={open ? 0 : -1}
-                  aria-current={dashboardActive ? 'page' : undefined}
-                  className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                    dashboardActive
-                      ? 'bg-brand-500/10 text-brand-200'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                >
-                  Dashboard
-                </Link>
-                <div className="mt-auto border-t border-slate-800 pt-4">
-                  <SignOutButton fullWidth onBeforeSignOut={close} />
-                </div>
-              </>
+              <ProfileMenu
+                session={session}
+                avatar={avatar}
+                onNavigate={close}
+                variant="drawer"
+              />
             ) : (
               <div className="mt-auto flex flex-col gap-3 border-t border-slate-800 pt-4">
                 <Link
@@ -150,48 +150,19 @@ export function SiteNav({ session }: { session: Session | null }) {
             )}
           </div>
         </nav>
-      </div>,
+      </>,
       document.body,
     );
 
   return (
     <>
-      {/* Desktop nav */}
       <div className="hidden items-center md:flex">
         <HeaderNavLinks />
-        <div className="ml-3 flex items-center gap-0.5 border-l border-slate-800 pl-3">
+        <div className="ml-3 border-l border-slate-800 pl-3">
           {session ? (
-            <>
-              <Link
-                href="/dashboard"
-                aria-current={dashboardActive ? 'page' : undefined}
-                className={`group relative inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium transition ${
-                  dashboardActive ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <LayoutDashboard
-                  size={16}
-                  strokeWidth={dashboardActive ? 2.25 : 2}
-                  className={`shrink-0 transition ${
-                    dashboardActive ? 'text-brand-400' : 'text-slate-500 group-hover:text-slate-300'
-                  }`}
-                />
-                <span>Dashboard</span>
-                <span
-                  className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full transition-all ${
-                    dashboardActive
-                      ? 'bg-brand-400 opacity-100'
-                      : 'bg-slate-600 opacity-0 group-hover:opacity-40'
-                  }`}
-                />
-              </Link>
-              <SignOutButton
-                showIcon
-                className="group relative inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-slate-400 transition hover:text-red-300"
-              />
-            </>
+            <ProfileMenu session={session} avatar={avatar} />
           ) : (
-            <>
+            <div className="flex items-center gap-0.5">
               <Link
                 href="/login"
                 className="group relative inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-slate-400 transition hover:text-slate-200"
@@ -207,12 +178,11 @@ export function SiteNav({ session }: { session: Session | null }) {
                 <UserPlus size={16} className="shrink-0" />
                 <span>Register</span>
               </Link>
-            </>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Mobile toggle */}
       <button
         type="button"
         className="relative z-[120] rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-800 hover:text-white md:hidden"

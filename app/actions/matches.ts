@@ -23,15 +23,23 @@ export async function reportResult(matchId: string, winnerId: string, score: str
     throw new Error('Winner must be one of the two players.');
   }
 
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: match.tournamentId },
+    select: { format: true, isRanked: true },
+  });
+
   await prisma.match.update({
     where: { id: matchId },
     data: { winnerId, score: score || null, status: 'complete' },
   });
 
-  // Update winner stats (+50 rank points)
+  // Update winner stats (+50 rank points when ranked)
   await prisma.user.update({
     where: { id: winnerId },
-    data: { wins: { increment: 1 }, rankPoints: { increment: 50 } },
+    data: {
+      wins: { increment: 1 },
+      ...(tournament?.isRanked !== false ? { rankPoints: { increment: 50 } } : {}),
+    },
   });
 
   // Update loser stats
@@ -42,12 +50,6 @@ export async function reportResult(matchId: string, winnerId: string, score: str
       data: { losses: { increment: 1 } },
     });
   }
-
-  // Advance winner to next round (single elimination only)
-  const tournament = await prisma.tournament.findUnique({
-    where: { id: match.tournamentId },
-    select: { format: true },
-  });
 
   const matchSide = (match as { bracketSide?: string }).bracketSide;
 

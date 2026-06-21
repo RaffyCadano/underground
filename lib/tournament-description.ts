@@ -48,11 +48,20 @@ function pickVariant<T>(items: T[], seed: string) {
   return items[hash] ?? items[0];
 }
 
+import { formatScheduleLine } from '@/lib/tournament-schedule';
+
 export function generateTournamentDescription(input: {
   name: string;
   date: string;
   location: string;
+  checkInTime?: string;
+  eventStartTime?: string;
   format: string;
+  entryFee?: string;
+  prizePool?: string;
+  playerCap?: string;
+  isRanked?: boolean;
+  gameType?: string;
 }) {
   const name = input.name.trim() || 'Underground tournament';
   const location = input.location.trim();
@@ -60,12 +69,38 @@ export function generateTournamentDescription(input: {
   const formatLabel = FORMAT_LABELS[format] ?? 'tournament';
   const formattedDate = formatEventDate(input.date);
   const detail = pickVariant(FORMAT_DETAILS[format] ?? FORMAT_DETAILS.single_elimination, name + format);
+  const entryFee = input.entryFee?.trim();
+  const prizePool = input.prizePool?.trim();
+  const playerCap = input.playerCap?.trim();
+  const gameLabel =
+    input.gameType === 'beyblade_x_3on3'
+      ? 'Beyblade X 3v3'
+      : input.gameType === 'beyblade_burst'
+        ? 'Beyblade Burst'
+        : input.gameType === 'custom'
+          ? 'custom rules'
+          : 'Beyblade X';
 
   const opener = location
     ? `${name} hits ${location}`
     : `${name} is coming to the Underground circuit`;
 
   const when = formattedDate ? ` on ${formattedDate}` : '';
+  const rankedNote =
+    input.isRanked === false
+      ? ' This is an unranked event — play for fun and prizes, not rank points.'
+      : ' Register now, bring your best combos, and fight for rank points on the circuit.';
 
-  return `${opener}${when}. This ${formatLabel} event brings Beyblade X bladers together for bracket day competition. ${detail} Register now, bring your best combos, and fight for rank points on the circuit.`;
+  const extras: string[] = [];
+  const checkIn = formatScheduleLine('Check-In Open', input.checkInTime);
+  const eventStart = formatScheduleLine('Event Start', input.eventStartTime);
+  if (checkIn) extras.push(`${checkIn}.`);
+  if (eventStart) extras.push(`${eventStart}.`);
+  if (entryFee) extras.push(`Entry: ${entryFee}.`);
+  if (prizePool) extras.push(`Prizes: ${prizePool}.`);
+  if (playerCap) extras.push(`Limited to ${playerCap} players.`);
+
+  const extrasText = extras.length > 0 ? ` ${extras.join(' ')}` : '';
+
+  return `${opener}${when}. This ${formatLabel} ${gameLabel} event brings bladers together for bracket day competition. ${detail}${extrasText}${rankedNote}`;
 }

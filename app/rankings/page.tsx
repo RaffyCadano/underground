@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, BarChart3, Crown, Medal, Swords, Target, Trophy, Users } from 'lucide-react';
 import { ListSearch } from '@/app/components/list-search';
 import { Pagination } from '@/app/components/pagination';
+import { PlayerAvatar } from '@/app/components/player-avatar';
 import { prisma } from '@/lib/prisma';
 import { parsePageParam, RANKINGS_PAGE_SIZE, totalPages } from '@/lib/pagination';
 import {
@@ -14,6 +15,7 @@ import { parseSearchQuery, playerSearchWhere } from '@/lib/search';
 type RankedPlayer = {
   id: string;
   username: string;
+  avatar: string | null;
   rankPoints: number;
   wins: number;
   losses: number;
@@ -83,9 +85,7 @@ function PodiumCard({
             rank
           )}
         </span>
-        <span className="mt-2 inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-lg font-bold text-white transition group-hover:border-brand-500/40 group-hover:bg-brand-500/10 group-hover:text-brand-200 sm:mt-3 sm:h-14 sm:w-14 sm:text-xl">
-          {player.username.charAt(0).toUpperCase()}
-        </span>
+        <PlayerAvatar username={player.username} avatar={player.avatar} size="lg" />
         <h3 className="mt-2 max-w-full truncate px-2 text-base font-semibold text-white transition group-hover:text-brand-200 sm:mt-3 sm:text-lg">
           {player.username}
         </h3>
@@ -120,9 +120,7 @@ function LeaderboardMobileCard({ player, rank }: { player: RankedPlayer; rank: n
         >
           {rank}
         </span>
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sm font-bold text-slate-300">
-          {player.username.charAt(0).toUpperCase()}
-        </span>
+        <PlayerAvatar username={player.username} avatar={player.avatar} />
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-white">{player.username}</p>
           <p className="text-xs tabular-nums text-slate-500">
@@ -170,9 +168,7 @@ function LeaderboardTableRow({ player, rank }: { player: RankedPlayer; rank: num
           href={`/players/${player.username.toLowerCase()}`}
           className="group inline-flex min-w-0 items-center gap-3"
         >
-          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sm font-bold text-slate-300 transition group-hover:border-brand-500/40 group-hover:text-brand-200">
-            {player.username.charAt(0).toUpperCase()}
-          </span>
+          <PlayerAvatar username={player.username} avatar={player.avatar} />
           <span className="truncate font-semibold text-white transition group-hover:text-brand-300">
             {player.username}
           </span>

@@ -8,6 +8,7 @@ import { SmoothScrollProvider } from '@/app/components/smooth-scroll-provider';
 import { SiteBrand } from '@/app/components/site-brand';
 import { SiteFooter } from '@/app/components/site-footer';
 import { SiteNav } from '@/app/components/site-nav';
+import { prisma } from '@/lib/prisma';
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -32,6 +33,16 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
 
+  const avatar =
+    session?.user?.id != null
+      ? (
+          await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { avatar: true },
+          })
+        )?.avatar ?? null
+      : null;
+
   return (
     <html lang="en">
       <body className={`${spaceGrotesk.variable} ${spaceMono.variable}`}>
@@ -41,7 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <header className="relative sticky top-0 z-50 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
                 <div className="container flex items-center justify-between gap-6 py-3">
                   <SiteBrand />
-                  <SiteNav session={session} />
+                  <SiteNav session={session} avatar={avatar} />
                 </div>
               </header>
               <main className="flex-1">{children}</main>

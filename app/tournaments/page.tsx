@@ -1,11 +1,14 @@
 import Link from 'next/link';
 import {
   ArrowRight,
+  BarChart3,
   Calendar,
   CheckCircle2,
   Layers,
   MapPin,
+  Swords,
   Trophy,
+  UserPlus,
   Users,
   Zap,
 } from 'lucide-react';
@@ -15,6 +18,7 @@ import { authOptions } from '@/lib/auth';
 import { ListSearch } from '@/app/components/list-search';
 import { parseSearchQuery, parseStatusFilter, tournamentSearchWhere } from '@/lib/search';
 import { DeleteTournamentButton } from './delete-tournament-button';
+import { descriptionPlainText } from '@/lib/description-markdown';
 
 const STATUS_FILTER_OPTIONS = [
   { value: 'all', label: 'All statuses' },
@@ -120,8 +124,10 @@ function TournamentCard({
           <h2 className="break-words text-lg font-semibold leading-snug text-white transition group-hover:text-brand-200 sm:text-xl">
             {t.name}
           </h2>
-          {t.description && (
-            <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-400">{t.description}</p>
+          {t.description && descriptionPlainText(t.description) && (
+            <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-400">
+              {descriptionPlainText(t.description)}
+            </p>
           )}
         </Link>
 
@@ -260,18 +266,129 @@ export default async function TournamentsPage({
         </div>
 
         {totalCount === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 px-5 py-12 text-center sm:px-8 sm:py-16">
-            <Trophy size={36} className="mx-auto text-slate-600" />
-            <h2 className="mt-4 text-lg font-semibold text-white sm:text-xl">No tournaments yet</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
-              Check back soon — new Underground events will appear here when admins create them.
-            </p>
-            {!session && (
-              <Link href="/register" className="btn-primary mt-6 inline-flex w-full items-center justify-center gap-2 sm:w-auto">
-                Create account
-                <ArrowRight size={16} />
-              </Link>
-            )}
+          <div className="overflow-hidden rounded-2xl border border-dashed border-slate-800 bg-slate-900/40">
+            <div className="border-b border-slate-800/80 bg-gradient-to-br from-brand-500/5 to-transparent px-5 py-10 text-center sm:px-8 sm:py-12">
+              <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 text-slate-500">
+                <Trophy size={28} />
+              </span>
+              <h2 className="mt-5 text-xl font-semibold text-white sm:text-2xl">No tournaments yet</h2>
+              <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-400 sm:text-base">
+                The Underground circuit is getting ready for game day. When admins publish events, they
+                will show up here — open for registration, live brackets, and full results.
+              </p>
+            </div>
+
+            <div className="grid gap-3 p-4 sm:grid-cols-3 sm:p-6">
+              {[
+                {
+                  icon: UserPlus,
+                  title: 'Register & check in',
+                  body: 'Create a profile, join open events, and get paired into the bracket when play starts.',
+                },
+                {
+                  icon: Swords,
+                  title: 'Brackets & standings',
+                  body: 'Follow single or double elimination, report scores, and track who is still in the run.',
+                },
+                {
+                  icon: BarChart3,
+                  title: 'Ranked circuit points',
+                  body: 'Ranked events award Underground points for wins — climb the leaderboard over the season.',
+                },
+              ].map(({ icon: Icon, title, body }) => (
+                <div
+                  key={title}
+                  className="rounded-xl border border-slate-800 bg-slate-950/50 p-4 text-left"
+                >
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-brand-400">
+                    <Icon size={16} />
+                  </span>
+                  <h3 className="mt-3 text-sm font-semibold text-white">{title}</h3>
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-500 sm:text-sm">{body}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-slate-800/80 px-4 py-6 sm:px-8 sm:py-8">
+              <p className="text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                When events go live
+              </p>
+              <ol className="mx-auto mt-4 grid max-w-2xl gap-3 sm:grid-cols-3">
+                {[
+                  'Browse open tournaments and read event details',
+                  'Register before the bracket is generated',
+                  'Play your matches and check standings as results are posted',
+                ].map((step, index) => (
+                  <li
+                    key={step}
+                    className="flex gap-3 rounded-xl border border-slate-800/80 bg-slate-950/40 p-3 text-left sm:flex-col sm:gap-2 sm:p-4"
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-brand-300">
+                      {index + 1}
+                    </span>
+                    <p className="text-xs leading-relaxed text-slate-400 sm:text-sm">{step}</p>
+                  </li>
+                ))}
+              </ol>
+
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                {!session ? (
+                  <>
+                    <Link
+                      href="/register"
+                      className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+                    >
+                      Create account
+                      <ArrowRight size={16} />
+                    </Link>
+                    <Link href="/login" className="btn-secondary inline-flex w-full sm:w-auto">
+                      Sign in
+                    </Link>
+                  </>
+                ) : isAdmin ? (
+                  <Link
+                    href="/dashboard/tournaments/create"
+                    className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+                  >
+                    Create tournament
+                    <ArrowRight size={16} />
+                  </Link>
+                ) : (
+                  <Link
+                    href="/players"
+                    className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+                  >
+                    Browse players
+                    <ArrowRight size={16} />
+                  </Link>
+                )}
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
+                <Link href="/rankings" className="font-semibold text-brand-300 hover:text-brand-200">
+                  Circuit rankings
+                </Link>
+                <span className="hidden text-slate-700 sm:inline" aria-hidden>
+                  ·
+                </span>
+                <Link href="/players" className="font-semibold text-slate-400 hover:text-slate-200">
+                  Player directory
+                </Link>
+                {isAdmin && (
+                  <>
+                    <span className="hidden text-slate-700 sm:inline" aria-hidden>
+                      ·
+                    </span>
+                    <Link
+                      href="/dashboard/tournaments"
+                      className="font-semibold text-slate-400 hover:text-slate-200"
+                    >
+                      Admin dashboard
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         ) : tournaments.length === 0 ? (
           <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-5 py-10 text-center sm:px-8 sm:py-14">

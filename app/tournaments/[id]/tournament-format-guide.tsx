@@ -222,20 +222,15 @@ export function TournamentFormatGuide({
   const opts = { groupStageEnabled, phase, advancePerGroup, grandFinalsModifier, groupSize };
   const steps = getSteps(format, status, hasBracket, isAdmin, opts);
   const rules = getFormatRules(format, opts);
-  const defaultOpen = !hasBracket || status === 'open' || status === 'active';
 
   return (
     <div className="card p-5">
-      <details className="group" open={defaultOpen}>
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 marker:content-none [&::-webkit-details-marker]:hidden">
-          <CircleHelp size={14} className="shrink-0 text-brand-400" />
-          How this works
-          <span className="ml-auto text-[10px] font-normal normal-case tracking-normal text-slate-500 group-open:hidden">
-            Show
-          </span>
-        </summary>
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+        <CircleHelp size={14} className="shrink-0 text-brand-400" />
+        How this works
+      </div>
 
-        <div className="mt-4 space-y-4">
+      <div className="mt-4 space-y-4">
           <p className="text-sm text-slate-300">
             <span className="font-semibold text-white">{getStatusLine(format, hasBracket, status, opts)}</span>
           </p>
@@ -268,7 +263,6 @@ export function TournamentFormatGuide({
             </ul>
           </div>
         </div>
-      </details>
     </div>
   );
 }

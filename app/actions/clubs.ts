@@ -13,6 +13,81 @@ function revalidateClubPaths() {
   revalidatePath('/dashboard/overview');
 }
 
+export async function requestClub(
+  _prev: { error?: string; success?: boolean } | null,
+  formData: FormData,
+) {
+  const session = await getServerSession(authOptions);
+
+  const clubName = (formData.get('clubName') as string)?.trim();
+  const region = (formData.get('region') as string)?.trim();
+  const captain = (formData.get('captain') as string)?.trim() || null;
+  const contactName = (formData.get('contactName') as string)?.trim() || null;
+  const contactEmail = ((formData.get('contactEmail') as string) ?? session?.user?.email ?? '')
+    .trim()
+    .toLowerCase();
+  const message = (formData.get('message') as string)?.trim() || null;
+  const memberCountRaw = (formData.get('memberCount') as string)?.trim();
+  const memberCount = memberCountRaw ? Number(memberCountRaw) : null;
+
+  if (!clubName || !region) return { error: 'Club name and region are required.' };
+  if (!contactEmail) return { error: 'Contact email is required.' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+    return { error: 'Enter a valid email address.' };
+  }
+  if (memberCount != null && (Number.isNaN(memberCount) || memberCount < 0)) {
+    return { error: 'Member count must be 0 or greater.' };
+  }
+
+  const slug = slugifyClubName(clubName);
+  if (!slug) return { error: 'Club name must contain letters or numbers.' };
+
+  const existingClub = await prisma.communityClub.findFirst({
+    where: { OR: [{ name: { equals: clubName, mode: 'insensitive' } }, { slug }] },
+  });
+  if (existingClub) {
+    return { error: 'A club with this name is already listed on Underground.' };
+  }
+
+  const pendingDuplicate = await prisma.clubRequest.findFirst({
+    where: {
+      status: 'pending',
+      clubName: { equals: clubName, mode: 'insensitive' },
+    },
+  });
+  if (pendingDuplicate) {
+    return { error: 'A request for this club name is already pending review.' };
+  }
+
+  await prisma.clubRequest.create({
+    data: {
+      clubName,
+      region,
+      captain,
+      contactName,
+      contactEmail,
+      memberCount,
+      message,
+      userId: session?.user?.id ?? null,
+    },
+  });
+
+  revalidatePath('/dashboard/clubs');
+  return { success: true };
+}
+
+export async function dismissClubRequest(requestId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== 'admin') throw new Error('Unauthorized.');
+
+  await prisma.clubRequest.update({
+    where: { id: requestId },
+    data: { status: 'reviewed' },
+  });
+
+  revalidatePath('/dashboard/clubs');
+}
+
 export async function createClub(_prev: { error?: string } | null, formData: FormData) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== 'admin') return { error: 'Unauthorized.' };

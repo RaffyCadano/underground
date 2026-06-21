@@ -6,6 +6,16 @@ import { authOptions } from '@/lib/auth';
 import { generateSingleElimination, generateSwissRound } from '@/lib/bracket';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { parseGameType } from '@/lib/tournament-options';
+import { assertCanRegister } from '@/lib/tournament-registration';
+import {
+  guestEmail,
+  normalizeGuestDisplayName,
+  uniqueGuestUsername,
+  validateGuestDisplayName,
+} from '@/lib/guest-player';
+import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 
 export async function createTournament(_prev: { error?: string } | null, formData: FormData) {
   const session = await getServerSession(authOptions);
@@ -20,6 +30,14 @@ export async function createTournament(_prev: { error?: string } | null, formDat
   const groupSize = parseInt(formData.get('groupSize') as string, 10) || 4;
   const advancePerGroup = parseInt(formData.get('advancePerGroup') as string, 10) || 2;
   const grandFinalsModifier = (formData.get('grandFinalsModifier') as string) || 'default';
+  const entryFee = (formData.get('entryFee') as string)?.trim() || null;
+  const prizePool = (formData.get('prizePool') as string)?.trim() || null;
+  const playerCapRaw = (formData.get('playerCap') as string)?.trim();
+  const playerCap = playerCapRaw ? Math.max(1, parseInt(playerCapRaw, 10) || 0) : null;
+  const isRanked = formData.get('isRanked') !== 'false';
+  const gameType = parseGameType(formData.get('gameType') as string);
+  const checkInTime = (formData.get('checkInTime') as string)?.trim() || null;
+  const eventStartTime = (formData.get('eventStartTime') as string)?.trim() || null;
 
   if (!name || !dateStr) return { error: 'Name and date are required.' };
 
@@ -28,6 +46,8 @@ export async function createTournament(_prev: { error?: string } | null, formDat
       name,
       description,
       date: new Date(dateStr),
+      checkInTime,
+      eventStartTime,
       location,
       format,
       groupStageEnabled: format === 'double_elimination' && groupStageEnabled,
@@ -35,6 +55,11 @@ export async function createTournament(_prev: { error?: string } | null, formDat
       advancePerGroup: Math.max(1, advancePerGroup),
       grandFinalsModifier:
         format === 'double_elimination' ? grandFinalsModifier : 'default',
+      entryFee,
+      prizePool,
+      playerCap,
+      isRanked,
+      gameType,
     },
   });
 
@@ -47,8 +72,12 @@ export async function joinTournament(tournamentId: string) {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
-  const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
-  if (!tournament || tournament.status !== 'open') throw new Error('Tournament is not open for registration.');
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    include: { _count: { select: { participants: true } } },
+  });
+  if (!tournament) throw new Error('Tournament not found.');
+  assertCanRegister(tournament, tournament._count.participants);
 
   await prisma.tournamentParticipant.upsert({
     where: { tournamentId_userId: { tournamentId, userId: session.user.id } },
@@ -135,10 +164,12 @@ export async function addPlayerToTournament(tournamentId: string, userId: string
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== 'admin') throw new Error('Unauthorized.');
 
-  const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
-  if (!tournament || tournament.status !== 'open') {
-    throw new Error('Tournament is not open for registration.');
-  }
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    include: { _count: { select: { participants: true } } },
+  });
+  if (!tournament) throw new Error('Tournament not found.');
+  assertCanRegister(tournament, tournament._count.participants);
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error('Player not found.');
@@ -147,6 +178,43 @@ export async function addPlayerToTournament(tournamentId: string, userId: string
     where: { tournamentId_userId: { tournamentId, userId } },
     update: {},
     create: { tournamentId, userId },
+  });
+
+  revalidatePath(`/tournaments/${tournamentId}`);
+  revalidatePath('/dashboard');
+}
+
+export async function addGuestPlayerToTournament(tournamentId: string, displayName: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== 'admin') throw new Error('Unauthorized.');
+
+  const nameError = validateGuestDisplayName(displayName);
+  if (nameError) throw new Error(nameError);
+
+  const normalizedName = normalizeGuestDisplayName(displayName);
+
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    include: { _count: { select: { participants: true } } },
+  });
+  if (!tournament) throw new Error('Tournament not found.');
+  assertCanRegister(tournament, tournament._count.participants);
+
+  const username = await uniqueGuestUsername(prisma, normalizedName);
+  const email = guestEmail(`${username}-${randomBytes(4).toString('hex')}`);
+  const password = await bcrypt.hash(randomBytes(32).toString('hex'), 10);
+
+  const user = await prisma.user.create({
+    data: {
+      username,
+      email,
+      password,
+      role: 'guest',
+    },
+  });
+
+  await prisma.tournamentParticipant.create({
+    data: { tournamentId, userId: user.id },
   });
 
   revalidatePath(`/tournaments/${tournamentId}`);

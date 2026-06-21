@@ -30,7 +30,15 @@ export type BracketStatus =
   | 'Eliminated'
   | 'Registered';
 
-/** Double elimination: out only after 2 losses (or when bracket has no remaining path). */
+function isInGrandFinalOrReset(matches: TournamentMatch[], userId: string): boolean {
+  for (const side of ['grand_final', 'reset'] as const) {
+    const m = matches.find((x) => x.bracketSide === side);
+    if (m && (m.player1Id === userId || m.player2Id === userId)) return true;
+  }
+  return false;
+}
+
+/** Double elimination: out after 2 losses, or when the bracket has no remaining path. */
 function isEliminatedFromBracket(
   matches: TournamentMatch[],
   userId: string,
@@ -38,7 +46,6 @@ function isEliminatedFromBracket(
 ): boolean {
   if (losses >= 2) return true;
 
-  // Still alive with 0–1 losses unless no pending slot remains in the bracket
   const inUpcoming = matches.some(
     (m) =>
       m.bracketSide !== 'reset' &&
@@ -48,7 +55,6 @@ function isEliminatedFromBracket(
   );
   if (inUpcoming) return false;
 
-  // Placed in a TBD slot waiting for an opponent (e.g. losers drop-in)
   const waitingInMatch = matches.some((m) => {
     if (m.status === 'complete' || m.status === 'bye') return false;
     const inMatch = m.player1Id === userId || m.player2Id === userId;
@@ -57,10 +63,24 @@ function isEliminatedFromBracket(
   });
   if (waitingInMatch) return false;
 
-  // One loss but never received a losers bracket match — bracket wiring gap, not a 2nd loss
-  if (losses === 1) return false;
+  if (isInGrandFinalOrReset(matches, userId)) return false;
 
-  return losses > 0;
+  const grandFinal = matches.find((m) => m.bracketSide === 'grand_final');
+  const losersStillRunning = matches.some(
+    (m) => m.bracketSide === 'losers' && m.status !== 'complete' && m.status !== 'bye',
+  );
+
+  // Grand final lineup is set — everyone else is out even if they only have one loss on paper
+  if (grandFinal?.player1Id && grandFinal.player2Id) {
+    if (grandFinal.player1Id !== userId && grandFinal.player2Id !== userId) return true;
+  }
+
+  // Losers bracket finished — only the grand-final losers-side slot is still alive with one loss
+  if (losses === 1 && !losersStillRunning && grandFinal?.player2Id) {
+    if (grandFinal.player2Id !== userId) return true;
+  }
+
+  return false;
 }
 
 export type PlayerStanding = {
@@ -142,8 +162,6 @@ export function getBracketStatus(
       return 'Runner-up';
     }
 
-    if (losses === 0) return 'Winners Bracket';
-    if (losses === 1) return 'Losers Bracket';
     return 'Eliminated';
   }
 

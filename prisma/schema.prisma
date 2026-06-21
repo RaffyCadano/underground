@@ -23,6 +23,7 @@ model User {
   matches2            Match[]                 @relation("player2Matches")
   winsAsWinner        Match[]                 @relation("winnerMatches")
   passwordResetTokens PasswordResetToken[]
+  clubRequests        ClubRequest[]
   createdAt           DateTime                @default(now())
 
   @@index([role, rankPoints(sort: Desc), wins(sort: Desc)])
@@ -56,11 +57,30 @@ model CommunityClub {
   @@index([region])
 }
 
+model ClubRequest {
+  id           String   @id @default(cuid())
+  clubName     String
+  region       String
+  captain      String?
+  contactName  String?
+  contactEmail String
+  memberCount  Int?
+  message      String?
+  status       String   @default("pending")
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId       String?
+  createdAt    DateTime @default(now())
+
+  @@index([status, createdAt(sort: Desc)])
+}
+
 model Tournament {
   id                  String                  @id @default(cuid())
   name                String
   description         String?
   date                DateTime
+  checkInTime         String?
+  eventStartTime      String?
   location            String?
   format              String                  @default("single_elimination")
   status              String                  @default("open")
@@ -69,6 +89,11 @@ model Tournament {
   advancePerGroup     Int                     @default(2)
   grandFinalsModifier String                  @default("default")
   phase               String?
+  entryFee            String?
+  prizePool           String?
+  playerCap           Int?
+  isRanked            Boolean                 @default(true)
+  gameType            String                  @default("beyblade_x")
   participants        TournamentParticipant[]
   matches             Match[]
   createdAt           DateTime                @default(now())
