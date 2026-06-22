@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight, BarChart3, Crown, Medal, Swords } from 'lucide-react';
 import { PlayerAvatar } from '@/app/components/player-avatar';
+import { ScrollReveal } from '@/app/components/scroll-reveal';
 
 export type CircuitPlayer = {
   id: string;
@@ -195,34 +196,37 @@ export function CircuitSection({ topPlayers, recentMatches }: Props) {
   return (
     <section className="border-y border-slate-800 bg-slate-950/40">
       <div className="container py-10 sm:py-16">
-        <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
-          <div className="max-w-xl">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Circuit pulse</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">Rankings & recent results</h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Top bladers on the leaderboard and the latest scores from Underground events.
-            </p>
+        <ScrollReveal>
+          <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Circuit pulse</p>
+              <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">Rankings & recent results</h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Top bladers on the leaderboard and the latest scores from UGNCBBX events.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/rankings"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-300 hover:text-brand-200"
+              >
+                Full rankings
+                <ArrowRight size={14} />
+              </Link>
+              <Link
+                href="/tournaments"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-slate-200"
+              >
+                All events
+                <ArrowRight size={14} />
+              </Link>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/rankings"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-300 hover:text-brand-200"
-            >
-              Full rankings
-              <ArrowRight size={14} />
-            </Link>
-            <Link
-              href="/tournaments"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-slate-200"
-            >
-              All events
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-        </div>
+        </ScrollReveal>
 
         <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
           {/* Top bladers */}
+          <ScrollReveal delay={80} direction="left">
           <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50">
             <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-4 sm:px-6 sm:py-5">
               <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/10 text-brand-300">
@@ -230,7 +234,7 @@ export function CircuitSection({ topPlayers, recentMatches }: Props) {
               </span>
               <div className="min-w-0">
                 <h3 className="text-base font-semibold text-white sm:text-lg">Top bladers</h3>
-                <p className="text-xs text-slate-500">Underground leaderboard</p>
+                <p className="text-xs text-slate-500">UGNCBBX leaderboard</p>
               </div>
             </div>
 
@@ -277,8 +281,10 @@ export function CircuitSection({ topPlayers, recentMatches }: Props) {
               </div>
             )}
           </div>
+          </ScrollReveal>
 
           {/* Recent matches */}
+          <ScrollReveal delay={160} direction="right">
           <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50">
             <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-4 sm:px-6 sm:py-5">
               <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-800 text-slate-300">
@@ -300,6 +306,7 @@ export function CircuitSection({ topPlayers, recentMatches }: Props) {
               </div>
             )}
           </div>
+          </ScrollReveal>
         </div>
       </div>
     </section>

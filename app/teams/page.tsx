@@ -161,11 +161,11 @@ export default async function TeamsPage({
           <div className="max-w-2xl space-y-3 sm:space-y-4">
             <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
               <UsersRound size={12} />
-              Underground clubs
+              UGNCBBX clubs
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl">Teams</h1>
             <p className="text-sm leading-relaxed text-slate-400 sm:text-base md:text-lg">
-              Join a club, coordinate local events, and compete together on the Underground circuit.
+              Join a club, coordinate local events, and compete together on the UGNCBBX circuit.
             </p>
           </div>
 
@@ -208,7 +208,7 @@ export default async function TeamsPage({
             <UsersRound size={36} className="mx-auto text-slate-600" />
             <h2 className="mt-4 text-lg font-semibold text-white sm:text-xl">No community clubs listed</h2>
             <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-slate-400">
-              Verified local chapters and regional teams will be published here as they join the Underground circuit.
+              Verified local chapters and regional teams will be published here as they join the UGNCBBX circuit.
               You can{' '}
               <a href="#request-club" className="font-semibold text-brand-300 hover:text-brand-200">
                 request a club listing
@@ -250,7 +250,7 @@ export default async function TeamsPage({
                 Request your community club
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-400 sm:text-base">
-                Running a local chapter or crew? Submit a listing request and the Underground team
+                Running a local chapter or crew? Submit a listing request and the UGNCBBX team
                 will review it for the public teams directory.
               </p>
               <ul className="mt-5 space-y-2 text-sm text-slate-500">

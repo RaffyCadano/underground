@@ -19,7 +19,7 @@ const steps = [
   {
     step: '01',
     title: 'Enter your email',
-    body: 'Use the address tied to your Underground blader account.',
+    body: 'Use the address tied to your UGNCBBX blader account.',
   },
   {
     step: '02',
@@ -186,7 +186,7 @@ export default function ForgotPasswordPage() {
                 Account recovery
               </p>
               <h2 className="mt-6 text-4xl font-semibold leading-tight tracking-tight text-white xl:text-5xl">
-                Get back on the Underground circuit.
+                Get back on the UGNCBBX circuit.
               </h2>
               <p className="mt-4 max-w-md text-lg leading-relaxed text-slate-400">
                 Reset your password to access your dashboard, tournament brackets, and ranking profile.

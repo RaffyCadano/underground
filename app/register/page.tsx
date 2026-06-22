@@ -41,7 +41,7 @@ function RegisterForm() {
         </div>
 
         <p className="text-sm leading-relaxed text-slate-400">
-          Set up your blader profile to register for tournaments, report scores, and compete on the Underground
+          Set up your blader profile to register for tournaments, report scores, and compete on UGNCBBX
           leaderboard.
         </p>
 
@@ -208,10 +208,10 @@ export default function RegisterPage() {
             <div className="hidden min-w-0 lg:block">
               <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
                 <UserPlus size={12} />
-                Underground circuit
+                UGNCBBX circuit
               </p>
               <h2 className="mt-6 text-4xl font-semibold leading-tight tracking-tight text-white xl:text-5xl">
-                Join the Underground and compete on game day.
+                Join UGNCBBX and compete on game day.
               </h2>
               <p className="mt-4 max-w-md text-lg leading-relaxed text-slate-400">
                 Create a free blader profile, enter tournaments, and start climbing the circuit rankings.
@@ -252,7 +252,7 @@ export default function RegisterPage() {
                   Join the circuit
                 </p>
                 <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:mt-4 sm:text-3xl">
-                  Create your Underground account
+                  Create your UGNCBBX account
                 </h2>
                 <p className="mx-auto mt-2 max-w-sm text-sm text-slate-400">
                   Free to join — set up your blader profile in under a minute.

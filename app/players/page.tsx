@@ -250,11 +250,11 @@ export default async function PlayersPage({
           <div className="max-w-2xl space-y-3 sm:space-y-4">
             <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
               <User size={12} />
-              Underground roster
+              UGNCBBX roster
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl">Players</h1>
             <p className="text-sm leading-relaxed text-slate-400 sm:text-base md:text-lg">
-              Browse blader profiles, tournament history, and circuit stats across the Underground community.
+              Browse blader profiles, tournament history, and circuit stats across the UGNCBBX community.
             </p>
           </div>
 
@@ -307,7 +307,7 @@ export default async function PlayersPage({
             <Users size={36} className="mx-auto text-slate-600" />
             <h2 className="mt-4 text-lg font-semibold text-white sm:text-xl">No players registered yet</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
-              Be the first blader on the Underground circuit.
+              Be the first blader on the UGNCBBX circuit.
             </p>
             <Link
               href="/register"
@@ -440,7 +440,7 @@ export default async function PlayersPage({
             <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-400">Join the circuit</p>
-                <h2 className="mt-2 text-xl font-semibold text-white sm:text-2xl">Compete on Underground</h2>
+                <h2 className="mt-2 text-xl font-semibold text-white sm:text-2xl">Compete on UGNCBBX</h2>
                 <p className="mt-2 max-w-lg text-sm text-slate-400 sm:text-base">
                   Create a profile, enter tournaments, and climb the rankings alongside the community.
                 </p>

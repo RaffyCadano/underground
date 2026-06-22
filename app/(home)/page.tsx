@@ -8,10 +8,12 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
+import { ScrollReveal } from '@/app/components/scroll-reveal';
 import { prisma } from '@/lib/prisma';
 import { rankedPlayerWhere } from '@/lib/rankings';
 import { CircuitSection } from './circuit-section';
 import { HowItWorksSection } from './how-it-works-section';
+import { UnderDevelopmentNotice } from './under-development-notice';
 
 function formatShortDate(date: Date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -75,6 +77,7 @@ export default async function HomePage() {
 
   return (
     <div className="w-full">
+      <UnderDevelopmentNotice />
       {/* Hero */}
       <section className="relative overflow-x-hidden border-b border-slate-800 py-0">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(34,197,94,0.12),transparent)]" />
@@ -82,58 +85,63 @@ export default async function HomePage() {
           <div className="grid min-w-0 gap-8 md:grid-cols-2 md:gap-8 md:items-start lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-12">
             {/* Copy */}
             <div className="order-2 min-w-0 space-y-6 sm:space-y-8 md:order-1 lg:order-none">
-              <div className="space-y-4 text-center sm:space-y-5 md:text-left">
-                <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
-                  <Zap size={12} />
-                  Underground circuit
-                </p>
-                <h1 className="mx-auto max-w-2xl text-[1.75rem] font-semibold leading-[1.15] tracking-tight text-white min-[480px]:text-3xl sm:text-4xl md:mx-0 md:text-[2.5rem] lg:text-5xl xl:text-6xl">
-                  Beyblade X tournaments, built for game day.
-                </h1>
-                <p className="mx-auto max-w-xl text-sm leading-relaxed text-slate-400 sm:text-base md:mx-0 md:text-lg">
-                  Register for brackets, report live scores, and climb the Underground rankings — all in one place.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap md:justify-start">
-                <Link
-                  href="/tournaments"
-                  className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
-                >
-                  Browse tournaments
-                  <ArrowRight size={16} />
-                </Link>
-                <Link href="/register" className="btn-secondary w-full text-center sm:w-auto">
-                  Create account
-                </Link>
-              </div>
-
-              <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 sm:rounded-none sm:border-0 sm:bg-transparent">
-                <div className="grid grid-cols-3 divide-x divide-slate-800 sm:flex sm:flex-wrap sm:gap-6 sm:divide-x-0 sm:border-t sm:border-slate-800/80 sm:pt-8">
-                  {stats.map(({ label, shortLabel, value, icon: Icon }) => (
-                    <div
-                      key={label}
-                      className="flex min-w-0 flex-col items-center gap-1.5 px-2 py-4 text-center sm:flex-row sm:gap-3 sm:px-0 sm:py-0 sm:text-left"
-                    >
-                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-950/80 text-brand-400 sm:h-10 sm:w-10 sm:rounded-xl sm:bg-slate-900/80">
-                        <Icon size={15} className="sm:hidden" />
-                        <Icon size={18} className="hidden sm:block" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-base font-semibold tabular-nums text-white sm:text-xl">{value}</p>
-                        <p className="truncate text-[10px] text-slate-500 sm:text-xs">
-                          <span className="sm:hidden">{shortLabel}</span>
-                          <span className="hidden sm:inline">{label}</span>
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+              <ScrollReveal>
+                <div className="space-y-4 text-center sm:space-y-5 md:text-left">
+                  <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
+                    <Zap size={12} />
+                    UGNCBBX circuit
+                  </p>
+                  <h1 className="mx-auto max-w-2xl text-[1.75rem] font-semibold leading-[1.15] tracking-tight text-white min-[480px]:text-3xl sm:text-4xl md:mx-0 md:text-[2.5rem] lg:text-5xl xl:text-6xl">
+                    Beyblade X tournaments, built for game day.
+                  </h1>
+                  <p className="mx-auto max-w-xl text-sm leading-relaxed text-slate-400 sm:text-base md:mx-0 md:text-lg">
+                    Register for brackets, report live scores, and climb the UGNCBBX rankings — all in one place.
+                  </p>
                 </div>
-              </div>
+              </ScrollReveal>
+
+              <ScrollReveal delay={120}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap md:justify-start">
+                  <Link
+                    href="/tournaments"
+                    className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+                  >
+                    Browse tournaments
+                    <ArrowRight size={16} />
+                  </Link>
+                  <Link href="/register" className="btn-secondary w-full text-center sm:w-auto">
+                    Create account
+                  </Link>
+                </div>
+              </ScrollReveal>
+
+              <ScrollReveal delay={220}>
+                <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 sm:rounded-none sm:border-0 sm:bg-transparent">
+                  <div className="grid grid-cols-3 divide-x divide-slate-800 sm:flex sm:flex-wrap sm:gap-6 sm:divide-x-0 sm:border-t sm:border-slate-800/80 sm:pt-8">
+                    {stats.map(({ label, shortLabel, value, icon: Icon }, index) => (
+                      <ScrollReveal key={label} delay={280 + index * 80} direction="scale">
+                        <div className="flex min-w-0 flex-col items-center gap-1.5 px-2 py-4 text-center sm:flex-row sm:gap-3 sm:px-0 sm:py-0 sm:text-left">
+                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-950/80 text-brand-400 sm:h-10 sm:w-10 sm:rounded-xl sm:bg-slate-900/80">
+                            <Icon size={15} className="sm:hidden" />
+                            <Icon size={18} className="hidden sm:block" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-base font-semibold tabular-nums text-white sm:text-xl">{value}</p>
+                            <p className="truncate text-[10px] text-slate-500 sm:text-xs">
+                              <span className="sm:hidden">{shortLabel}</span>
+                              <span className="hidden sm:inline">{label}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </ScrollReveal>
+                    ))}
+                  </div>
+                </div>
+              </ScrollReveal>
             </div>
 
             {/* Featured + upcoming */}
-            <div className="order-1 min-w-0 space-y-4 md:order-2 lg:order-none">
+            <ScrollReveal className="order-1 min-w-0 space-y-4 md:order-2 lg:order-none" delay={100} direction="right">
               {featuredTournament ? (
                 <div className="overflow-hidden rounded-2xl border border-brand-500/25 bg-slate-900/80 shadow-lg shadow-brand-950/20">
                   <div className="h-1 bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
@@ -236,7 +244,7 @@ export default async function HomePage() {
                   </div>
                 </div>
               )}
-            </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
@@ -247,11 +255,12 @@ export default async function HomePage() {
 
       {/* CTA */}
       <section className="container py-10 sm:py-16">
-        <div className="relative overflow-hidden rounded-2xl border border-brand-500/20 bg-slate-900 px-5 py-10 text-center sm:px-12 sm:py-12">
+        <ScrollReveal direction="scale">
+          <div className="relative overflow-hidden rounded-2xl border border-brand-500/20 bg-slate-900 px-5 py-10 text-center sm:px-12 sm:py-12">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(34,197,94,0.08),transparent_70%)]" />
           <div className="relative">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-400">Ready to compete?</p>
-            <h2 className="mt-3 text-2xl font-semibold text-white sm:text-3xl md:text-4xl">Join the Underground circuit</h2>
+            <h2 className="mt-3 text-2xl font-semibold text-white sm:text-3xl md:text-4xl">Join the UGNCBBX circuit</h2>
             <p className="mx-auto mt-3 max-w-lg text-sm text-slate-400 sm:text-base">
               Create a free account, enter your first tournament, and start climbing the rankings.
             </p>
@@ -265,7 +274,8 @@ export default async function HomePage() {
               </Link>
             </div>
           </div>
-        </div>
+          </div>
+        </ScrollReveal>
       </section>
     </div>
   );

@@ -232,7 +232,7 @@ export default function LoginPage() {
             <div className="hidden min-w-0 lg:block">
               <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
                 <LogIn size={12} />
-                Underground circuit
+                UGNCBBX circuit
               </p>
               <h2 className="mt-6 text-4xl font-semibold leading-tight tracking-tight text-white xl:text-5xl">
                 Pick up where you left off on the circuit.
@@ -272,7 +272,7 @@ export default function LoginPage() {
                   Sign in
                 </p>
                 <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:mt-4 sm:text-3xl">
-                  Welcome back to Underground
+                  Welcome back to UGNCBBX
                 </h2>
                 <p className="mx-auto mt-2 max-w-sm text-sm text-slate-400">
                   Enter your email and password to access your account.

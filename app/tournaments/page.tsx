@@ -1,23 +1,23 @@
 import Link from 'next/link';
 import {
   ArrowRight,
-  BarChart3,
   Calendar,
   CheckCircle2,
   Layers,
   MapPin,
-  Swords,
   Trophy,
-  UserPlus,
   Users,
   Zap,
 } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { ListSearch } from '@/app/components/list-search';
+import { ScrollReveal } from '@/app/components/scroll-reveal';
 import { parseSearchQuery, parseStatusFilter, tournamentSearchWhere } from '@/lib/search';
 import { DeleteTournamentButton } from './delete-tournament-button';
+import { TournamentsEmptyState } from './tournaments-empty-state';
+import { TournamentsHero } from './tournaments-hero';
+import { TournamentsSearchSection } from './tournaments-search-section';
 import { descriptionPlainText } from '@/lib/description-markdown';
 
 const STATUS_FILTER_OPTIONS = [
@@ -214,184 +214,45 @@ export default async function TournamentsPage({
 
   return (
     <div className="w-full overflow-x-hidden">
-      {/* Hero */}
-      <section className="relative border-b border-slate-800 py-0">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(34,197,94,0.1),transparent)]" />
-        <div className="container relative py-8 sm:py-12 lg:py-16">
-          <div className="max-w-2xl space-y-3 sm:space-y-4">
-            <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
-              <Trophy size={12} />
-              Underground events
-            </p>
-            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl">
-              Tournaments
-            </h1>
-            <p className="text-sm leading-relaxed text-slate-400 sm:text-base md:text-lg">
-              Browse brackets, register for open events, and follow live competitions across the circuit.
-            </p>
-          </div>
-
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-            {stats.map(({ label, shortLabel, value, icon: Icon }) => (
-              <div
-                key={label}
-                className="flex min-w-0 items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3"
-              >
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-brand-400 sm:h-9 sm:w-9">
-                  <Icon size={15} className="sm:hidden" />
-                  <Icon size={16} className="hidden sm:block" />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-base font-semibold tabular-nums text-white sm:text-lg">{value}</p>
-                  <p className="truncate text-[10px] text-slate-500 sm:text-xs">
-                    <span className="sm:hidden">{shortLabel}</span>
-                    <span className="hidden sm:inline">{label}</span>
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <TournamentsHero stats={stats} />
 
       <section className="container py-8 sm:py-12 lg:py-16">
-        <div className="mb-6 sm:mb-8">
-          <ListSearch
-            action="/tournaments"
-            query={query}
-            status={status}
-            statusOptions={STATUS_FILTER_OPTIONS}
-            placeholder="Search by name, location…"
-          />
-        </div>
+        {totalCount !== 0 && (
+          <ScrollReveal className="mb-6 sm:mb-8">
+            <TournamentsSearchSection
+              query={query}
+              status={status}
+              statusOptions={STATUS_FILTER_OPTIONS}
+            />
+          </ScrollReveal>
+        )}
+
+        {totalCount === 0 && (
+          <ScrollReveal className="mx-auto mb-6 max-w-2xl text-center sm:mb-8">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Event directory
+            </p>
+            <h2 className="mt-1 text-xl font-semibold text-white sm:text-2xl">
+              The circuit calendar is warming up
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-slate-400 sm:text-base">
+              North Carolina Beyblade X events will appear here for registration, live brackets, and
+              standings. Check back as new game days are added.
+            </p>
+          </ScrollReveal>
+        )}
 
         {totalCount === 0 ? (
-          <div className="overflow-hidden rounded-2xl border border-dashed border-slate-800 bg-slate-900/40">
-            <div className="border-b border-slate-800/80 bg-gradient-to-br from-brand-500/5 to-transparent px-5 py-10 text-center sm:px-8 sm:py-12">
-              <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 text-slate-500">
-                <Trophy size={28} />
-              </span>
-              <h2 className="mt-5 text-xl font-semibold text-white sm:text-2xl">No tournaments yet</h2>
-              <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-400 sm:text-base">
-                The Underground circuit is getting ready for game day. When admins publish events, they
-                will show up here — open for registration, live brackets, and full results.
-              </p>
-            </div>
-
-            <div className="grid gap-3 p-4 sm:grid-cols-3 sm:p-6">
-              {[
-                {
-                  icon: UserPlus,
-                  title: 'Register & check in',
-                  body: 'Create a profile, join open events, and get paired into the bracket when play starts.',
-                },
-                {
-                  icon: Swords,
-                  title: 'Brackets & standings',
-                  body: 'Follow single or double elimination, report scores, and track who is still in the run.',
-                },
-                {
-                  icon: BarChart3,
-                  title: 'Ranked circuit points',
-                  body: 'Ranked events award Underground points for wins — climb the leaderboard over the season.',
-                },
-              ].map(({ icon: Icon, title, body }) => (
-                <div
-                  key={title}
-                  className="rounded-xl border border-slate-800 bg-slate-950/50 p-4 text-left"
-                >
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-brand-400">
-                    <Icon size={16} />
-                  </span>
-                  <h3 className="mt-3 text-sm font-semibold text-white">{title}</h3>
-                  <p className="mt-1.5 text-xs leading-relaxed text-slate-500 sm:text-sm">{body}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t border-slate-800/80 px-4 py-6 sm:px-8 sm:py-8">
-              <p className="text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                When events go live
-              </p>
-              <ol className="mx-auto mt-4 grid max-w-2xl gap-3 sm:grid-cols-3">
-                {[
-                  'Browse open tournaments and read event details',
-                  'Register before the bracket is generated',
-                  'Play your matches and check standings as results are posted',
-                ].map((step, index) => (
-                  <li
-                    key={step}
-                    className="flex gap-3 rounded-xl border border-slate-800/80 bg-slate-950/40 p-3 text-left sm:flex-col sm:gap-2 sm:p-4"
-                  >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-brand-300">
-                      {index + 1}
-                    </span>
-                    <p className="text-xs leading-relaxed text-slate-400 sm:text-sm">{step}</p>
-                  </li>
-                ))}
-              </ol>
-
-              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                {!session ? (
-                  <>
-                    <Link
-                      href="/register"
-                      className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
-                    >
-                      Create account
-                      <ArrowRight size={16} />
-                    </Link>
-                    <Link href="/login" className="btn-secondary inline-flex w-full sm:w-auto">
-                      Sign in
-                    </Link>
-                  </>
-                ) : isAdmin ? (
-                  <Link
-                    href="/dashboard/tournaments/create"
-                    className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
-                  >
-                    Create tournament
-                    <ArrowRight size={16} />
-                  </Link>
-                ) : (
-                  <Link
-                    href="/players"
-                    className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
-                  >
-                    Browse players
-                    <ArrowRight size={16} />
-                  </Link>
-                )}
-              </div>
-
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
-                <Link href="/rankings" className="font-semibold text-brand-300 hover:text-brand-200">
-                  Circuit rankings
-                </Link>
-                <span className="hidden text-slate-700 sm:inline" aria-hidden>
-                  ·
-                </span>
-                <Link href="/players" className="font-semibold text-slate-400 hover:text-slate-200">
-                  Player directory
-                </Link>
-                {isAdmin && (
-                  <>
-                    <span className="hidden text-slate-700 sm:inline" aria-hidden>
-                      ·
-                    </span>
-                    <Link
-                      href="/dashboard/tournaments"
-                      className="font-semibold text-slate-400 hover:text-slate-200"
-                    >
-                      Admin dashboard
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+          <ScrollReveal direction="scale">
+            <TournamentsEmptyState
+              query={query}
+              status={status}
+              statusOptions={STATUS_FILTER_OPTIONS}
+            />
+          </ScrollReveal>
         ) : tournaments.length === 0 ? (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-5 py-10 text-center sm:px-8 sm:py-14">
+          <ScrollReveal>
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-5 py-10 text-center sm:px-8 sm:py-14">
             <p className="text-base font-semibold text-white sm:text-lg">No tournaments match your filters</p>
             <p className="mt-2 text-sm text-slate-400">
               {query ? (
@@ -406,18 +267,23 @@ export default async function TournamentsPage({
             <Link href="/tournaments" className="btn-secondary mt-6 inline-flex w-full sm:w-auto">
               Clear filters
             </Link>
-          </div>
+            </div>
+          </ScrollReveal>
         ) : hasFilters ? (
           <div>
-            <div className="mb-5 sm:mb-6">
+            <ScrollReveal>
+              <div className="mb-5 sm:mb-6">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Results</p>
               <h2 className="mt-1 text-xl font-semibold text-white sm:text-2xl">
                 {tournaments.length} {tournaments.length === 1 ? 'event' : 'events'} found
               </h2>
             </div>
+            </ScrollReveal>
             <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
               {tournaments.map((t, i) => (
-                <TournamentCard key={t.id} tournament={t} isAdmin={isAdmin} featured={i === 0} />
+                <ScrollReveal key={t.id} delay={i * 90}>
+                  <TournamentCard tournament={t} isAdmin={isAdmin} featured={i === 0} />
+                </ScrollReveal>
               ))}
             </div>
           </div>
@@ -425,7 +291,8 @@ export default async function TournamentsPage({
           <div className="space-y-10 sm:space-y-14">
             {upcoming.length > 0 && (
               <div>
-                <div className="mb-5 sm:mb-6">
+                <ScrollReveal>
+                  <div className="mb-5 sm:mb-6">
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Upcoming &amp; live
                   </p>
@@ -433,9 +300,12 @@ export default async function TournamentsPage({
                     {upcoming.length} {upcoming.length === 1 ? 'event' : 'events'} on the circuit
                   </h2>
                 </div>
+                </ScrollReveal>
                 <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
                   {upcoming.map((t, i) => (
-                    <TournamentCard key={t.id} tournament={t} isAdmin={isAdmin} featured={i === 0} />
+                    <ScrollReveal key={t.id} delay={i * 90}>
+                      <TournamentCard tournament={t} isAdmin={isAdmin} featured={i === 0} />
+                    </ScrollReveal>
                   ))}
                 </div>
               </div>
@@ -443,11 +313,14 @@ export default async function TournamentsPage({
 
             {completeTournaments.length > 0 && (
               <div>
-                <div className="mb-5 sm:mb-6">
+                <ScrollReveal>
+                  <div className="mb-5 sm:mb-6">
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Archive</p>
                   <h2 className="mt-1 text-xl font-semibold text-white sm:text-2xl">Past tournaments</h2>
                 </div>
-                <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
+                </ScrollReveal>
+                <ScrollReveal delay={100}>
+                  <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
                   <div className="divide-y divide-slate-800">
                     {completeTournaments.map((t) => (
                       <div
@@ -498,13 +371,16 @@ export default async function TournamentsPage({
                     ))}
                   </div>
                 </div>
+                </ScrollReveal>
               </div>
             )}
 
             {upcoming.length === 0 && completeTournaments.length > 0 && (
-              <div className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3.5 text-sm text-slate-400 sm:px-5 sm:py-4">
-                No open or live tournaments right now. Browse past events below or check back later.
-              </div>
+              <ScrollReveal>
+                <div className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3.5 text-sm text-slate-400 sm:px-5 sm:py-4">
+                  No open or live tournaments right now. Browse past events below or check back later.
+                </div>
+              </ScrollReveal>
             )}
           </div>
         )}

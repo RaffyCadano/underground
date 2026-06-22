@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { SITE_LOGO_SRC, SITE_NAME } from '@/lib/site';
 
 const sizes = {
   header: 'h-9 w-9 rounded-lg',
@@ -18,11 +19,11 @@ export function SiteLogo({
 
   return (
     <span
-      className={`relative inline-flex shrink-0 overflow-hidden border border-brand-500/30 bg-slate-950 ${sizes[size]} ${className}`}
+      className={`relative inline-flex shrink-0 overflow-hidden ${sizes[size]} ${className}`}
     >
       <Image
-        src="/underground-icon.png"
-        alt="Underground"
+        src={SITE_LOGO_SRC}
+        alt={SITE_NAME}
         width={px}
         height={px}
         className="h-full w-full object-cover"

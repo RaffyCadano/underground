@@ -9,6 +9,7 @@ import { SiteBrand } from '@/app/components/site-brand';
 import { SiteFooter } from '@/app/components/site-footer';
 import { SiteNav } from '@/app/components/site-nav';
 import { prisma } from '@/lib/prisma';
+import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -22,12 +23,8 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Underground',
-  description: 'The home of competitive Beyblade X tournaments and rankings.',
-  icons: {
-    icon: '/underground-icon.png',
-    apple: '/underground-icon.png',
-  },
+  title: SITE_NAME,
+  description: SITE_DESCRIPTION,
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

@@ -27,7 +27,7 @@ function PodiumCardSkeleton({ highlight = false }: { highlight?: boolean }) {
   return (
     <div
       className={`relative min-w-0 overflow-hidden rounded-2xl border bg-slate-900/60 p-4 sm:p-6 ${
-        highlight ? 'border-brand-500/30 md:-mt-4 md:pb-8' : 'border-slate-800'
+        highlight ? 'border-brand-500/30 lg:-mt-4 lg:pb-8' : 'border-slate-800'
       }`}
     >
       {highlight && <Skeleton className="absolute inset-x-0 top-0 h-1 rounded-none" />}
@@ -48,10 +48,10 @@ function PodiumCardSkeleton({ highlight = false }: { highlight?: boolean }) {
 function LeaderboardRowSkeleton() {
   return (
     <div className="px-4 py-3.5 sm:px-5">
-      <div className="flex items-center gap-3">
+      <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
         <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
         <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
-        <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="min-w-0 space-y-1.5">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-3 w-20" />
         </div>
@@ -59,10 +59,10 @@ function LeaderboardRowSkeleton() {
           <Skeleton className="ml-auto h-4 w-12" />
           <Skeleton className="ml-auto h-2.5 w-6" />
         </div>
-      </div>
-      <div className="mt-2.5 flex items-center gap-2 pl-11">
-        <Skeleton className="h-1.5 flex-1 rounded-full" />
-        <Skeleton className="h-3 w-9 shrink-0" />
+        <div className="col-span-4 flex items-center gap-2">
+          <Skeleton className="h-1.5 min-w-0 flex-1 rounded-full" />
+          <Skeleton className="h-3 w-9 shrink-0" />
+        </div>
       </div>
     </div>
   );
@@ -143,13 +143,13 @@ export default function RankingsLoading() {
               <Skeleton className="mx-auto mt-2 h-8 w-36 sm:h-9" />
             </div>
 
-            <div className="mx-auto grid max-w-md gap-3 sm:hidden">
+            <div className="mx-auto grid gap-3 sm:hidden">
               <PodiumCardSkeleton highlight />
               <PodiumCardSkeleton />
               <PodiumCardSkeleton />
             </div>
 
-            <div className="mx-auto hidden items-end gap-4 sm:grid sm:grid-cols-3 lg:max-w-4xl">
+            <div className="mx-auto hidden max-w-lg gap-4 sm:grid sm:grid-cols-1 lg:max-w-4xl lg:grid-cols-3 lg:items-end">
               <PodiumCardSkeleton />
               <PodiumCardSkeleton highlight />
               <PodiumCardSkeleton />
@@ -169,13 +169,13 @@ export default function RankingsLoading() {
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
-              <div className="divide-y divide-slate-800 md:hidden">
+              <div className="divide-y divide-slate-800 lg:hidden">
                 {Array.from({ length: 8 }, (_, i) => (
                   <LeaderboardRowSkeleton key={i} />
                 ))}
               </div>
 
-              <div className="hidden overflow-x-auto md:block">
+              <div className="hidden overflow-x-auto lg:block">
                 <table className="min-w-full text-left text-sm">
                   <thead className="border-b border-slate-800 bg-slate-900/80">
                     <tr>

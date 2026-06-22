@@ -65,7 +65,7 @@ function PodiumCard({
       href={`/players/${player.username.toLowerCase()}`}
       className={`group relative block min-w-0 overflow-hidden rounded-2xl border bg-slate-900/60 p-4 transition hover:border-slate-600 sm:p-6 ${
         highlight
-          ? 'border-brand-500/30 shadow-lg shadow-brand-950/15 md:-mt-4 md:pb-8'
+          ? 'border-brand-500/30 shadow-lg shadow-brand-950/15 lg:-mt-4 lg:pb-8'
           : 'border-slate-800'
       }`}
     >
@@ -85,7 +85,12 @@ function PodiumCard({
             rank
           )}
         </span>
-        <PlayerAvatar username={player.username} avatar={player.avatar} size="lg" />
+        <PlayerAvatar
+          username={player.username}
+          avatar={player.avatar}
+          size="lg"
+          className="mt-2 sm:mt-3"
+        />
         <h3 className="mt-2 max-w-full truncate px-2 text-base font-semibold text-white transition group-hover:text-brand-200 sm:mt-3 sm:text-lg">
           {player.username}
         </h3>
@@ -114,14 +119,14 @@ function LeaderboardMobileCard({ player, rank }: { player: RankedPlayer; rank: n
       href={`/players/${player.username.toLowerCase()}`}
       className="block px-4 py-3.5 transition hover:bg-slate-900/50 sm:px-5"
     >
-      <div className="flex items-center gap-3">
+      <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
         <span
           className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-bold tabular-nums ${badge.className}`}
         >
           {rank}
         </span>
         <PlayerAvatar username={player.username} avatar={player.avatar} />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <p className="truncate font-semibold text-white">{player.username}</p>
           <p className="text-xs tabular-nums text-slate-500">
             {player.wins}-{player.losses} · {total > 0 ? `${winRate}%` : '—'} win
@@ -133,17 +138,17 @@ function LeaderboardMobileCard({ player, rank }: { player: RankedPlayer; rank: n
           </p>
           <p className="text-[10px] text-slate-500">pts</p>
         </div>
-      </div>
-      <div className="mt-2.5 flex items-center gap-2 pl-11">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800">
-          <div
-            className="h-full rounded-full bg-brand-500/70"
-            style={{ width: total > 0 ? `${winRate}%` : '0%' }}
-          />
+        <div className="col-span-4 flex items-center gap-2 sm:col-span-4">
+          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-800">
+            <div
+              className="h-full rounded-full bg-brand-500/70"
+              style={{ width: total > 0 ? `${winRate}%` : '0%' }}
+            />
+          </div>
+          <span className="w-9 shrink-0 text-right text-xs tabular-nums text-slate-400">
+            {total > 0 ? `${winRate}%` : '—'}
+          </span>
         </div>
-        <span className="w-9 shrink-0 text-right text-xs tabular-nums text-slate-400">
-          {total > 0 ? `${winRate}%` : '—'}
-        </span>
       </div>
     </Link>
   );
@@ -260,13 +265,13 @@ export default async function RankingsPage({
           <div className="max-w-2xl space-y-3 sm:space-y-4">
             <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
               <BarChart3 size={12} />
-              Underground circuit
+              UGNCBBX circuit
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl">
               Rankings
             </h1>
             <p className="text-sm leading-relaxed text-slate-400 sm:text-base md:text-lg">
-              Track rank points, records, and win rates for every blader on the Underground leaderboard.
+              Track rank points, records, and win rates for every blader on the UGNCBBX leaderboard.
             </p>
           </div>
 
@@ -332,20 +337,20 @@ export default async function RankingsPage({
                 </div>
 
                 {/* Mobile: rank order 1 → 2 → 3 */}
-                <div className="mx-auto grid max-w-md gap-3 sm:hidden">
+                <div className="grid gap-3 sm:hidden">
                   {topThree.map((p, i) => (
                     <PodiumCard key={p.id} player={p} rank={i + 1} highlight={i === 0} />
                   ))}
                 </div>
 
-                {/* Tablet+: classic podium layout */}
+                {/* Tablet: stacked · Desktop: classic podium */}
                 <div
                   className={`mx-auto hidden gap-4 sm:grid ${
                     topThree.length === 1
                       ? 'max-w-sm'
                       : topThree.length === 2
-                        ? 'sm:grid-cols-2 lg:max-w-2xl'
-                        : 'items-end sm:grid-cols-3 lg:max-w-4xl'
+                        ? 'max-w-2xl sm:grid-cols-2'
+                        : 'max-w-lg sm:grid-cols-1 lg:max-w-4xl lg:grid-cols-3 lg:items-end'
                   }`}
                 >
                   {topThree.length === 3 ? (
@@ -370,31 +375,31 @@ export default async function RankingsPage({
                     {isSearching ? 'Search results' : 'Full standings'}
                   </p>
                   <h2 className="mt-1 text-xl font-semibold text-white sm:text-2xl">
-                    {isSearching ? (
-                      <>
-                        {filteredTotal.toLocaleString()} {filteredTotal === 1 ? 'player' : 'players'} for
-                        &ldquo;{query}&rdquo;
-                      </>
-                    ) : (
-                      'Leaderboard'
-                    )}
+                    {isSearching
+                      ? `${filteredTotal.toLocaleString()} ${filteredTotal === 1 ? 'player' : 'players'} found`
+                      : 'Leaderboard'}
                   </h2>
+                  {isSearching && (
+                    <p className="mt-1 truncate text-sm text-slate-400">
+                      Matching &ldquo;{query}&rdquo;
+                    </p>
+                  )}
                 </div>
-                <div className="w-full lg:max-w-md lg:shrink-0">
+                <div className="w-full min-w-0 lg:max-w-md lg:shrink-0">
                   <ListSearch action="/rankings" query={query} placeholder="Search by username…" />
                 </div>
               </div>
 
               <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
-                {/* Mobile card list */}
-                <div className="divide-y divide-slate-800 md:hidden">
+                {/* Mobile + tablet card list */}
+                <div className="divide-y divide-slate-800 lg:hidden">
                   {players.map((p, i) => (
                     <LeaderboardMobileCard key={p.id} player={p} rank={skip + i + 1} />
                   ))}
                 </div>
 
                 {/* Desktop table */}
-                <div className="hidden overflow-x-auto md:block">
+                <div className="hidden overflow-x-auto lg:block">
                   <table className="min-w-full text-left text-sm">
                     <thead className="border-b border-slate-800 bg-slate-900/80 text-slate-500">
                       <tr>

@@ -40,14 +40,8 @@ const siteNav: NavItem[] = [
 ];
 
 function isActive(pathname: string, href: string) {
-  if (href === '/dashboard/profile') {
-    return pathname === '/dashboard/profile';
-  }
   if (href === '/dashboard/overview') {
-    return (
-      pathname === '/dashboard/overview' ||
-      (pathname.startsWith('/dashboard/') && pathname !== '/dashboard/profile')
-    );
+    return pathname === '/dashboard/overview' || pathname === '/dashboard';
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }

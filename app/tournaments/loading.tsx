@@ -4,11 +4,11 @@ function Skeleton({ className }: { className?: string }) {
 
 function StatCardSkeleton() {
   return (
-    <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
+    <div className="flex min-w-0 flex-col items-center gap-1.5 px-2 py-3.5 sm:flex-row sm:gap-3 sm:px-3 sm:py-4 sm:text-left md:px-4">
       <Skeleton className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9" />
-      <div className="min-w-0 flex-1 space-y-1.5">
-        <Skeleton className="h-5 w-8 sm:h-6 sm:w-10" />
-        <Skeleton className="h-2.5 w-14 sm:h-3 sm:w-20" />
+      <div className="min-w-0 flex-1 space-y-1.5 text-center sm:text-left">
+        <Skeleton className="mx-auto h-5 w-8 sm:mx-0 sm:h-6 sm:w-10" />
+        <Skeleton className="mx-auto h-2.5 w-14 sm:mx-0 sm:h-3 sm:w-20" />
       </div>
     </div>
   );
@@ -75,23 +75,43 @@ export default function TournamentsLoading() {
   return (
     <div className="w-full overflow-x-hidden" aria-busy="true" aria-label="Loading tournaments">
       {/* Hero */}
-      <section className="relative border-b border-slate-800 py-0">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(34,197,94,0.1),transparent)]" />
+      <section className="relative overflow-x-hidden border-b border-slate-800 py-0">
         <div className="container relative py-8 sm:py-12 lg:py-16">
-          <div className="max-w-2xl space-y-3 sm:space-y-4">
-            <Skeleton className="h-7 w-36 rounded-full" />
-            <Skeleton className="h-9 w-48 sm:h-10 sm:w-56 md:h-12 md:w-64" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-full max-w-xl" />
-              <Skeleton className="h-4 w-5/6 max-w-lg" />
+          <div className="grid min-w-0 gap-6 sm:gap-8 md:grid-cols-2 md:items-center md:gap-8 lg:gap-10">
+            <div className="relative order-1 min-w-0 md:order-2">
+              <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-slate-800 bg-slate-950 sm:aspect-[5/3] sm:rounded-2xl md:aspect-[4/3]">
+                <Skeleton className="absolute inset-0 h-full w-full rounded-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/55 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 space-y-2 p-4 sm:p-5 md:p-6">
+                  <Skeleton className="h-6 w-28 rounded-full" />
+                  <Skeleton className="h-6 w-48 sm:h-7 sm:w-56" />
+                  <Skeleton className="h-4 w-full max-w-xs" />
+                  <div className="flex gap-2 pt-1">
+                    <Skeleton className="h-7 w-16 rounded-lg" />
+                    <Skeleton className="h-7 w-14 rounded-lg" />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:mt-10 sm:gap-4 lg:grid-cols-4">
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-            <StatCardSkeleton />
+            <div className="order-2 min-w-0 space-y-3 text-center sm:space-y-4 md:order-1 md:text-left">
+              <Skeleton className="mx-auto h-7 w-36 rounded-full md:mx-0" />
+              <Skeleton className="mx-auto h-9 w-48 min-[480px]:h-10 min-[480px]:w-56 sm:h-12 sm:w-64 md:mx-0" />
+              <div className="mx-auto max-w-xl space-y-2 md:mx-0">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+              <div className="mt-4 overflow-hidden rounded-xl border border-slate-800 sm:mt-6">
+                <div className="grid grid-cols-2 divide-x divide-y divide-slate-800 sm:grid-cols-4 sm:divide-y-0">
+                  <StatCardSkeleton />
+                  <StatCardSkeleton />
+                  <StatCardSkeleton />
+                  <StatCardSkeleton />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

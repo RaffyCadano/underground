@@ -608,7 +608,7 @@ export function ParticipantManager({
               </button>
             </div>
             <p className="mt-1.5 text-[11px] text-slate-600">
-              For players without an Underground account — they won&apos;t appear on rankings.
+              For players without a UGNCBBX account — they won&apos;t appear on rankings.
             </p>
           </div>
         </div>

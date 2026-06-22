@@ -64,7 +64,7 @@ const RANKING_OPTIONS = [
   {
     value: 'true',
     label: 'Ranked',
-    description: 'Match wins award Underground rank points.',
+    description: 'Match wins award UGNCBBX rank points.',
     icon: Medal,
   },
   {

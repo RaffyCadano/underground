@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import type { Session } from 'next-auth';
-import { BarChart3, LayoutDashboard, LogIn, Trophy, UserPlus, Users, UsersRound } from 'lucide-react';
+import { BarChart3, Info, LayoutDashboard, LogIn, Trophy, UserPlus, Users, UsersRound } from 'lucide-react';
 import { SiteBrand } from '@/app/components/site-brand';
+import { SITE_FULL_NAME, SITE_NAME } from '@/lib/site';
 
 const exploreLinks = [
+  { href: '/about', label: 'About', icon: Info },
   { href: '/tournaments', label: 'Tournaments', icon: Trophy },
   { href: '/rankings', label: 'Rankings', icon: BarChart3 },
   { href: '/players', label: 'Players', icon: Users },
@@ -28,8 +30,7 @@ export function SiteFooter({ session }: { session: Session | null }) {
           <div className="space-y-4">
             <SiteBrand />
             <p className="max-w-sm text-sm leading-relaxed text-slate-500">
-              The home of competitive Beyblade X — run brackets, report scores, and climb the Underground
-              rankings.
+              {SITE_FULL_NAME} — run brackets, report scores, and climb the {SITE_NAME} rankings.
             </p>
             <p className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-xs text-slate-400">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-400" />
@@ -74,7 +75,7 @@ export function SiteFooter({ session }: { session: Session | null }) {
 
         <div className="mt-10 flex flex-col gap-4 border-t border-slate-800/80 pt-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-slate-500">
-            © {new Date().getFullYear()} Underground. All rights reserved.
+            © {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
           </p>
           <p className="text-sm text-slate-600">Built for Beyblade X tournament management and rankings.</p>
         </div>

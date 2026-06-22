@@ -44,42 +44,217 @@ function FeaturedCardSkeleton() {
   );
 }
 
-function StepCardSkeleton() {
+function StepTimelineSkeleton({ isLast = false }: { isLast?: boolean }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5 sm:p-6">
-      <Skeleton className="h-9 w-12" />
-      <Skeleton className="mt-4 h-6 w-40" />
-      <Skeleton className="mt-2 h-4 w-full" />
-      <Skeleton className="mt-2 h-4 w-4/5" />
-      <Skeleton className="mt-5 h-4 w-24" />
+    <li className="relative flex gap-4 pb-10 last:pb-0 sm:gap-6">
+      {!isLast && (
+        <span
+          aria-hidden
+          className="absolute left-[15px] top-10 bottom-0 w-px bg-slate-800 sm:left-[19px]"
+        />
+      )}
+      <Skeleton className="h-8 w-8 shrink-0 rounded-full sm:h-10 sm:w-10" />
+      <div className="min-w-0 flex-1 rounded-xl border border-slate-800 bg-slate-950/70 p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <Skeleton className="h-9 w-9 shrink-0 rounded-lg" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-4/5" />
+          </div>
+        </div>
+        <Skeleton className="mt-4 h-10 w-28 rounded-lg" />
+      </div>
+    </li>
+  );
+}
+
+function FormatCardSkeleton() {
+  return (
+    <div className="flex min-w-[260px] snap-start flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-950/60 sm:min-w-0">
+      <Skeleton className="h-1 w-full rounded-none" />
+      <div className="space-y-3 p-4 sm:p-5">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-8 rounded-lg" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+      </div>
     </div>
   );
 }
 
-function PanelSkeleton({ rows = 5 }: { rows?: number }) {
+function HowItWorksSkeleton() {
   return (
-    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
+    <section className="relative overflow-hidden border-b border-slate-800">
+      <div className="container relative py-12 sm:py-16 lg:py-20">
+        <div className="lg:grid lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-x-12 xl:gap-x-16">
+          <div className="lg:sticky lg:top-24 lg:self-start">
+            <Skeleton className="h-7 w-36 rounded-full" />
+            <Skeleton className="mt-4 h-9 w-full max-w-xs sm:h-10 lg:h-12" />
+            <div className="mt-3 space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+            </div>
+            <div className="mt-6 hidden rounded-xl border border-slate-800 bg-slate-950/50 p-4 lg:block">
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="mt-2 h-4 w-40" />
+            </div>
+          </div>
+
+          <div className="mt-10 lg:mt-0">
+            <Skeleton className="mb-6 h-3 w-44 lg:hidden" />
+            <ol className="list-none">
+              <StepTimelineSkeleton />
+              <StepTimelineSkeleton />
+              <StepTimelineSkeleton isLast />
+            </ol>
+          </div>
+        </div>
+
+        <div className="mt-14 sm:mt-16 lg:mt-20">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-2xl space-y-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-8 w-52 sm:h-9" />
+              <Skeleton className="h-4 w-full max-w-xl" />
+              <Skeleton className="h-4 w-4/5 max-w-lg" />
+            </div>
+            <Skeleton className="h-11 w-36 shrink-0 rounded-lg" />
+          </div>
+
+          <div className="-mx-4 mt-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:mt-8 xl:grid-cols-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <FormatCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PodiumCardSkeleton({ highlight = false }: { highlight?: boolean }) {
+  return (
+    <div
+      className={`relative flex min-w-0 flex-1 flex-col items-center rounded-xl border p-3 sm:p-4 ${
+        highlight
+          ? 'border-slate-700 bg-slate-900/60 sm:-mt-3 sm:pb-5'
+          : 'border-slate-800 bg-slate-950/50'
+      }`}
+    >
+      {highlight && <Skeleton className="absolute inset-x-0 top-0 h-0.5 rounded-none" />}
+      <Skeleton className="h-8 w-8 rounded-full" />
+      <Skeleton className="mt-2 h-12 w-12 rounded-full sm:mt-3 sm:h-14 sm:w-14" />
+      <Skeleton className="mt-2 h-4 w-24 sm:mt-3" />
+      <Skeleton className="mt-2 h-6 w-16" />
+      <Skeleton className="mt-1 h-3 w-20" />
+    </div>
+  );
+}
+
+function LeaderboardRowSkeleton() {
+  return (
+    <div className="rounded-xl border border-slate-800/80 bg-slate-950/40 px-3 py-3 sm:px-4">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+        <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+        <div className="shrink-0 space-y-1 text-right">
+          <Skeleton className="ml-auto h-4 w-12" />
+          <Skeleton className="ml-auto h-2.5 w-6" />
+        </div>
+      </div>
+      <div className="mt-2.5 flex items-center gap-2 pl-11">
+        <Skeleton className="h-1 min-w-0 flex-1 rounded-full" />
+        <Skeleton className="h-3 w-8 shrink-0" />
+      </div>
+    </div>
+  );
+}
+
+function MatchCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/50">
+      <Skeleton className="h-8 w-full rounded-none" />
+      <div className="grid grid-cols-[1fr_auto_1fr] items-stretch">
+        <div className="flex items-center justify-end px-3 py-3 sm:px-4">
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <div className="flex flex-col items-center justify-center border-x border-slate-800/80 px-2.5 py-2 sm:px-3">
+          <Skeleton className="h-2 w-8" />
+          <Skeleton className="mt-1 h-5 w-10" />
+        </div>
+        <div className="flex items-center px-3 py-3 sm:px-4">
+          <Skeleton className="h-4 w-20" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CircuitPanelSkeleton({ variant }: { variant: 'leaderboard' | 'matches' }) {
+  return (
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50">
       <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-4 sm:px-6 sm:py-5">
-        <Skeleton className="h-9 w-9 shrink-0 rounded-lg" />
+        <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
         <div className="min-w-0 flex-1 space-y-2">
           <Skeleton className="h-5 w-28" />
           <Skeleton className="h-3 w-36" />
         </div>
-        <Skeleton className="hidden h-3 w-20 shrink-0 sm:block" />
       </div>
-      <div className="divide-y divide-slate-800">
-        {Array.from({ length: rows }, (_, i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-6 sm:py-4">
-            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-20" />
-            </div>
-            <Skeleton className="h-4 w-14 shrink-0" />
+
+      {variant === 'leaderboard' ? (
+        <div className="space-y-4 p-4 sm:p-5">
+          <div className="flex items-end gap-2 sm:gap-3">
+            <PodiumCardSkeleton />
+            <PodiumCardSkeleton highlight />
+            <PodiumCardSkeleton />
           </div>
-        ))}
-      </div>
+          <div className="space-y-2">
+            <LeaderboardRowSkeleton />
+            <LeaderboardRowSkeleton />
+          </div>
+          <Skeleton className="h-11 w-full rounded-xl" />
+        </div>
+      ) : (
+        <div className="space-y-3 p-4 sm:p-5">
+          {Array.from({ length: 5 }, (_, i) => (
+            <MatchCardSkeleton key={i} />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+function CircuitSectionSkeleton() {
+  return (
+    <section className="border-y border-slate-800 bg-slate-950/40">
+      <div className="container py-10 sm:py-16">
+        <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-xl space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-9 w-64 sm:h-10" />
+            <Skeleton className="h-4 w-full max-w-md" />
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+          <CircuitPanelSkeleton variant="leaderboard" />
+          <CircuitPanelSkeleton variant="matches" />
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -121,7 +296,10 @@ export default function HomeLoading() {
                 </div>
                 <div className="space-y-1 sm:space-y-2">
                   {Array.from({ length: 3 }, (_, i) => (
-                    <div key={i} className="flex items-center justify-between gap-3 rounded-lg px-2 py-2.5 sm:px-3">
+                    <div
+                      key={i}
+                      className="flex items-center justify-between gap-3 rounded-lg px-2 py-2.5 sm:px-3"
+                    >
                       <div className="min-w-0 flex-1 space-y-1.5">
                         <Skeleton className="h-4 w-full max-w-[12rem]" />
                         <Skeleton className="h-3 w-16" />
@@ -136,32 +314,13 @@ export default function HomeLoading() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="container py-10 sm:py-16">
-        <div className="mb-8 max-w-xl sm:mb-10">
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="mt-2 h-8 w-64 sm:h-9" />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <StepCardSkeleton />
-          <StepCardSkeleton />
-          <StepCardSkeleton />
-        </div>
-      </section>
+      <HowItWorksSkeleton />
 
-      {/* Leaderboard + matches */}
-      <section className="border-y border-slate-800 bg-slate-950/40">
-        <div className="container py-10 sm:py-16">
-          <div className="grid gap-6 md:grid-cols-2">
-            <PanelSkeleton />
-            <PanelSkeleton rows={5} />
-          </div>
-        </div>
-      </section>
+      <CircuitSectionSkeleton />
 
       {/* CTA */}
       <section className="container py-10 sm:py-16">
-        <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 px-5 py-10 text-center sm:px-12 sm:py-12">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 px-5 py-10 text-center sm:border-brand-500/20 sm:px-12 sm:py-12">
           <div className="relative mx-auto max-w-lg space-y-3">
             <Skeleton className="mx-auto h-3 w-32" />
             <Skeleton className="mx-auto h-9 w-full max-w-sm sm:h-10" />

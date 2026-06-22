@@ -41,13 +41,41 @@ export function tournamentSearchWhere(
   return where;
 }
 
+export type AccountRoleFilter = 'all' | 'player' | 'admin';
+
+export function parseRoleFilter(value?: string): AccountRoleFilter {
+  if (value === 'player' || value === 'admin') return value;
+  return 'all';
+}
+
+export function accountSearchWhere(
+  query: string,
+  role: AccountRoleFilter,
+): Prisma.UserWhereInput {
+  const where: Prisma.UserWhereInput = {};
+
+  if (role !== 'all') {
+    where.role = role;
+  }
+
+  if (query) {
+    where.OR = [
+      { username: { contains: query, mode: 'insensitive' } },
+      { email: { contains: query, mode: 'insensitive' } },
+    ];
+  }
+
+  return where;
+}
+
 export function buildListUrl(
   pathname: string,
-  params: { page?: number; q?: string; status?: string },
+  params: { page?: number; q?: string; status?: string; role?: string },
 ) {
   const searchParams = new URLSearchParams();
   if (params.q) searchParams.set('q', params.q);
   if (params.status && params.status !== 'all') searchParams.set('status', params.status);
+  if (params.role && params.role !== 'all') searchParams.set('role', params.role);
   if (params.page && params.page > 1) searchParams.set('page', String(params.page));
   const qs = searchParams.toString();
   return qs ? `${pathname}?${qs}` : pathname;

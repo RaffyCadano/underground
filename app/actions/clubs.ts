@@ -46,7 +46,7 @@ export async function requestClub(
     where: { OR: [{ name: { equals: clubName, mode: 'insensitive' } }, { slug }] },
   });
   if (existingClub) {
-    return { error: 'A club with this name is already listed on Underground.' };
+    return { error: 'A club with this name is already listed on UGNCBBX.' };
   }
 
   const pendingDuplicate = await prisma.clubRequest.findFirst({

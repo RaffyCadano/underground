@@ -13,7 +13,7 @@ const FORMAT_DETAILS: Record<string, string[]> = {
   ],
   double_elimination: [
     'Winners and losers brackets mean everyone gets a second chance before elimination.',
-    'Fight through both brackets for a shot at the grand final and the Underground title.',
+    'Fight through both brackets for a shot at the grand final and the UGNCBBX title.',
     'Double elimination action — drop a match early and battle back through the losers side.',
   ],
   swiss: [
@@ -63,7 +63,7 @@ export function generateTournamentDescription(input: {
   isRanked?: boolean;
   gameType?: string;
 }) {
-  const name = input.name.trim() || 'Underground tournament';
+  const name = input.name.trim() || 'UGNCBBX tournament';
   const location = input.location.trim();
   const format = input.format || 'single_elimination';
   const formatLabel = FORMAT_LABELS[format] ?? 'tournament';
@@ -83,7 +83,7 @@ export function generateTournamentDescription(input: {
 
   const opener = location
     ? `${name} hits ${location}`
-    : `${name} is coming to the Underground circuit`;
+    : `${name} is coming to the UGNCBBX circuit`;
 
   const when = formattedDate ? ` on ${formattedDate}` : '';
   const rankedNote =

@@ -8,6 +8,7 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
+import { ScrollReveal } from '@/app/components/scroll-reveal';
 
 const STEPS = [
   {
@@ -42,72 +43,77 @@ const FORMATS = [
     tag: 'Classic',
     description: 'Win to advance. One loss and you are out of the bracket.',
     icon: Trophy,
-    accent: 'from-sky-500/20 to-transparent border-sky-500/25 text-sky-300',
-    iconBg: 'border-sky-500/30 bg-sky-500/10 text-sky-300',
+    accent: 'from-sky-500/80 to-sky-600/40',
   },
   {
     label: 'Double Elimination',
     tag: 'Second chance',
     description: 'Winners and losers brackets — everyone gets another shot before elimination.',
     icon: Layers,
-    accent: 'from-amber-500/20 to-transparent border-amber-500/25 text-amber-300',
-    iconBg: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+    accent: 'from-amber-500/80 to-amber-600/40',
   },
   {
     label: 'Swiss Format',
     tag: 'No early outs',
     description: 'Re-paired each round by win record. Play every round on the schedule.',
     icon: Users,
-    accent: 'from-violet-500/20 to-transparent border-violet-500/25 text-violet-300',
-    iconBg: 'border-violet-500/30 bg-violet-500/10 text-violet-300',
+    accent: 'from-violet-500/80 to-violet-600/40',
   },
   {
     label: 'Round Robin',
     tag: 'Full pool',
     description: 'Every player faces everyone. Final standings decide who finishes on top.',
     icon: RefreshCw,
-    accent: 'from-emerald-500/20 to-transparent border-emerald-500/25 text-emerald-300',
-    iconBg: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+    accent: 'from-emerald-500/80 to-emerald-600/40',
   },
 ] as const;
 
-function StepCard({
+function StepTimelineItem({
   step,
   title,
   body,
   href,
   cta,
   icon: Icon,
-  showConnector,
-}: (typeof STEPS)[number] & { showConnector?: boolean }) {
+  isLast,
+  index = 0,
+}: (typeof STEPS)[number] & { isLast?: boolean; index?: number }) {
   return (
-    <div className="relative flex min-w-0 flex-1 flex-col">
-      {showConnector && (
-        <div
-          className="pointer-events-none absolute left-[calc(50%+2rem)] top-8 hidden h-px w-[calc(100%-4rem)] bg-gradient-to-r from-brand-500/50 to-brand-500/10 lg:block"
+    <li className="relative flex gap-4 pb-10 last:pb-0 sm:gap-6">
+      {!isLast && (
+        <span
           aria-hidden
+          className="absolute left-[15px] top-10 bottom-0 w-px bg-gradient-to-b from-brand-500/50 via-brand-500/20 to-transparent sm:left-[19px]"
         />
       )}
-      <div className="group relative flex h-full flex-col rounded-2xl border border-slate-800 bg-slate-900/60 p-5 transition hover:border-slate-700 sm:p-6">
-        <div className="flex items-start justify-between gap-3">
-          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/10 text-brand-300 transition group-hover:border-brand-400/40 group-hover:bg-brand-500/15">
-            <Icon size={20} />
-          </span>
-          <span className="font-mono text-2xl font-bold tabular-nums text-slate-800 transition group-hover:text-brand-500/25">
-            0{step}
-          </span>
-        </div>
-        <h3 className="mt-5 text-lg font-semibold text-white">{title}</h3>
-        <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-400">{body}</p>
-        <Link
-          href={href}
-          className="mt-5 inline-flex w-fit items-center gap-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 px-3.5 py-2 text-sm font-semibold text-brand-200 transition hover:border-brand-400/40 hover:bg-brand-500/15"
-        >
-          {cta}
-          <ArrowRight size={14} />
-        </Link>
+
+      <div className="relative z-10 flex shrink-0 flex-col items-center">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-500/50 bg-slate-950 font-mono text-[11px] font-bold tabular-nums text-brand-300 sm:h-10 sm:w-10 sm:text-xs">
+          0{step}
+        </span>
       </div>
-    </div>
+
+      <ScrollReveal className="min-w-0 flex-1 pt-0.5" delay={index * 120} direction="right">
+        <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition hover:border-slate-700 sm:p-5">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-brand-400">
+              <Icon size={18} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base font-semibold text-white sm:text-lg">{title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{body}</p>
+            </div>
+          </div>
+          <Link
+            href={href}
+            className="btn-secondary mt-4 inline-flex items-center gap-2 text-sm"
+          >
+            {cta}
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+      </ScrollReveal>
+    </li>
   );
 }
 
@@ -117,88 +123,106 @@ function FormatCard({
   description,
   icon: Icon,
   accent,
-  iconBg,
 }: (typeof FORMATS)[number]) {
   return (
-    <div
-      className={`group relative overflow-hidden rounded-2xl border bg-gradient-to-br ${accent} p-5 transition hover:brightness-110 sm:p-6`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${iconBg}`}>
-          <Icon size={18} />
-        </span>
-        <span className="rounded-full border border-slate-700/80 bg-slate-950/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-          {tag}
-        </span>
+    <article className="group relative flex min-w-[260px] snap-start flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-950/60 sm:min-w-0">
+      <div className={`h-1 bg-gradient-to-r ${accent}`} />
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-300 transition group-hover:border-slate-700 group-hover:text-white">
+            <Icon size={15} />
+          </span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            {tag}
+          </span>
+        </div>
+        <h4 className="mt-3 text-sm font-semibold text-white sm:text-base">{label}</h4>
+        <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-500">{description}</p>
       </div>
-      <h3 className="mt-4 text-base font-semibold text-white">{label}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-slate-400">{description}</p>
-    </div>
+    </article>
   );
 }
 
 export function HowItWorksSection() {
   return (
-    <section className="relative overflow-hidden border-b border-slate-800 bg-slate-950/40">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_0%,rgba(34,197,94,0.07),transparent)]" />
+    <section className="relative overflow-hidden border-b border-slate-800">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.04)_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,black,transparent)]"
+      />
 
-      <div className="container relative py-12 sm:py-20">
-        {/* Header */}
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
-            Underground circuit
-          </p>
-          <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Here&apos;s how it works
-          </h2>
-          <p className="mt-4 text-sm leading-relaxed text-slate-400 sm:text-base">
-            Create an account, join a bracket, and earn rank points — all on one circuit built for
-            Beyblade X game day.
-          </p>
-        </div>
+      <div className="container relative py-12 sm:py-16 lg:py-20">
+        <div className="lg:grid lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-x-12 xl:gap-x-16">
+          <ScrollReveal className="lg:sticky lg:top-24 lg:self-start" direction="left">
+            <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
+              UGNCBBX circuit
+            </p>
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
+              Here&apos;s how it works
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-slate-400 sm:text-base">
+              Create an account, join a bracket, and earn rank points — all on one circuit built for
+              Beyblade X game day.
+            </p>
 
-        {/* Steps */}
-        <div className="mt-12 sm:mt-16">
-          <div className="mb-6 flex items-end justify-between gap-4 px-1">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Path to the podium</p>
-              <h3 className="mt-1 text-xl font-semibold text-white sm:text-2xl">Three steps</h3>
+            <div className="mt-6 hidden rounded-xl border border-slate-800 bg-slate-950/50 p-4 lg:block">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Path to the podium
+              </p>
+              <p className="mt-1 text-sm font-medium text-white">Three steps to compete</p>
             </div>
-          </div>
+          </ScrollReveal>
 
-          <div className="flex flex-col gap-4 lg:flex-row lg:gap-5">
-            {STEPS.map((step, i) => (
-              <StepCard key={step.step} {...step} showConnector={i < STEPS.length - 1} />
-            ))}
+          <div className="mt-10 lg:mt-0">
+            <ScrollReveal>
+              <p className="mb-6 text-xs font-semibold uppercase tracking-wider text-slate-500 lg:hidden">
+                Path to the podium · Three steps
+              </p>
+            </ScrollReveal>
+            <ol className="list-none">
+              {STEPS.map((step, index) => (
+                <StepTimelineItem
+                  key={step.step}
+                  {...step}
+                  index={index}
+                  isLast={index === STEPS.length - 1}
+                />
+              ))}
+            </ol>
           </div>
         </div>
 
-        {/* Formats */}
-        <div className="mt-14 sm:mt-20">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-5 sm:p-8">
-            <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
-              <div className="max-w-lg">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Bracket styles</p>
-                <h3 className="mt-1 text-xl font-semibold text-white sm:text-2xl">Tournament formats</h3>
-                <p className="mt-2 text-sm text-slate-400">
-                  Every Underground event runs one of these four formats. Pick the bracket that matches
-                  how you want to compete.
+        <div className="mt-14 sm:mt-16 lg:mt-20">
+          <ScrollReveal>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Bracket styles
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-white sm:text-2xl">
+                  Tournament formats
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-400 sm:text-base">
+                  Every UGNCBBX event runs one of these four formats. Pick the bracket that matches how
+                  you want to compete.
                 </p>
               </div>
               <Link
                 href="/tournaments"
-                className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-brand-300 hover:text-brand-200"
+                className="btn-primary inline-flex shrink-0 items-center gap-2 self-start sm:self-auto"
               >
                 Browse events
-                <ArrowRight size={14} />
+                <ArrowRight size={16} />
               </Link>
             </div>
+          </ScrollReveal>
 
-            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
-              {FORMATS.map((format) => (
-                <FormatCard key={format.label} {...format} />
-              ))}
-            </div>
+          <div className="-mx-4 mt-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:mt-8 xl:grid-cols-4">
+            {FORMATS.map((format, index) => (
+              <ScrollReveal key={format.label} delay={index * 90} direction="up">
+                <FormatCard {...format} />
+              </ScrollReveal>
+            ))}
           </div>
         </div>
       </div>

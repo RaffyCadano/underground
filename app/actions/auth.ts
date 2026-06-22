@@ -1,5 +1,8 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { redirect } from 'next/navigation';
@@ -128,4 +131,58 @@ export async function resetPassword(
   ]);
 
   redirect('/login?reset=1');
+}
+
+export async function changePassword(
+  _prev: { error?: string; success?: boolean; message?: string } | null,
+  formData: FormData,
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return { error: 'Sign in to change your password.' };
+  }
+
+  const currentPassword = formData.get('currentPassword') as string;
+  const password = formData.get('password') as string;
+  const confirm = formData.get('confirm') as string;
+
+  if (!currentPassword || !password || !confirm) {
+    return { error: 'All fields are required.' };
+  }
+  if (password.length < 8) {
+    return { error: 'New password must be at least 8 characters.' };
+  }
+  if (password !== confirm) {
+    return { error: 'New passwords do not match.' };
+  }
+  if (currentPassword === password) {
+    return { error: 'Choose a different password than your current one.' };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, password: true },
+  });
+  if (!user) {
+    return { error: 'Account not found.' };
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.password);
+  if (!valid) {
+    return { error: 'Current password is incorrect.' };
+  }
+
+  const hash = await bcrypt.hash(password, 12);
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: user.id },
+      data: { password: hash },
+    }),
+    prisma.passwordResetToken.deleteMany({ where: { userId: user.id } }),
+  ]);
+
+  revalidatePath('/dashboard/profile');
+
+  return { success: true, message: 'Password updated successfully.' };
 }

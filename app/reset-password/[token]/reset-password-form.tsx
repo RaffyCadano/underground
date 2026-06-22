@@ -26,7 +26,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         </div>
 
         <p className="text-sm leading-relaxed text-slate-400">
-          Enter a new password for your Underground account. You&apos;ll sign in with it on the next page.
+          Enter a new password for your UGNCBBX account. You&apos;ll sign in with it on the next page.
         </p>
 
         <form action={action} className="mt-6 space-y-4 sm:mt-8 sm:space-y-5">

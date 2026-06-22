@@ -87,7 +87,7 @@ export function SignOutDialog({
                   End session
                 </p>
                 <h2 id="sign-out-title" className="mt-1 text-lg font-semibold text-white">
-                  Sign out of Underground?
+                  Sign out of UGNCBBX?
                 </h2>
               </div>
             </div>
@@ -123,7 +123,7 @@ export function SignOutDialog({
                 <p className="font-medium text-amber-100">You&apos;ll need to sign in again to continue.</p>
                 <ul className="mt-2 list-inside list-disc space-y-1 text-slate-400">
                   <li>Dashboard and account settings become unavailable</li>
-                  <li>Your tournament data stays saved on Underground</li>
+                  <li>Your tournament data stays saved on UGNCBBX</li>
                   <li>You&apos;ll be redirected to the home page</li>
                 </ul>
               </div>

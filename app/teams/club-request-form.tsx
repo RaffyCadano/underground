@@ -24,7 +24,7 @@ export function ClubRequestForm({
         <CheckCircle2 size={28} className="mx-auto text-emerald-400" />
         <h3 className="mt-3 text-base font-semibold text-white">Request submitted</h3>
         <p className="mt-2 text-sm leading-relaxed text-slate-400">
-          Thanks — the Underground team will review your club request and reach out by email if we
+          Thanks — the UGNCBBX team will review your club request and reach out by email if we
           need anything else.
         </p>
       </div>
@@ -141,7 +141,7 @@ export function ClubRequestForm({
 
       {!isLoggedIn && (
         <p className="text-xs text-slate-500">
-          Already on Underground?{' '}
+          Already on UGNCBBX?{' '}
           <Link href="/login" className="font-semibold text-brand-300 hover:text-brand-200">
             Sign in
           </Link>{' '}

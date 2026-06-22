@@ -6,21 +6,33 @@ type FilterOption = { value: string; label: string };
 export function ListSearch({
   action,
   query = '',
+  filterName = 'status',
+  filterValue,
+  filterOptions,
   status,
   statusOptions,
   placeholder = 'Search…',
 }: {
   action: string;
   query?: string;
+  filterName?: string;
+  filterValue?: string;
+  filterOptions?: FilterOption[];
   status?: string;
   statusOptions?: FilterOption[];
   placeholder?: string;
 }) {
-  const hasFilters = Boolean(query || (status && status !== 'all'));
+  const options = filterOptions ?? statusOptions;
+  const value = filterValue ?? status;
+  const hasFilters = Boolean(query || (value && value !== 'all'));
 
   return (
-    <form method="GET" action={action} className="flex flex-col gap-3 lg:flex-row lg:items-stretch lg:justify-end">
-      <div className="relative min-w-0 flex-1 lg:max-w-md">
+    <form
+      method="GET"
+      action={action}
+      className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:justify-end"
+    >
+      <div className="relative min-w-0 w-full flex-1 sm:min-w-[12rem]">
         <Search
           size={16}
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
@@ -33,17 +45,17 @@ export function ListSearch({
           className="input w-full pl-9"
         />
       </div>
-      {statusOptions && (
-        <select name="status" defaultValue={status ?? 'all'} className="select w-full sm:w-auto lg:w-44">
-          {statusOptions.map((option) => (
+      {options && (
+        <select name={filterName} defaultValue={value ?? 'all'} className="select w-full sm:w-36 sm:shrink-0">
+          {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
         </select>
       )}
-      <div className="flex gap-2">
-        <button type="submit" className="btn-primary min-w-0 flex-1 px-5 sm:flex-none">
+      <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">
+        <button type="submit" className="btn-primary min-w-0 flex-1 px-4 sm:flex-none sm:px-5">
           Search
         </button>
         {hasFilters && (

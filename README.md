@@ -1,6 +1,6 @@
-# Underground
+# UGNCBBX
 
-Underground is a Next.js MVP for tournament registration, brackets, match results, and rankings.
+UGNCBBX (Underground North Carolina Beyblade X) is a Next.js MVP for tournament registration, brackets, match results, and rankings.
 
 ## Tech stack
 
