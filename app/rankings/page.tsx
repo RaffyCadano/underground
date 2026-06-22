@@ -10,6 +10,7 @@ import {
   rankedPlayerSelect,
   rankedPlayerWhere,
 } from '@/lib/rankings';
+import { playerProfilePath } from '@/lib/player-profile';
 import { parseSearchQuery, playerSearchWhere } from '@/lib/search';
 
 type RankedPlayer = {
@@ -62,7 +63,7 @@ function PodiumCard({
 
   return (
     <Link
-      href={`/players/${player.username.toLowerCase()}`}
+      href={playerProfilePath(player.username)}
       className={`group relative block min-w-0 overflow-hidden rounded-2xl border bg-slate-900/60 p-4 transition hover:border-slate-600 sm:p-6 ${
         highlight
           ? 'border-brand-500/30 shadow-lg shadow-brand-950/15 lg:-mt-4 lg:pb-8'
@@ -116,7 +117,7 @@ function LeaderboardMobileCard({ player, rank }: { player: RankedPlayer; rank: n
 
   return (
     <Link
-      href={`/players/${player.username.toLowerCase()}`}
+      href={playerProfilePath(player.username)}
       className="block px-4 py-3.5 transition hover:bg-slate-900/50 sm:px-5"
     >
       <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
@@ -170,7 +171,7 @@ function LeaderboardTableRow({ player, rank }: { player: RankedPlayer; rank: num
       </td>
       <td className="px-4 py-4 sm:px-6">
         <Link
-          href={`/players/${player.username.toLowerCase()}`}
+          href={playerProfilePath(player.username)}
           className="group inline-flex min-w-0 items-center gap-3"
         >
           <PlayerAvatar username={player.username} avatar={player.avatar} />

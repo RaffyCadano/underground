@@ -13,7 +13,8 @@ import {
   X,
 } from 'lucide-react';
 import { deleteUser, updateUser } from '@/app/actions/users';
-import { ASSIGNABLE_ROLES } from '@/lib/roles';
+import { ASSIGNABLE_ROLES, canManageProtectedAdminAccount, isProtectedAdminAccount } from '@/lib/roles';
+import { playerProfilePath } from '@/lib/player-profile';
 
 export type AccountUser = {
   id: string;
@@ -69,9 +70,11 @@ function ModalPortal({
 export function AccountActionsMenu({
   user,
   currentUserId,
+  currentUsername,
 }: {
   user: AccountUser;
   currentUserId: string;
+  currentUsername: string;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -83,9 +86,15 @@ export function AccountActionsMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuPanelRef = useRef<HTMLDivElement>(null);
 
-  const canDelete = user.id !== currentUserId;
-  const canChangeRole = user.id !== currentUserId;
-  const profileHref = `/players/${user.username.toLowerCase()}`;
+  const canManageAccount = canManageProtectedAdminAccount(
+    { username: currentUsername },
+    { username: user.username },
+  );
+  const isProtectedAccount = isProtectedAdminAccount(user);
+  const canDelete = canManageAccount && user.id !== currentUserId;
+  const canEdit = canManageAccount;
+  const canChangeRole = canManageAccount && user.id !== currentUserId && !isProtectedAdminAccount(user);
+  const profileHref = playerProfilePath(user.username);
 
   const [form, setForm] = useState({
     username: user.username,
@@ -179,6 +188,7 @@ export function AccountActionsMenu({
   }, [editOpen, deleteOpen, isPending]);
 
   function openEdit() {
+    if (!canEdit) return;
     setMenuOpen(false);
     setForm({
       username: user.username,
@@ -266,6 +276,8 @@ export function AccountActionsMenu({
       label: 'Edit account',
       icon: Pencil,
       onClick: openEdit,
+      disabled: !canEdit,
+      disabledReason: 'The main admin account cannot be modified',
       tone: 'default' as const,
     },
     {
@@ -273,7 +285,9 @@ export function AccountActionsMenu({
       icon: Trash2,
       onClick: openDelete,
       disabled: !canDelete,
-      disabledReason: 'You cannot delete your own account',
+      disabledReason: user.id === currentUserId
+        ? 'You cannot delete your own account'
+        : 'The main admin account cannot be deleted',
       tone: 'danger' as const,
     },
   ];
@@ -402,7 +416,8 @@ export function AccountActionsMenu({
                   minLength={3}
                   value={form.username}
                   onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-                  className="input mt-1"
+                  disabled={isProtectedAccount}
+                  className="input mt-1 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
               <div>
@@ -434,7 +449,11 @@ export function AccountActionsMenu({
                 <p className="mt-1 text-sm capitalize text-slate-300">{user.role}</p>
               )}
               {!canChangeRole && (
-                <p className="mt-1.5 text-xs text-slate-500">You cannot change your own role.</p>
+                <p className="mt-1.5 text-xs text-slate-500">
+                  {isProtectedAccount
+                    ? 'The main admin role cannot be changed.'
+                    : 'You cannot change your own role.'}
+                </p>
               )}
             </div>
             <div className="grid gap-4 sm:grid-cols-3">

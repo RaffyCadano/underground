@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Crown, Medal } from 'lucide-react';
 import type { PodiumEntry } from '@/lib/tournament-stats';
+import { playerProfilePath } from '@/lib/player-profile';
 
 const PLACEMENT_META: Record<
   PodiumEntry['placement'],
@@ -43,7 +44,7 @@ export function TournamentPodium({ entries }: Props) {
           return (
             <Link
               key={entry.userId}
-              href={`/players/${entry.username.toLowerCase()}`}
+              href={playerProfilePath(entry.username)}
               className={`group flex items-center gap-3 rounded-xl border px-4 py-3 transition hover:brightness-110 ${meta.className} ${
                 entry.placement === 1 ? 'sm:-mt-0.5 sm:shadow-lg sm:shadow-amber-950/20' : ''
               }`}

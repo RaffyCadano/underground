@@ -1,9 +1,10 @@
 'use client';
 
-import { useActionState, useRef, useState, useTransition } from 'react';
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2, X } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { Info, Loader2, X } from 'lucide-react';
 import {
   addBlockedUser,
   removeBlockedUser,
@@ -11,6 +12,7 @@ import {
   uploadProfileAvatar,
 } from '@/app/actions/profile';
 import { PlayerAvatar } from '@/app/components/player-avatar';
+import { SuccessToast } from '@/app/components/success-toast';
 import {
   COUNTRY_OPTIONS,
   LANGUAGE_OPTIONS,
@@ -42,21 +44,44 @@ type User = {
 type Props = {
   user: User;
   uploadEnabled: boolean;
+  canEditUsername: boolean;
 };
+
+function LabelTooltip({ text }: { text: string }) {
+  return (
+    <span className="group relative ml-1.5 inline-flex align-middle">
+      <button
+        type="button"
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition hover:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+        aria-label={text}
+      >
+        <Info size={14} />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-48 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs leading-relaxed text-slate-300 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
 
 function FieldRow({
   label,
   hint,
   children,
 }: {
-  label: string;
+  label: React.ReactNode;
   hint?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="grid gap-2 border-b border-slate-800/80 py-5 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-start sm:gap-6">
       <div className="pt-0.5">
-        <label className="text-sm font-medium text-slate-300">{label}</label>
+        <div className="flex items-center text-sm font-medium text-slate-300">
+          {typeof label === 'string' ? <label>{label}</label> : label}
+        </div>
         {hint && <p className="mt-1 text-xs leading-relaxed text-slate-500">{hint}</p>}
       </div>
       <div className="min-w-0">{children}</div>
@@ -99,16 +124,25 @@ function CheckboxField({
   );
 }
 
-export function ProfileAccountSettingsForm({ user, uploadEnabled }: Props) {
+export function ProfileAccountSettingsForm({ user, uploadEnabled, canEditUsername }: Props) {
   const router = useRouter();
+  const { update } = useSession();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [state, saveAction, savePending] = useActionState(updateAccountSettings, null);
+  const [successToastOpen, setSuccessToastOpen] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [selectedFileName, setSelectedFileName] = useState('');
   const [blockInput, setBlockInput] = useState('');
   const [blockError, setBlockError] = useState('');
   const [uploadPending, startUploadTransition] = useTransition();
   const [blockPending, startBlockTransition] = useTransition();
+
+  useEffect(() => {
+    if (!state?.success) return;
+    setSuccessToastOpen(true);
+    void update();
+    router.refresh();
+  }, [state?.success, update, router]);
 
   function uploadFile(file: File) {
     const formData = new FormData();
@@ -159,26 +193,51 @@ export function ProfileAccountSettingsForm({ user, uploadEnabled }: Props) {
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
+      <SuccessToast
+        open={successToastOpen}
+        title="Account settings saved"
+        body="Your profile changes have been updated."
+        onDismiss={() => setSuccessToastOpen(false)}
+      />
       <form action={saveAction}>
         <div className="px-5 sm:px-6">
-          <FieldRow label="Email">
+          <FieldRow
+            label={
+              <>
+                <label>Email</label>
+                <LabelTooltip text="Email cannot be changed here." />
+              </>
+            }
+          >
             <input
               type="email"
               name="email"
-              required
               defaultValue={user.email}
-              className="input w-full max-w-md"
+              readOnly
+              className="input w-full max-w-md cursor-default bg-slate-900/50"
             />
           </FieldRow>
 
-          <FieldRow label="Username">
+          <FieldRow
+            label={
+              canEditUsername ? (
+                'Username'
+              ) : (
+                <>
+                  <label>Username</label>
+                  <LabelTooltip text="Only admins can change their username here." />
+                </>
+              )
+            }
+          >
             <input
               type="text"
-              name="username"
-              required
-              minLength={3}
+              name={canEditUsername ? 'username' : undefined}
+              required={canEditUsername}
+              minLength={canEditUsername ? 3 : undefined}
               defaultValue={user.username}
-              className="input w-full max-w-md"
+              readOnly={!canEditUsername}
+              className={`input w-full max-w-md${canEditUsername ? '' : ' cursor-default bg-slate-900/50'}`}
             />
           </FieldRow>
 
@@ -384,11 +443,6 @@ export function ProfileAccountSettingsForm({ user, uploadEnabled }: Props) {
           {state?.error && (
             <p className="mb-3 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
               {state.error}
-            </p>
-          )}
-          {state?.success && (
-            <p className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
-              {state.success}
             </p>
           )}
           <button type="submit" disabled={savePending} className="btn-primary">

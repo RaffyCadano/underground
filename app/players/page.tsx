@@ -16,6 +16,7 @@ import { PlayerAvatar } from '@/app/components/player-avatar';
 import { prisma } from '@/lib/prisma';
 import { parsePageParam, PLAYERS_PAGE_SIZE, totalPages } from '@/lib/pagination';
 import { rankedPlayerOrderBy, rankedPlayerSelect, rankedPlayerWhere } from '@/lib/rankings';
+import { playerProfilePath } from '@/lib/player-profile';
 import { parseSearchQuery, playerSearchWhere } from '@/lib/search';
 
 type RankedPlayer = {
@@ -56,7 +57,7 @@ function SpotlightCard({
 
   return (
     <Link
-      href={`/players/${player.username.toLowerCase()}`}
+      href={playerProfilePath(player.username)}
       className={`group block min-w-0 overflow-hidden rounded-2xl border bg-slate-900/60 p-4 transition hover:border-slate-600 sm:p-5 ${
         highlight ? 'border-brand-500/25 shadow-lg shadow-brand-950/10' : 'border-slate-800'
       }`}
@@ -95,7 +96,7 @@ function PlayerMobileCard({ player, rank }: { player: RankedPlayer; rank: number
   const total = player.wins + player.losses;
   const winRate = total > 0 ? Math.round((player.wins / total) * 100) : 0;
   const badge = rankBadge(rank);
-  const profileHref = `/players/${player.username.toLowerCase()}`;
+  const profileHref = playerProfilePath(player.username);
 
   return (
     <div className="px-4 py-3.5 sm:px-5">
@@ -142,7 +143,7 @@ function PlayerTableRow({ player, rank }: { player: RankedPlayer; rank: number }
   const total = player.wins + player.losses;
   const winRate = total > 0 ? Math.round((player.wins / total) * 100) : 0;
   const badge = rankBadge(rank);
-  const profileHref = `/players/${player.username.toLowerCase()}`;
+  const profileHref = playerProfilePath(player.username);
 
   return (
     <tr className="transition hover:bg-slate-900/50">

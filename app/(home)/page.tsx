@@ -6,18 +6,19 @@ import {
   MapPin,
   Swords,
   Trophy,
+  UserRound,
   Users,
   Zap,
 } from 'lucide-react';
 import { ScrollReveal } from '@/app/components/scroll-reveal';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { playerProfilePath } from '@/lib/player-profile';
 import { rankedPlayerWhere } from '@/lib/rankings';
 import { dashboardHrefForRole } from '@/lib/roles';
 import { CircuitSection } from './circuit-section';
 import { HowItWorksSection } from './how-it-works-section';
 import { PricingPlansSection } from './pricing-plans-section';
-import { UnderDevelopmentNotice } from './under-development-notice';
 
 function formatShortDate(date: Date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -49,7 +50,10 @@ export default async function HomePage() {
       where: { status: { in: ['open', 'active'] } },
       orderBy: [{ status: 'asc' }, { date: 'asc' }],
       take: 4,
-      include: { _count: { select: { participants: true } } },
+      include: {
+        _count: { select: { participants: true } },
+        createdBy: { select: { username: true } },
+      },
     }),
     prisma.match.findMany({
       where: { status: 'complete', score: { not: null } },
@@ -85,7 +89,6 @@ export default async function HomePage() {
 
   return (
     <div className="w-full">
-      <UnderDevelopmentNotice />
       {/* Hero */}
       <section className="relative overflow-x-hidden border-b border-slate-800 py-0">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(34,197,94,0.12),transparent)]" />
@@ -197,6 +200,24 @@ export default async function HomePage() {
                         <Users size={14} className="shrink-0 text-slate-500" />
                         {featuredTournament._count.participants}{' '}
                         {featuredTournament._count.participants === 1 ? 'player' : 'players'} registered
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <UserRound size={14} className="mt-0.5 shrink-0 text-slate-500" />
+                        <span>
+                          {featuredTournament.createdBy ? (
+                            <>
+                              Organizer{' '}
+                              <Link
+                                href={playerProfilePath(featuredTournament.createdBy.username)}
+                                className="font-medium text-brand-300 hover:text-brand-200"
+                              >
+                                {featuredTournament.createdBy.username}
+                              </Link>
+                            </>
+                          ) : (
+                            'Organizer UGNCBBX'
+                          )}
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <Trophy size={14} className="mt-0.5 shrink-0 text-slate-500" />

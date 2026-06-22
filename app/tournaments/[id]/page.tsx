@@ -5,7 +5,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { canManageTournament } from '@/lib/tournament-host';
 import { TournamentActions } from './tournament-actions';
-import { ParticipantManager } from './participant-manager';
+import { ParticipantManager, TournamentParticipantList } from './participant-manager';
 import { BracketTree } from './bracket-tree';
 import { BracketSwiss } from './bracket-swiss';
 import { TournamentDoubleElimTabs } from './tournament-double-elim-tabs';
@@ -37,6 +37,7 @@ export default async function TournamentDetail({
   const tournament = await prisma.tournament.findUnique({
     where: { id },
     include: {
+      createdBy: { select: { username: true } },
       participants: {
         orderBy: [{ seed: 'asc' }, { createdAt: 'asc' }],
         include: { user: { select: { id: true, username: true, rankPoints: true, role: true } } },
@@ -116,6 +117,7 @@ export default async function TournamentDetail({
         entryFee={tournament.entryFee}
         prizePool={tournament.prizePool}
         tournamentId={tournament.id}
+        organizerUsername={tournament.createdBy?.username ?? null}
         isLoggedIn={isLoggedIn}
         isJoined={isJoined}
         isAdmin={isAdmin}
@@ -274,7 +276,7 @@ export default async function TournamentDetail({
                   interactive
                 />
               )
-            ) : canManagePlayers ? (
+            ) : isAdmin && canManagePlayers ? (
               <ParticipantManager
                 tournamentId={tournament.id}
                 participants={tournament.participants}
@@ -282,11 +284,9 @@ export default async function TournamentDetail({
                 isAdmin={isAdmin}
                 canManage={canManagePlayers}
               />
-            ) : tournament.status === 'open' ? (
-              <div className="card-muted p-10 text-center text-slate-400">
-                Bracket will be generated once registration closes.
-              </div>
-            ) : null}
+            ) : (
+              <TournamentParticipantList participants={tournament.participants} />
+            )}
           </div>
         </div>
       </div>

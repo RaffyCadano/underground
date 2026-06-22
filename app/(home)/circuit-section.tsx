@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, BarChart3, Crown, Medal, Swords } from 'lucide-react';
 import { PlayerAvatar } from '@/app/components/player-avatar';
 import { ScrollReveal } from '@/app/components/scroll-reveal';
+import { playerProfilePath } from '@/lib/player-profile';
 
 export type CircuitPlayer = {
   id: string;
@@ -47,7 +48,7 @@ function PodiumSpot({ player, rank }: { player: CircuitPlayer; rank: number }) {
 
   return (
     <Link
-      href={`/players/${player.username.toLowerCase()}`}
+      href={playerProfilePath(player.username)}
       className={`group relative flex min-w-0 flex-1 flex-col items-center rounded-xl border p-2.5 text-center transition hover:border-slate-600 sm:p-4 ${
         isFirst
           ? 'border-brand-500/35 bg-gradient-to-b from-brand-500/10 to-slate-950/40 sm:-mt-3 sm:pb-5'
@@ -83,7 +84,7 @@ function LeaderboardRow({ player, rank }: { player: CircuitPlayer; rank: number 
 
   return (
     <Link
-      href={`/players/${player.username.toLowerCase()}`}
+      href={playerProfilePath(player.username)}
       className="group block rounded-xl border border-slate-800/80 bg-slate-950/40 px-3 py-3 transition hover:border-slate-700 hover:bg-slate-900/60 sm:px-4"
     >
       <div className="flex items-center gap-2.5 sm:gap-3">

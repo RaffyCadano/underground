@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { ProfileAccountSettingsForm } from '@/app/components/profile-account-settings-form';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isAdminRole } from '@/lib/roles';
 import { isSupabaseStorageConfigured } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -46,6 +47,7 @@ export default async function ProfileSettingsPage() {
       <ProfileAccountSettingsForm
         user={user}
         uploadEnabled={isSupabaseStorageConfigured()}
+        canEditUsername={isAdminRole(session.user.role)}
       />
     </div>
   );

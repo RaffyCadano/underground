@@ -6,10 +6,12 @@ import {
   Layers,
   MapPin,
   Trophy,
+  UserRound,
   Users,
   Zap,
 } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { playerProfilePath } from '@/lib/player-profile';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { canManageTournament as userCanManageTournament } from '@/lib/tournament-host';
@@ -89,6 +91,7 @@ function TournamentCard({
     format: string;
     status: string;
     createdById: string | null;
+    createdBy: { username: string } | null;
     _count: { participants: number };
   };
   canManage: boolean;
@@ -142,8 +145,26 @@ function TournamentCard({
           </li>
           <li className="flex h-5 items-center gap-2.5">
             <MapPin size={14} className="shrink-0 text-slate-500" />
-            <span className={`min-w-0 truncate ${t.location ? 'text-slate-400' : 'text-slate-600'}`}>
-              {t.location ?? 'null'}
+            <span className="min-w-0 truncate text-slate-400">
+              {t.location ?? 'TBD'}
+            </span>
+          </li>
+          <li className="flex h-5 items-center gap-2.5">
+            <UserRound size={14} className="shrink-0 text-slate-500" />
+            <span className="min-w-0 truncate">
+              {t.createdBy ? (
+                <>
+                  <span className="text-slate-500">Organizer </span>
+                  <Link
+                    href={playerProfilePath(t.createdBy.username)}
+                    className="font-medium text-brand-300 hover:text-brand-200"
+                  >
+                    {t.createdBy.username}
+                  </Link>
+                </>
+              ) : (
+                <span className="text-slate-400">Organizer UGNCBBX</span>
+              )}
             </span>
           </li>
           <li className="flex h-5 items-center gap-2.5">
@@ -202,7 +223,10 @@ export default async function TournamentsPage({
     prisma.tournament.findMany({
       where: listWhere,
       orderBy: { date: 'asc' },
-      include: { _count: { select: { participants: true } } },
+      include: {
+        _count: { select: { participants: true } },
+        createdBy: { select: { username: true } },
+      },
     }),
   ]);
 
@@ -351,6 +375,19 @@ export default async function TournamentsPage({
                                 <span className="truncate">{t.location}</span>
                               </span>
                             )}
+                            <span className="inline-flex min-w-0 items-center gap-1">
+                              <UserRound size={12} className="shrink-0" />
+                              {t.createdBy ? (
+                                <Link
+                                  href={playerProfilePath(t.createdBy.username)}
+                                  className="truncate transition hover:text-brand-300"
+                                >
+                                  {t.createdBy.username}
+                                </Link>
+                              ) : (
+                                <span>UGNCBBX</span>
+                              )}
+                            </span>
                             <span className="inline-flex items-center gap-1">
                               <Users size={12} className="shrink-0" />
                               {t._count.participants} players

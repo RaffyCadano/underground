@@ -12,7 +12,11 @@ import {
 import { getServerSession } from 'next-auth';
 import { PlayerAvatar } from '@/app/components/player-avatar';
 import { authOptions } from '@/lib/auth';
+import {
+  usernameFromProfileParam,
+} from '@/lib/player-profile';
 import { prisma } from '@/lib/prisma';
+import { rankedPlayerWhere } from '@/lib/rankings';
 import { roleBadgeClass, roleLabel } from '@/lib/roles';
 
 function formatDate(date: Date) {
@@ -28,12 +32,18 @@ export default async function PlayerProfile({
 }: {
   params: Promise<{ username: string }>;
 }) {
-  const { username } = await params;
+  const { username: usernameParam } = await params;
+  const lookupUsername = usernameFromProfileParam(usernameParam);
 
   const session = await getServerSession(authOptions);
 
   const player = await prisma.user.findFirst({
-    where: { username: { equals: username, mode: 'insensitive' } },
+    where: {
+      OR: [
+        { username: { equals: lookupUsername, mode: 'insensitive' } },
+        { username: { equals: usernameParam.trim(), mode: 'insensitive' } },
+      ],
+    },
     include: {
       tournaments: {
         include: {

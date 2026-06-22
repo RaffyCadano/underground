@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { addGuestPlayerToTournament, addPlayerToTournament, removePlayerFromTournament } from '@/app/actions/tournaments';
 import { normalizeGuestDisplayName } from '@/lib/guest-player';
+import { playerProfilePath } from '@/lib/player-profile';
 
 type Participant = {
   id: string;
@@ -18,6 +19,92 @@ type AvailableUser = {
   username: string;
   rankPoints: number;
 };
+
+export function TournamentParticipantList({
+  participants,
+  emptyMessage = 'No players registered yet.',
+  onRemove,
+  removeDisabled,
+}: {
+  participants: Participant[];
+  emptyMessage?: string;
+  onRemove?: (userId: string, username: string, isGuest: boolean) => void;
+  removeDisabled?: boolean;
+}) {
+  const canRemove = !!onRemove;
+
+  if (participants.length === 0) {
+    return (
+      <div className="card-muted p-8 text-center text-slate-400">{emptyMessage}</div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-800">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-slate-800 bg-slate-900">
+            <th className="w-10 px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              #
+            </th>
+            <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Player
+            </th>
+            <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Rating
+            </th>
+            {canRemove && (
+              <th className="w-20 px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Remove
+              </th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {participants.map((p, i) => (
+            <tr key={p.id} className="border-b border-slate-800 last:border-0">
+              <td className="px-4 py-2.5 tabular-nums text-slate-400">{i + 1}</td>
+              <td className="px-4 py-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  {p.user.role === 'guest' ? (
+                    <span className="font-semibold text-white">{p.user.username}</span>
+                  ) : (
+                    <Link
+                      href={playerProfilePath(p.user.username)}
+                      className="font-semibold text-white transition hover:text-brand-300"
+                    >
+                      {p.user.username}
+                    </Link>
+                  )}
+                  {p.user.role === 'guest' && (
+                    <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                      Walk-in
+                    </span>
+                  )}
+                </div>
+              </td>
+              <td className="px-4 py-2.5 text-right tabular-nums text-slate-400">
+                {p.user.role === 'guest' ? '—' : p.user.rankPoints}
+              </td>
+              {canRemove && (
+                <td className="px-4 py-2.5 text-right">
+                  <button
+                    type="button"
+                    onClick={() => onRemove(p.userId, p.user.username, p.user.role === 'guest')}
+                    disabled={removeDisabled}
+                    className="text-xs font-semibold text-red-400 transition hover:text-red-300 disabled:opacity-60"
+                  >
+                    Remove
+                  </button>
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 interface Props {
   tournamentId: string;
@@ -525,18 +612,6 @@ export function ParticipantManager({
         error={removeError}
       />
 
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-          Registered players ({participants.length})
-        </p>
-        {canManage && (
-          <p className="mt-1 text-sm text-slate-400">
-            Add or remove players, then generate the bracket when ready. Organizers can add
-            walk-ins even when the public cap is full.
-          </p>
-        )}
-      </div>
-
       {error && (
         <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
           {error}
@@ -615,77 +690,16 @@ export function ParticipantManager({
         </div>
       )}
 
-      {participants.length === 0 ? (
-        <div className="card-muted p-8 text-center text-slate-400">
-          No players registered yet.
-          {isAdmin && canManage && ' Use the form above to add players.'}
-          {!isAdmin && ' Sign in and register, or wait for an organizer to add players.'}
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-800">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-800 bg-slate-900">
-                <th className="w-10 px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  #
-                </th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Player
-                </th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Rating
-                </th>
-                {isAdmin && canManage && (
-                  <th className="w-20 px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Remove
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {participants.map((p, i) => (
-                <tr key={p.id} className="border-b border-slate-800 last:border-0">
-                  <td className="px-4 py-2.5 tabular-nums text-slate-400">{i + 1}</td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {p.user.role === 'guest' ? (
-                        <span className="font-semibold text-white">{p.user.username}</span>
-                      ) : (
-                        <Link
-                          href={`/players/${p.user.username.toLowerCase()}`}
-                          className="font-semibold text-white transition hover:text-brand-300"
-                        >
-                          {p.user.username}
-                        </Link>
-                      )}
-                      {p.user.role === 'guest' && (
-                        <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                          Walk-in
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-2.5 text-right tabular-nums text-slate-400">
-                    {p.user.role === 'guest' ? '—' : p.user.rankPoints}
-                  </td>
-                  {isAdmin && canManage && (
-                    <td className="px-4 py-2.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => openRemoveConfirm(p.userId, p.user.username, p.user.role === 'guest')}
-                        disabled={isPending}
-                        className="text-xs font-semibold text-red-400 transition hover:text-red-300 disabled:opacity-60"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <TournamentParticipantList
+        participants={participants}
+        emptyMessage={
+          isAdmin && canManage
+            ? 'No players registered yet. Use the form above to add players.'
+            : 'No players registered yet.'
+        }
+        onRemove={isAdmin && canManage ? openRemoveConfirm : undefined}
+        removeDisabled={isPending}
+      />
     </div>
   );
 }

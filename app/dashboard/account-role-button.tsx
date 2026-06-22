@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { Shield, X } from 'lucide-react';
 import { updateUserRole } from '@/app/actions/users';
-import { ASSIGNABLE_ROLES, isAdminRole } from '@/lib/roles';
+import { ASSIGNABLE_ROLES, isAdminRole, isProtectedAdminAccount } from '@/lib/roles';
 
 export function AccountRoleButton({
   userId,
@@ -65,7 +65,7 @@ export function AccountRoleButton({
     });
   }
 
-  if (isSelf) return null;
+  if (isSelf || isProtectedAdminAccount({ username })) return null;
 
   return (
     <>

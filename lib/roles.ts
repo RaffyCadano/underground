@@ -55,3 +55,22 @@ export function dashboardHrefForRole(role: string): string {
   if (role === 'organizer') return '/dashboard/tournaments';
   return '/dashboard';
 }
+
+/** Primary site owner account — cannot be deleted or modified by other admins. */
+export const MAIN_ADMIN_USERNAME = 'vandam';
+
+export function isMainAdminUsername(username: string): boolean {
+  return username.toLowerCase() === MAIN_ADMIN_USERNAME.toLowerCase();
+}
+
+export function isProtectedAdminAccount(user: { username: string }): boolean {
+  return isMainAdminUsername(user.username);
+}
+
+export function canManageProtectedAdminAccount(
+  actor: { username: string },
+  target: { username: string },
+): boolean {
+  if (!isProtectedAdminAccount(target)) return true;
+  return isMainAdminUsername(actor.username);
+}

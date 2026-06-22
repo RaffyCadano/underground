@@ -7,11 +7,13 @@ import {
   MapPin,
   Medal,
   Trophy,
+  UserRound,
   Users,
 } from 'lucide-react';
 import { GAME_TYPE_LABELS } from '@/lib/tournament-options';
 import { formatPlayerCapLabel } from '@/lib/tournament-registration';
 import { formatEventTime } from '@/lib/tournament-schedule';
+import { playerProfilePath } from '@/lib/player-profile';
 import { TournamentHeroRegister } from './tournament-hero-register';
 
 const FORMAT_LABELS: Record<string, string> = {
@@ -49,6 +51,7 @@ type Props = {
   entryFee: string | null;
   prizePool: string | null;
   tournamentId: string;
+  organizerUsername: string | null;
   isLoggedIn: boolean;
   isJoined: boolean;
   isAdmin: boolean;
@@ -69,6 +72,7 @@ export function TournamentHero({
   entryFee,
   prizePool,
   tournamentId,
+  organizerUsername,
   isLoggedIn,
   isJoined,
   isAdmin,
@@ -83,11 +87,24 @@ export function TournamentHero({
   const eventStart = formatEventTime(eventStartTime);
   const playersLabel = formatPlayerCapLabel(participantCount, playerCap);
 
-  const facts = [
+  const facts: Array<{
+    icon: typeof Calendar;
+    label: string;
+    value: string;
+    href?: string;
+  }> = [
     { icon: Calendar, label: 'Date', value: dateLabel },
-    ...(location
-      ? [{ icon: MapPin, label: 'Location', value: location }]
-      : []),
+    ...(location ? [{ icon: MapPin, label: 'Location', value: location }] : []),
+    ...(organizerUsername
+      ? [
+          {
+            icon: UserRound,
+            label: 'Organizer',
+            value: organizerUsername,
+            href: playerProfilePath(organizerUsername),
+          },
+        ]
+      : [{ icon: UserRound, label: 'Organizer', value: 'UGNCBBX' }]),
     ...(checkIn ? [{ icon: Clock, label: 'Check-in open', value: checkIn }] : []),
     ...(eventStart ? [{ icon: Clock, label: 'Event start', value: eventStart }] : []),
     { icon: Users, label: 'Players', value: playersLabel },
@@ -156,7 +173,7 @@ export function TournamentHero({
         />
 
         <dl className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {facts.map(({ icon: Icon, label, value }) => (
+          {facts.map(({ icon: Icon, label, value, href }) => (
             <div
               key={label}
               className="flex items-start gap-3 rounded-xl border border-slate-800/90 bg-slate-900/50 px-4 py-3.5 backdrop-blur-sm"
@@ -168,7 +185,15 @@ export function TournamentHero({
                 <dt className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
                   {label}
                 </dt>
-                <dd className="mt-1 text-sm font-semibold leading-snug text-white">{value}</dd>
+                <dd className="mt-1 text-sm font-semibold leading-snug text-white">
+                  {href ? (
+                    <Link href={href} className="transition hover:text-brand-300">
+                      {value}
+                    </Link>
+                  ) : (
+                    value
+                  )}
+                </dd>
               </div>
             </div>
           ))}

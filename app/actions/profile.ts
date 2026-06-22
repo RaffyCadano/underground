@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isAdminRole } from '@/lib/roles';
+import { playerProfilePath } from '@/lib/player-profile';
 import { getSupabaseAdmin, TOURNAMENT_IMAGES_BUCKET } from '@/lib/supabase-admin';
 
 const MAX_BYTES = 500 * 1024;
@@ -45,13 +47,13 @@ async function deleteStoredAvatar(url: string | null | undefined) {
 }
 
 function revalidateProfilePaths(username: string) {
-  const slug = username.toLowerCase();
+  const profilePath = playerProfilePath(username);
   revalidatePath('/dashboard');
   revalidatePath('/profile');
   revalidatePath('/dashboard/profile');
   revalidatePath('/players');
   revalidatePath('/rankings');
-  revalidatePath(`/players/${slug}`);
+  revalidatePath(profilePath);
 }
 
 export async function uploadProfileAvatar(
@@ -170,47 +172,50 @@ export async function updateAccountSettings(
     return { error: 'Sign in to update your account.' };
   }
 
-  const email = (formData.get('email') as string)?.trim().toLowerCase();
-  const username = (formData.get('username') as string)?.trim();
+  const usernameInput = (formData.get('username') as string)?.trim();
   const fullName = (formData.get('fullName') as string)?.trim() || null;
   const language = (formData.get('language') as string)?.trim() || 'en';
   const timezone = (formData.get('timezone') as string)?.trim() || 'America/New_York';
   const country = (formData.get('country') as string)?.trim() || 'US';
 
-  if (!email || !username) {
-    return { error: 'Email and username are required.' };
-  }
-  if (username.length < 3) {
-    return { error: 'Username must be at least 3 characters.' };
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { error: 'Enter a valid email address.' };
-  }
-
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, username: true },
+    select: { id: true, username: true, email: true, role: true },
   });
   if (!user) {
     return { error: 'Account not found.' };
   }
 
-  const conflict = await prisma.user.findFirst({
-    where: {
-      id: { not: user.id },
-      OR: [{ email }, { username }],
-    },
-    select: { email: true, username: true },
-  });
+  const canEditUsername = isAdminRole(user.role);
+  const username = canEditUsername ? usernameInput : user.username;
+
+  if (canEditUsername) {
+    if (!username) {
+      return { error: 'Username is required.' };
+    }
+    if (username.length < 3) {
+      return { error: 'Username must be at least 3 characters.' };
+    }
+  } else if (usernameInput && usernameInput !== user.username) {
+    return { error: 'Only admins can change their username.' };
+  }
+
+  const conflict = canEditUsername
+    ? await prisma.user.findFirst({
+        where: {
+          id: { not: user.id },
+          username,
+        },
+        select: { username: true },
+      })
+    : null;
   if (conflict) {
-    if (conflict.email === email) return { error: 'That email is already in use.' };
     return { error: 'That username is already taken.' };
   }
 
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      email,
       username,
       fullName,
       language,

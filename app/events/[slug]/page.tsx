@@ -4,6 +4,7 @@ import { Calendar, Globe, MapPin, UserRound } from 'lucide-react';
 import { TournamentDescriptionContent } from '@/app/components/tournament-description-content';
 import { timezoneLabel } from '@/lib/profile-settings-options';
 import { prisma } from '@/lib/prisma';
+import { playerProfilePath } from '@/lib/player-profile';
 import { SITE_NAME } from '@/lib/site';
 
 function formatEventDateTime(date: Date, timezone: string) {
@@ -86,7 +87,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
           <span className="inline-flex items-center gap-2">
             <UserRound size={15} className="text-slate-500" />
             Hosted by{' '}
-            <Link href={`/players/${event.host.username}`} className="font-medium text-brand-300 hover:text-brand-200">
+            <Link href={playerProfilePath(event.host.username)} className="font-medium text-brand-300 hover:text-brand-200">
               {event.host.username}
             </Link>
           </span>

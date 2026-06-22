@@ -35,6 +35,7 @@ function RoleBadge({ role }: { role: string }) {
 function AccountActions({
   user,
   currentUserId,
+  currentUsername,
 }: {
   user: {
     id: string;
@@ -46,6 +47,7 @@ function AccountActions({
     losses: number;
   };
   currentUserId: string;
+  currentUsername: string;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -55,7 +57,11 @@ function AccountActions({
         role={user.role}
         currentUserId={currentUserId}
       />
-      <AccountActionsMenu user={user} currentUserId={currentUserId} />
+      <AccountActionsMenu
+        user={user}
+        currentUserId={currentUserId}
+        currentUsername={currentUsername}
+      />
     </div>
   );
 }
@@ -249,7 +255,11 @@ export default async function DashboardAccountsPage({
                     <td
                       className={`${tdClass} sticky right-0 z-10 min-w-[8.5rem] bg-slate-950 text-right shadow-[-4px_0_12px_-4px_rgba(0,0,0,0.5)] group-hover:bg-slate-900/60`}
                     >
-                      <AccountActions user={u} currentUserId={session.user.id} />
+                      <AccountActions
+                        user={u}
+                        currentUserId={session.user.id}
+                        currentUsername={session.user.name ?? ''}
+                      />
                     </td>
                   </tr>
                 ))}

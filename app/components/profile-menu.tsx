@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Session } from 'next-auth';
+import { useSession } from 'next-auth/react';
 import { ChevronDown } from 'lucide-react';
 import { PlayerAvatar } from '@/app/components/player-avatar';
 import { SignOutDialog } from '@/app/components/sign-out-dialog';
 import { isAdminRole } from '@/lib/roles';
+import { playerProfilePath } from '@/lib/player-profile';
 
 type ProfileMenuProps = {
   session: Session;
@@ -34,7 +36,7 @@ function buildMenuLinks(session: Session): MenuLink[] {
 
   return [
     { href: dashboardHref, label: 'Dashboard' },
-    { href: `/players/${username.toLowerCase()}`, label: 'Public Profile' },
+    { href: playerProfilePath(username), label: 'Public Profile' },
     { href: '/profile', label: 'Settings' },
     { href: '/messages', label: 'Messages', count: 0 },
     { href: '/news', label: 'News', count: 2 },
@@ -149,12 +151,14 @@ function AccountMenuPanel({
 }
 
 export function ProfileMenu({
-  session,
+  session: initialSession,
   avatar = null,
   onNavigate,
   variant = 'dropdown',
 }: ProfileMenuProps) {
   const pathname = usePathname();
+  const { data: clientSession } = useSession();
+  const session = clientSession ?? initialSession;
   const [open, setOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
