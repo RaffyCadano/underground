@@ -33,7 +33,12 @@ function grandFinalRule(modifier: string): string {
 
 function getFormatRules(
   format: string,
-  opts?: { groupStageEnabled?: boolean; advancePerGroup?: number; grandFinalsModifier?: string },
+  opts?: {
+    groupStageEnabled?: boolean;
+    advancePerGroup?: number;
+    grandFinalsModifier?: string;
+    groupSize?: number;
+  },
 ): string[] {
   switch (format) {
     case 'double_elimination': {

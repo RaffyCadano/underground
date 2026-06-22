@@ -1,0 +1,23 @@
+# Firebase App Hosting — https://firebase.google.com/docs/app-hosting/configure
+# Set secrets: firebase apphosting:secrets:set SECRET_NAME
+
+runConfig:
+  minInstances: 0
+  maxInstances: 10
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 1024
+
+env:
+  - variable: DATABASE_URL
+    secret: DATABASE_URL
+  - variable: DIRECT_URL
+    secret: DIRECT_URL
+  - variable: NEXTAUTH_SECRET
+    secret: NEXTAUTH_SECRET
+  - variable: NEXTAUTH_URL
+    secret: NEXTAUTH_URL
+  - variable: NEXT_PUBLIC_SUPABASE_URL
+    secret: NEXT_PUBLIC_SUPABASE_URL
+  - variable: SUPABASE_SECRET_KEY
+    secret: SUPABASE_SECRET_KEY

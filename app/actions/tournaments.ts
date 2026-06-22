@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { canManageTournaments } from '@/lib/roles';
+import { canManageTournaments, isAdminRole } from '@/lib/roles';
 import { assertCanManageTournament } from '@/lib/tournament-host';
 import { generateSingleElimination, generateSwissRound } from '@/lib/bracket';
 import { redirect } from 'next/navigation';

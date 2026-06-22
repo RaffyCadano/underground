@@ -1,0 +1,15 @@
+{
+  "apphosting": [
+    {
+      "backendId": "ugncbbx",
+      "rootDir": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**",
+        ".next",
+        "out"
+      ]
+    }
+  ]
+}

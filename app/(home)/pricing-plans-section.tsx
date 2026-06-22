@@ -39,7 +39,6 @@ function PlanCard({
   badge,
   productName,
   price,
-  period,
   billingPeriod,
   description,
   features,

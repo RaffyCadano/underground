@@ -21,7 +21,7 @@ const DELEGATE_KEYS = [
 
 function clientIsCurrent(client: PrismaClient): boolean {
   return DELEGATE_KEYS.every((key) => {
-    const delegate = (client as Record<string, unknown>)[key];
+    const delegate = (client as unknown as Record<string, unknown>)[key];
     return (
       delegate != null &&
       typeof delegate === 'object' &&
@@ -75,7 +75,7 @@ function getPrismaClient(): PrismaClient {
 
   if (!clientIsCurrent(client)) {
     const missing = DELEGATE_KEYS.filter((key) => {
-      const delegate = (client as Record<string, unknown>)[key];
+      const delegate = (client as unknown as Record<string, unknown>)[key];
       return !(
         delegate != null &&
         typeof delegate === 'object' &&
