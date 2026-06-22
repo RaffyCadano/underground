@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Prisma } from '@prisma/client';
 import {
+  ArrowRight,
   MapPin,
   Shield,
   Sparkles,
@@ -9,12 +10,9 @@ import {
   Users,
   UsersRound,
 } from 'lucide-react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { ListSearch } from '@/app/components/list-search';
 import { prisma } from '@/lib/prisma';
 import { parseSearchQuery } from '@/lib/search';
-import { ClubRequestForm } from './club-request-form';
 
 type Club = {
   id: string;
@@ -125,7 +123,6 @@ export default async function TeamsPage({
   const { q: qParam } = await searchParams;
   const query = parseSearchQuery(qParam);
   const searchWhere = clubSearchWhere(query);
-  const session = await getServerSession(authOptions);
 
   const [clubs, statsAgg] = await Promise.all([
     prisma.communityClub.findMany({
@@ -198,8 +195,17 @@ export default async function TeamsPage({
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Directory</p>
             <h2 className="mt-1 text-xl font-semibold text-white sm:text-2xl">Community clubs</h2>
           </div>
-          <div className="w-full lg:max-w-md lg:shrink-0">
-            <ListSearch action="/teams" query={query} placeholder="Search clubs, regions…" />
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto lg:shrink-0">
+            <Link
+              href="/teams/request"
+              className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+            >
+              <Sparkles size={15} />
+              Request club listing
+            </Link>
+            <div className="w-full lg:max-w-md">
+              <ListSearch action="/teams" query={query} placeholder="Search clubs, regions…" />
+            </div>
           </div>
         </div>
 
@@ -210,10 +216,10 @@ export default async function TeamsPage({
             <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-slate-400">
               Verified local chapters and regional teams will be published here as they join the UGNCBBX circuit.
               You can{' '}
-              <a href="#request-club" className="font-semibold text-brand-300 hover:text-brand-200">
+              <Link href="/teams/request" className="font-semibold text-brand-300 hover:text-brand-200">
                 request a club listing
-              </a>{' '}
-              below.
+              </Link>{' '}
+              to get started.
             </p>
           </div>
         ) : clubs.length === 0 ? (
@@ -238,60 +244,28 @@ export default async function TeamsPage({
           </>
         )}
 
-        <div id="request-club" className="relative mt-10 scroll-mt-24 overflow-hidden rounded-2xl border border-brand-500/20 bg-slate-900 sm:mt-14">
+        <div className="relative mt-10 overflow-hidden rounded-2xl border border-brand-500/20 bg-slate-900 sm:mt-14">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(34,197,94,0.08),transparent_70%)]" />
-          <div className="relative grid gap-8 border-b border-slate-800/80 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-10 lg:p-10">
+          <div className="relative flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-8">
             <div className="max-w-xl">
               <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-400">
                 <Sparkles size={12} />
                 Start a club listing
               </p>
-              <h2 className="mt-2 text-xl font-semibold text-white sm:text-2xl md:text-3xl">
-                Request your community club
+              <h2 className="mt-2 text-lg font-semibold text-white sm:text-xl">
+                Run a local chapter or crew?
               </h2>
-              <p className="mt-3 text-sm leading-relaxed text-slate-400 sm:text-base">
-                Running a local chapter or crew? Submit a listing request and the UGNCBBX team
-                will review it for the public teams directory.
+              <p className="mt-2 text-sm leading-relaxed text-slate-400">
+                Submit your club for review and get listed on the UGNCBBX teams directory.
               </p>
-              <ul className="mt-5 space-y-2 text-sm text-slate-500">
-                {[
-                  'Share your club name, region, and captain',
-                  'Tell us about your members and local events',
-                  'We follow up by email once your request is reviewed',
-                ].map((item) => (
-                  <li key={item} className="flex gap-2">
-                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-brand-500/80" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link
-                  href="/tournaments"
-                  className="btn-secondary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
-                >
-                  <Trophy size={15} />
-                  Browse events
-                </Link>
-                {!session && (
-                  <Link
-                    href="/register"
-                    className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
-                  >
-                    <UserPlus size={15} />
-                    Create account
-                  </Link>
-                )}
-              </div>
             </div>
-
-            <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-4 sm:p-5">
-              <ClubRequestForm
-                isLoggedIn={Boolean(session)}
-                defaultContactName={session?.user?.name ?? ''}
-                defaultContactEmail={session?.user?.email ?? ''}
-              />
-            </div>
+            <Link
+              href="/teams/request"
+              className="btn-primary inline-flex w-full shrink-0 items-center justify-center gap-2 sm:w-auto"
+            >
+              Request club listing
+              <ArrowRight size={15} />
+            </Link>
           </div>
         </div>
       </section>

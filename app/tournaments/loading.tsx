@@ -27,7 +27,7 @@ function SearchSkeleton() {
 function TournamentCardSkeleton({ featured = false }: { featured?: boolean }) {
   return (
     <article
-      className={`relative min-w-0 overflow-hidden rounded-2xl border bg-slate-900/60 ${
+      className={`relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border bg-slate-900/60 ${
         featured ? 'border-brand-500/25' : 'border-slate-800'
       }`}
     >
@@ -127,7 +127,7 @@ export default function TournamentsLoading() {
               <Skeleton className="h-3 w-28" />
               <Skeleton className="mt-2 h-8 w-56 sm:h-9" />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
+            <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
               <TournamentCardSkeleton featured />
               <TournamentCardSkeleton />
               <TournamentCardSkeleton />

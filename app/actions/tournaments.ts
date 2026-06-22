@@ -3,6 +3,8 @@
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { canManageTournaments } from '@/lib/roles';
+import { assertCanManageTournament } from '@/lib/tournament-host';
 import { generateSingleElimination, generateSwissRound } from '@/lib/bracket';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
@@ -14,12 +16,20 @@ import {
   uniqueGuestUsername,
   validateGuestDisplayName,
 } from '@/lib/guest-player';
+import { canResetBracketForRoster } from '@/lib/tournament-roster';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 
+async function requireTournamentHost(tournamentId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || !canManageTournaments(session.user.role)) throw new Error('Unauthorized.');
+  await assertCanManageTournament(tournamentId, session.user.id, session.user.role);
+  return session;
+}
+
 export async function createTournament(_prev: { error?: string } | null, formData: FormData) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'admin') return { error: 'Unauthorized.' };
+  if (!session || !canManageTournaments(session.user.role)) return { error: 'Unauthorized.' };
 
   const name = (formData.get('name') as string)?.trim();
   const description = (formData.get('description') as string)?.trim() || null;
@@ -60,6 +70,7 @@ export async function createTournament(_prev: { error?: string } | null, formDat
       playerCap,
       isRanked,
       gameType,
+      createdById: session.user.id,
     },
   });
 
@@ -102,8 +113,7 @@ export async function leaveTournament(tournamentId: string) {
 }
 
 export async function generateBracket(tournamentId: string) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'admin') throw new Error('Unauthorized.');
+  await requireTournamentHost(tournamentId);
 
   const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
   if (!tournament) throw new Error('Tournament not found.');
@@ -121,8 +131,7 @@ export async function generateBracket(tournamentId: string) {
 }
 
 export async function generatePlayoffs(tournamentId: string) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'admin') throw new Error('Unauthorized.');
+  await requireTournamentHost(tournamentId);
 
   const { generatePlayoffsFromGroups } = await import('@/lib/group-stage');
   await generatePlayoffsFromGroups(tournamentId);
@@ -130,16 +139,44 @@ export async function generatePlayoffs(tournamentId: string) {
 }
 
 export async function generateNextSwissRound(tournamentId: string) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'admin') throw new Error('Unauthorized.');
+  await requireTournamentHost(tournamentId);
 
   await generateSwissRound(tournamentId);
   revalidatePath(`/tournaments/${tournamentId}`);
 }
 
+export async function resetBracketForRegistration(tournamentId: string) {
+  await requireTournamentHost(tournamentId);
+
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    include: { matches: { select: { score: true } } },
+  });
+  if (!tournament) throw new Error('Tournament not found.');
+  if (tournament.status === 'complete') {
+    throw new Error('Cannot edit the roster after the tournament is complete.');
+  }
+  if (tournament.matches.length === 0) {
+    throw new Error('No bracket has been generated yet.');
+  }
+  if (!canResetBracketForRoster(tournament.matches)) {
+    throw new Error(
+      'Cannot reset the bracket after match results have been reported. Remove incorrect scores first or continue the event.',
+    );
+  }
+
+  await prisma.match.deleteMany({ where: { tournamentId } });
+  await prisma.tournament.update({
+    where: { id: tournamentId },
+    data: { status: 'open', phase: null },
+  });
+
+  revalidatePath(`/tournaments/${tournamentId}`);
+  revalidatePath('/dashboard');
+}
+
 export async function removePlayerFromTournament(tournamentId: string, userId: string) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'admin') throw new Error('Unauthorized.');
+  await requireTournamentHost(tournamentId);
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
@@ -161,15 +198,14 @@ export async function removePlayerFromTournament(tournamentId: string, userId: s
 }
 
 export async function addPlayerToTournament(tournamentId: string, userId: string) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'admin') throw new Error('Unauthorized.');
+  await requireTournamentHost(tournamentId);
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
     include: { _count: { select: { participants: true } } },
   });
   if (!tournament) throw new Error('Tournament not found.');
-  assertCanRegister(tournament, tournament._count.participants);
+  assertCanRegister(tournament, tournament._count.participants, 1, { exemptCap: true });
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error('Player not found.');
@@ -185,8 +221,7 @@ export async function addPlayerToTournament(tournamentId: string, userId: string
 }
 
 export async function addGuestPlayerToTournament(tournamentId: string, displayName: string) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'admin') throw new Error('Unauthorized.');
+  await requireTournamentHost(tournamentId);
 
   const nameError = validateGuestDisplayName(displayName);
   if (nameError) throw new Error(nameError);
@@ -198,7 +233,7 @@ export async function addGuestPlayerToTournament(tournamentId: string, displayNa
     include: { _count: { select: { participants: true } } },
   });
   if (!tournament) throw new Error('Tournament not found.');
-  assertCanRegister(tournament, tournament._count.participants);
+  assertCanRegister(tournament, tournament._count.participants, 1, { exemptCap: true });
 
   const username = await uniqueGuestUsername(prisma, normalizedName);
   const email = guestEmail(`${username}-${randomBytes(4).toString('hex')}`);
@@ -222,11 +257,11 @@ export async function addGuestPlayerToTournament(tournamentId: string, displayNa
 }
 
 export async function deleteTournament(tournamentId: string) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'admin') throw new Error('Unauthorized.');
+  const session = await requireTournamentHost(tournamentId);
 
   await prisma.tournament.delete({ where: { id: tournamentId } });
   revalidatePath('/tournaments');
-  revalidatePath('/admin');
-  redirect('/tournaments');
+  revalidatePath('/dashboard/tournaments');
+  revalidatePath('/dashboard');
+  redirect(isAdminRole(session.user.role) ? '/dashboard/tournaments' : '/dashboard');
 }

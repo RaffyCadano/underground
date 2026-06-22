@@ -48,7 +48,7 @@ function PodiumSpot({ player, rank }: { player: CircuitPlayer; rank: number }) {
   return (
     <Link
       href={`/players/${player.username.toLowerCase()}`}
-      className={`group relative flex min-w-0 flex-1 flex-col items-center rounded-xl border p-3 text-center transition hover:border-slate-600 sm:p-4 ${
+      className={`group relative flex min-w-0 flex-1 flex-col items-center rounded-xl border p-2.5 text-center transition hover:border-slate-600 sm:p-4 ${
         isFirst
           ? 'border-brand-500/35 bg-gradient-to-b from-brand-500/10 to-slate-950/40 sm:-mt-3 sm:pb-5'
           : 'border-slate-800 bg-slate-950/50'
@@ -58,19 +58,19 @@ function PodiumSpot({ player, rank }: { player: CircuitPlayer; rank: number }) {
         <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-400/80 to-transparent" />
       )}
       <span
-        className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold ${badge.className}`}
+        className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-bold sm:h-8 sm:w-8 sm:text-xs ${badge.className}`}
       >
-        {BadgeIcon ? <BadgeIcon size={14} /> : rank}
+        {BadgeIcon ? <BadgeIcon size={13} /> : rank}
       </span>
-      <PlayerAvatar username={player.username} avatar={player.avatar} size="lg" className="mt-2" />
-      <p className="mt-2 w-full truncate text-sm font-semibold text-white group-hover:text-brand-200">
+      <PlayerAvatar username={player.username} avatar={player.avatar} size="lg" className="mt-1.5 sm:mt-2" />
+      <p className="mt-1.5 w-full truncate text-xs font-semibold text-white group-hover:text-brand-200 sm:mt-2 sm:text-sm">
         {player.username}
       </p>
-      <p className="mt-1 text-lg font-semibold tabular-nums text-brand-300">
+      <p className="mt-1 text-base font-semibold tabular-nums text-brand-300 sm:text-lg">
         {player.rankPoints.toLocaleString()}
         <span className="ml-0.5 text-[10px] font-normal text-slate-500">pts</span>
       </p>
-      <p className="mt-1 text-[11px] tabular-nums text-slate-500">
+      <p className="mt-0.5 text-[10px] tabular-nums text-slate-500 sm:mt-1 sm:text-[11px]">
         {player.wins}-{player.losses} · {rate}%
       </p>
     </Link>
@@ -86,16 +86,18 @@ function LeaderboardRow({ player, rank }: { player: CircuitPlayer; rank: number 
       href={`/players/${player.username.toLowerCase()}`}
       className="group block rounded-xl border border-slate-800/80 bg-slate-950/40 px-3 py-3 transition hover:border-slate-700 hover:bg-slate-900/60 sm:px-4"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5 sm:gap-3">
         <span
-          className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-bold tabular-nums ${badge.className}`}
+          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold tabular-nums sm:h-8 sm:w-8 sm:text-xs ${badge.className}`}
         >
           {rank}
         </span>
-        <PlayerAvatar username={player.username} avatar={player.avatar} />
+        <PlayerAvatar username={player.username} avatar={player.avatar} size="sm" className="shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-white group-hover:text-brand-200">{player.username}</p>
-          <p className="text-xs tabular-nums text-slate-500">
+          <p className="truncate text-sm font-semibold text-white group-hover:text-brand-200 sm:text-base">
+            {player.username}
+          </p>
+          <p className="text-[11px] tabular-nums text-slate-500 sm:text-xs">
             {player.wins}-{player.losses} W-L
           </p>
         </div>
@@ -106,8 +108,8 @@ function LeaderboardRow({ player, rank }: { player: CircuitPlayer; rank: number 
           <p className="text-[10px] text-slate-500">pts</p>
         </div>
       </div>
-      <div className="mt-2.5 flex items-center gap-2 pl-11">
-        <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-800">
+      <div className="mt-2.5 flex items-center gap-2 pl-[4.375rem] sm:pl-11">
+        <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-800">
           <div className="h-full rounded-full bg-brand-500/70" style={{ width: `${rate}%` }} />
         </div>
         <span className="w-8 shrink-0 text-right text-[10px] tabular-nums text-slate-500">{rate}%</span>
@@ -134,7 +136,48 @@ function MatchResultCard({ match }: { match: CircuitMatch }) {
         {match.tournament.name}
       </Link>
 
-      <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-0">
+      <div className="divide-y divide-slate-800/80 sm:hidden">
+        <div
+          className={`flex items-center justify-between gap-3 px-3 py-2.5 ${p1Won ? 'bg-emerald-950/35' : ''}`}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            {p1Won && (
+              <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-300">
+                W
+              </span>
+            )}
+            <span
+              className={`min-w-0 truncate text-sm font-semibold ${
+                p1Won ? 'text-emerald-100' : 'text-slate-500'
+              }`}
+            >
+              {p1Name}
+            </span>
+          </div>
+          <span className="shrink-0 text-sm font-bold tabular-nums text-white">{p1Score}</span>
+        </div>
+        <div
+          className={`flex items-center justify-between gap-3 px-3 py-2.5 ${p2Won ? 'bg-emerald-950/35' : ''}`}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            {p2Won && (
+              <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-300">
+                W
+              </span>
+            )}
+            <span
+              className={`min-w-0 truncate text-sm font-semibold ${
+                p2Won ? 'text-emerald-100' : 'text-slate-500'
+              }`}
+            >
+              {p2Name}
+            </span>
+          </div>
+          <span className="shrink-0 text-sm font-bold tabular-nums text-white">{p2Score}</span>
+        </div>
+      </div>
+
+      <div className="hidden grid-cols-[1fr_auto_1fr] items-stretch gap-0 sm:grid">
         <div
           className={`flex min-w-0 items-center justify-end gap-2 px-3 py-3 sm:px-4 ${
             p1Won ? 'bg-emerald-950/35' : ''
@@ -197,25 +240,25 @@ export function CircuitSection({ topPlayers, recentMatches }: Props) {
     <section className="border-y border-slate-800 bg-slate-950/40">
       <div className="container py-10 sm:py-16">
         <ScrollReveal>
-          <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
-            <div className="max-w-xl">
+          <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+            <div className="min-w-0 max-w-xl">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Circuit pulse</p>
               <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">Rankings & recent results</h2>
-              <p className="mt-2 text-sm text-slate-400">
+              <p className="mt-2 text-sm leading-relaxed text-slate-400 sm:text-base">
                 Top bladers on the leaderboard and the latest scores from UGNCBBX events.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
               <Link
                 href="/rankings"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-300 hover:text-brand-200"
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 px-4 py-2.5 text-sm font-semibold text-brand-200 transition hover:border-brand-400/40 hover:bg-brand-500/15 sm:w-auto sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-brand-300 sm:hover:text-brand-200"
               >
                 Full rankings
                 <ArrowRight size={14} />
               </Link>
               <Link
                 href="/tournaments"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-slate-200"
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-slate-600 hover:bg-slate-900 sm:w-auto sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-slate-400 sm:hover:text-slate-200"
               >
                 All events
                 <ArrowRight size={14} />
@@ -224,9 +267,9 @@ export function CircuitSection({ topPlayers, recentMatches }: Props) {
           </div>
         </ScrollReveal>
 
-        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
           {/* Top bladers */}
-          <ScrollReveal delay={80} direction="left">
+          <ScrollReveal className="min-w-0" delay={80} direction="left">
           <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50">
             <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-4 sm:px-6 sm:py-5">
               <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/10 text-brand-300">
@@ -243,11 +286,18 @@ export function CircuitSection({ topPlayers, recentMatches }: Props) {
             ) : (
               <div className="space-y-4 p-4 sm:p-5">
                 {podium.length >= 3 && (
-                  <div className="flex items-end gap-2 sm:gap-3">
-                    <PodiumSpot player={podium[1]} rank={2} />
-                    <PodiumSpot player={podium[0]} rank={1} />
-                    <PodiumSpot player={podium[2]} rank={3} />
-                  </div>
+                  <>
+                    <div className="hidden items-end gap-2 sm:flex sm:gap-3">
+                      <PodiumSpot player={podium[1]} rank={2} />
+                      <PodiumSpot player={podium[0]} rank={1} />
+                      <PodiumSpot player={podium[2]} rank={3} />
+                    </div>
+                    <div className="space-y-2 sm:hidden">
+                      {podium.map((p, i) => (
+                        <LeaderboardRow key={p.id} player={p} rank={i + 1} />
+                      ))}
+                    </div>
+                  </>
                 )}
 
                 {podium.length > 0 && podium.length < 3 && (
@@ -284,7 +334,7 @@ export function CircuitSection({ topPlayers, recentMatches }: Props) {
           </ScrollReveal>
 
           {/* Recent matches */}
-          <ScrollReveal delay={160} direction="right">
+          <ScrollReveal className="min-w-0" delay={160} direction="right">
           <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50">
             <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-4 sm:px-6 sm:py-5">
               <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-800 text-slate-300">

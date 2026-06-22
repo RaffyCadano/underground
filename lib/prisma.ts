@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
 /** Bump when schema changes so dev hot-reload discards a stale cached client. */
-const PRISMA_SCHEMA_VERSION = 6;
+const PRISMA_SCHEMA_VERSION = 7;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -13,6 +13,7 @@ const DELEGATE_KEYS = [
   'passwordResetToken',
   'communityClub',
   'clubRequest',
+  'organizerRequest',
   'tournament',
   'tournamentParticipant',
   'match',
@@ -73,8 +74,16 @@ function getPrismaClient(): PrismaClient {
   const client = createPrismaClient();
 
   if (!clientIsCurrent(client)) {
+    const missing = DELEGATE_KEYS.filter((key) => {
+      const delegate = (client as Record<string, unknown>)[key];
+      return !(
+        delegate != null &&
+        typeof delegate === 'object' &&
+        typeof (delegate as { findMany?: unknown }).findMany === 'function'
+      );
+    });
     throw new Error(
-      'Prisma client is missing model delegates (e.g. clubRequest). Run `npx prisma generate` and restart the dev server.',
+      `Prisma client is missing model delegates: ${missing.join(', ')}. Stop the dev server, run \`npx prisma generate\`, then restart.`,
     );
   }
 

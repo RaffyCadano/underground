@@ -35,7 +35,7 @@ export function DraggablePan({ children, className = '', style }: DraggablePanPr
     if (e.button !== 0 || e.pointerType === 'touch') return;
 
     const target = e.target as HTMLElement;
-    if (target.closest('button, a, input, textarea, select, label')) return;
+    if (target.closest('button, a, input, textarea, select, label, [role="button"], [data-pan-exclude]')) return;
 
     const el = containerRef.current;
     if (!el) return;

@@ -525,33 +525,33 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
 
         <div className="card divide-y divide-slate-800 overflow-hidden">
         <FormSection grouped title="Event details" description="Name, date, schedule, and where you're hosting.">
-          <div>
+        <div>
             <FieldLabel htmlFor="tournament-name">Name *</FieldLabel>
-            <input
+          <input
               id="tournament-name"
-              name="name"
-              type="text"
-              required
+            name="name"
+            type="text"
+            required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Storm Clash II"
+            placeholder="Storm Clash II"
               className="input mt-2"
-            />
-          </div>
+          />
+        </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
               <FieldLabel htmlFor="tournament-date">Date *</FieldLabel>
               <div className="relative mt-2">
                 <Calendar
                   size={15}
                   className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
                 />
-                <input
+            <input
                   id="tournament-date"
-                  name="date"
-                  type="date"
-                  required
+              name="date"
+              type="date"
+              required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   className="input pl-9"
@@ -736,7 +736,7 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
                         : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'
                     }`}
                   >
-                    <input
+            <input
                       type="radio"
                       name="gameType"
                       value={value}
@@ -801,7 +801,7 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
                 </label>
               );
             })}
-          </div>
+        </div>
 
           {format === 'double_elimination' && (
             <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-950/50 p-4">
@@ -829,9 +829,9 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
 
               {groupStageEnabled && (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
+        <div>
                     <FieldLabel htmlFor="groupSize">Group size</FieldLabel>
-                    <select
+          <select
                       id="groupSize"
                       name="groupSize"
                       value={groupSize}
@@ -842,9 +842,9 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
                       <option value="4">4</option>
                       <option value="5">5</option>
                       <option value="6">6</option>
-                    </select>
-                  </div>
-                  <div>
+          </select>
+        </div>
+        <div>
                     <FieldLabel htmlFor="advancePerGroup">Advance per group</FieldLabel>
                     <select
                       id="advancePerGroup"
@@ -915,14 +915,14 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
           <Link href="/dashboard/tournaments" className="btn-secondary text-center">
             Cancel
           </Link>
-          <button
+        <button
             type="button"
             onClick={handleCreateClick}
             disabled={pending || isCreating}
             className="btn-primary disabled:opacity-60"
           >
             Create tournament
-          </button>
+        </button>
         </div>
       </form>
 

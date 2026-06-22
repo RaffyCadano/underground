@@ -131,6 +131,7 @@ function HqMatchCard({
       <div
         role={clickable ? 'button' : undefined}
         tabIndex={clickable ? 0 : undefined}
+        data-pan-exclude={clickable ? '' : undefined}
         onClick={clickable ? openAction : undefined}
         onKeyDown={
           clickable

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { canManageTournament } from '@/lib/tournament-host';
 import { TournamentActions } from './tournament-actions';
 import { ParticipantManager } from './participant-manager';
 import { BracketTree } from './bracket-tree';
@@ -12,8 +13,11 @@ import { TournamentFormatGuide } from './tournament-format-guide';
 import { isGroupStageComplete } from '@/lib/group-stage';
 import { GAME_TYPE_LABELS } from '@/lib/tournament-options';
 import { formatPlayerCapLabel } from '@/lib/tournament-registration';
+import { canResetBracketForRoster } from '@/lib/tournament-roster';
 import { TournamentDescriptionContent } from '@/app/components/tournament-description-content';
 import { TournamentHero } from './tournament-hero';
+
+export const dynamic = 'force-dynamic';
 
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: 'Single Elimination',
@@ -51,7 +55,11 @@ export default async function TournamentDetail({
   if (!tournament) notFound();
 
   const isLoggedIn = !!session;
-  const isAdmin = session?.user.role === 'admin';
+  const isAdmin = canManageTournament(
+    tournament,
+    session?.user.id,
+    session?.user.role ?? '',
+  );
   const isJoined = session
     ? tournament.participants.some((p) => p.userId === session.user.id)
     : false;
@@ -77,6 +85,7 @@ export default async function TournamentDetail({
 
   const canManagePlayers = tournament.status === 'open' && tournament.matches.length === 0;
   const hasBracket = tournament.matches.length > 0;
+  const canResetRoster = isAdmin && canResetBracketForRoster(tournament.matches);
   const groupStageComplete = isGroupStageComplete(tournament.matches);
 
   const availableUsers =
@@ -213,6 +222,7 @@ export default async function TournamentDetail({
                   completedMatches={completedMatches}
                   currentRound={currentRound}
                   allCurrentRoundComplete={allCurrentRoundComplete}
+                  canResetRoster={canResetRoster}
                 />
               </div>
             </div>

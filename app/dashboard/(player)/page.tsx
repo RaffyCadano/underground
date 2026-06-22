@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { PlayerDashboard } from '../player-dashboard';
+import { YourTournamentsView } from '../your-tournaments-view';
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -11,5 +11,7 @@ export default async function DashboardPage() {
     redirect('/dashboard/overview');
   }
 
-  return <PlayerDashboard userId={session.user.id} />;
+  return (
+    <YourTournamentsView userId={session.user.id} role={session.user.role} />
+  );
 }

@@ -9,6 +9,7 @@ import { redirect } from 'next/navigation';
 
 function revalidateClubPaths() {
   revalidatePath('/teams');
+  revalidatePath('/teams/request');
   revalidatePath('/dashboard/clubs');
   revalidatePath('/dashboard/overview');
 }

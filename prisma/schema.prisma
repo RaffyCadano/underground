@@ -9,24 +9,48 @@ datasource db {
 }
 
 model User {
-  id                  String                  @id @default(cuid())
-  username            String                  @unique
-  email               String                  @unique
-  password            String
-  avatar              String?
-  role                String                  @default("player")
-  rankPoints          Int                     @default(0)
-  wins                Int                     @default(0)
-  losses              Int                     @default(0)
-  tournaments         TournamentParticipant[]
-  matches1            Match[]                 @relation("player1Matches")
-  matches2            Match[]                 @relation("player2Matches")
-  winsAsWinner        Match[]                 @relation("winnerMatches")
-  passwordResetTokens PasswordResetToken[]
-  clubRequests        ClubRequest[]
-  createdAt           DateTime                @default(now())
+  id                      String                  @id @default(cuid())
+  username                String                  @unique
+  email                   String                  @unique
+  password                String
+  avatar                  String?
+  fullName                String?
+  language                String                  @default("en")
+  timezone                String                  @default("America/New_York")
+  country                 String                  @default("US")
+  emailPrivateMessages    Boolean                 @default(true)
+  emailMatchNotifications Boolean                 @default(true)
+  markReadOnEmail         Boolean                 @default(true)
+  productUpdates          Boolean                 @default(false)
+  optOutPersonalizedAds   Boolean                 @default(false)
+  role                    String                  @default("player")
+  rankPoints              Int                     @default(0)
+  wins                    Int                     @default(0)
+  losses                  Int                     @default(0)
+  tournaments             TournamentParticipant[]
+  matches1                Match[]                 @relation("player1Matches")
+  matches2                Match[]                 @relation("player2Matches")
+  winsAsWinner            Match[]                 @relation("winnerMatches")
+  passwordResetTokens     PasswordResetToken[]
+  clubRequests            ClubRequest[]
+  organizerRequests       OrganizerRequest[]
+  blockedUsers            BlockedUser[]           @relation("UserBlocks")
+  hostedTournaments       Tournament[]            @relation("TournamentCreator")
+  hostedEvents            Event[]                 @relation("EventHost")
+  createdAt               DateTime                @default(now())
 
   @@index([role, rankPoints(sort: Desc), wins(sort: Desc)])
+}
+
+model BlockedUser {
+  id         String   @id @default(cuid())
+  user       User     @relation("UserBlocks", fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  identifier String
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, identifier])
+  @@index([userId])
 }
 
 model PasswordResetToken {
@@ -74,6 +98,46 @@ model ClubRequest {
   @@index([status, createdAt(sort: Desc)])
 }
 
+model OrganizerRequest {
+  id        String   @id @default(cuid())
+  message   String
+  status    String   @default("pending")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([userId, status])
+}
+
+model Event {
+  id               String   @id @default(cuid())
+  title            String
+  slug             String   @unique
+  shortDescription String?
+  description      String?
+  startsAt         DateTime
+  endsAt           DateTime?
+  timezone         String   @default("America/New_York")
+  venueName        String?
+  location         String?
+  addressLine1     String?
+  addressLine2     String?
+  city             String?
+  state            String?
+  postalCode       String?
+  country          String?
+  isOnline         Boolean  @default(false)
+  status           String   @default("draft")
+  host             User     @relation("EventHost", fields: [hostId], references: [id], onDelete: Cascade)
+  hostId           String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([hostId])
+  @@index([slug])
+}
+
 model Tournament {
   id                  String                  @id @default(cuid())
   name                String
@@ -94,9 +158,13 @@ model Tournament {
   playerCap           Int?
   isRanked            Boolean                 @default(true)
   gameType            String                  @default("beyblade_x")
+  createdBy           User?                   @relation("TournamentCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById         String?
   participants        TournamentParticipant[]
   matches             Match[]
   createdAt           DateTime                @default(now())
+
+  @@index([createdById])
 }
 
 model TournamentParticipant {

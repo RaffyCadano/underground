@@ -2,13 +2,13 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, ArrowRight, CheckCircle2, Loader2, Swords, UserPlus, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2, Loader2, RotateCcw, Swords, UserPlus, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { joinTournament, leaveTournament, generateBracket, generateNextSwissRound, generatePlayoffs } from '@/app/actions/tournaments';
+import { joinTournament, leaveTournament, generateBracket, generateNextSwissRound, generatePlayoffs, resetBracketForRegistration } from '@/app/actions/tournaments';
 import { reportResult, correctScore } from '@/app/actions/matches';
 import { formatPlayerCapLabel, isTournamentFull } from '@/lib/tournament-registration';
 
-type PendingAction = 'join' | 'leave' | 'generate' | 'generate-next' | 'playoffs' | 'report' | 'edit' | null;
+type PendingAction = 'join' | 'leave' | 'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'report' | 'edit' | null;
 
 type Player = { id: string; username: string } | null;
 
@@ -290,6 +290,251 @@ function GenerateBracketConfirmModal({
   );
 }
 
+function ResetRosterConfirmModal({
+  open,
+  onClose,
+  onConfirm,
+  isPending,
+  error,
+  participantCount,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+  error: string;
+  participantCount: number;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !isPending) onClose();
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, isPending, onClose]);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reset-roster-title"
+      onClick={() => !isPending && onClose()}
+    >
+      <div
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl shadow-black/50"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300">
+                <RotateCcw size={20} />
+              </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300/80">
+                  Late player / roster change
+                </p>
+                <h2 id="reset-roster-title" className="mt-1 text-lg font-semibold text-white">
+                  Cancel bracket and edit roster?
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Reopens registration so you can remove no-shows and add walk-ins.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isPending}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-white disabled:opacity-50"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 px-5 py-4">
+          <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Current roster
+            </p>
+            <p className="mt-1 font-semibold text-white">{participantCount} registered</p>
+          </div>
+
+          <div>
+            <p className="text-sm text-slate-400">This will:</p>
+            <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+              {[
+                'Delete the current bracket (pairings and TBD slots)',
+                'Reopen registration on the Bracket tab',
+                'Let you add or remove players, then generate again',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-amber-400/80" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3.5 py-3">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-400" />
+            <p className="text-xs leading-relaxed text-amber-100/90">
+              Only available before any match scores are reported. Once games have results, use score
+              correction or continue the event as-is.
+            </p>
+          </div>
+
+          {error && (
+            <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-800 bg-slate-900/40 px-5 py-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="btn-secondary w-full sm:w-auto disabled:opacity-60"
+          >
+            Keep bracket
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isPending}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-500/40 bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-500 disabled:opacity-60 sm:w-auto"
+          >
+            {isPending ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                Resetting…
+              </>
+            ) : (
+              <>
+                <RotateCcw size={15} />
+                Edit roster
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function ActionSuccessNotice({
+  action,
+  tournamentFormat,
+  currentRound,
+  onDismiss,
+}: {
+  action: 'generate' | 'generate-next' | 'playoffs' | 'reset-roster';
+  tournamentFormat: string;
+  currentRound: number;
+  onDismiss: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const frame = requestAnimationFrame(() => setVisible(true));
+    const timer = window.setTimeout(onDismiss, 6000);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [mounted, onDismiss]);
+
+  const copy = (() => {
+    switch (action) {
+      case 'generate':
+        if (tournamentFormat === 'swiss' || tournamentFormat === 'round_robin') {
+          return {
+            title: 'Round 1 ready',
+            body: 'Pairings are live and registration is closed.',
+          };
+        }
+        return {
+          title: 'Bracket generated',
+          body: 'Matches are seeded and the tournament is now live.',
+        };
+      case 'generate-next':
+        return {
+          title: `Round ${currentRound + 1} ready`,
+          body: 'New pairings have been added to the bracket.',
+        };
+      case 'playoffs':
+        return {
+          title: 'Playoffs started',
+          body: 'Advancers are seeded into the elimination bracket.',
+        };
+      case 'reset-roster':
+        return {
+          title: 'Roster unlocked',
+          body: 'Add or remove players on the Bracket tab, then generate again.',
+        };
+    }
+  })();
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className={`fixed bottom-4 left-4 z-[60] w-[min(100vw-2rem,22rem)] transition-all duration-300 sm:bottom-6 sm:left-6 ${
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+      }`}
+      role="status"
+      aria-live="polite"
+    >
+      <div className="overflow-hidden rounded-xl border border-emerald-500/30 bg-slate-950 shadow-2xl shadow-black/40">
+        <div className="h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent" />
+        <div className="flex items-start gap-3 p-4">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-emerald-300">
+            <CheckCircle2 size={20} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-white">{copy.title}</p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-400">{copy.body}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="shrink-0 rounded-lg p-1 text-slate-500 transition hover:bg-slate-800 hover:text-slate-300"
+            aria-label="Dismiss"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function ActionLoadingModal({
   action,
   tournamentFormat,
@@ -330,6 +575,11 @@ function ActionLoadingModal({
         return {
           title: 'Starting playoffs',
           body: 'Seeding advancers into the double elimination bracket…',
+        };
+      case 'reset-roster':
+        return {
+          title: 'Unlocking roster',
+          body: 'Clearing the bracket and reopening registration…',
         };
       default:
         return { title: 'Please wait', body: 'Working…' };
@@ -373,6 +623,7 @@ interface Props {
   completedMatches: Match[];
   currentRound: number;
   allCurrentRoundComplete: boolean;
+  canResetRoster?: boolean;
 }
 
 export function TournamentActions({
@@ -393,10 +644,15 @@ export function TournamentActions({
   completedMatches,
   currentRound,
   allCurrentRoundComplete,
+  canResetRoster = false,
 }: Props) {
   const [isPending, startTransition] = useTransition();
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
+  const [showResetRosterConfirm, setShowResetRosterConfirm] = useState(false);
+  const [successAction, setSuccessAction] = useState<
+    'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | null
+  >(null);
   const [error, setError] = useState('');
   const [reportingMatch, setReportingMatch] = useState<string | null>(null);
   const [score, setScore] = useState('');
@@ -438,6 +694,7 @@ export function TournamentActions({
     startTransition(async () => {
       try {
         await generateBracket(tournamentId);
+        setSuccessAction('generate');
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to generate bracket.');
         setShowGenerateConfirm(true);
@@ -455,6 +712,34 @@ export function TournamentActions({
   function closeGenerateConfirm() {
     if (isPending) return;
     setShowGenerateConfirm(false);
+    setError('');
+  }
+
+  function handleResetRoster() {
+    setError('');
+    setShowResetRosterConfirm(false);
+    setPendingAction('reset-roster');
+    startTransition(async () => {
+      try {
+        await resetBracketForRegistration(tournamentId);
+        setSuccessAction('reset-roster');
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Failed to reset bracket.');
+        setShowResetRosterConfirm(true);
+      } finally {
+        setPendingAction(null);
+      }
+    });
+  }
+
+  function openResetRosterConfirm() {
+    setError('');
+    setShowResetRosterConfirm(true);
+  }
+
+  function closeResetRosterConfirm() {
+    if (isPending) return;
+    setShowResetRosterConfirm(false);
     setError('');
   }
 
@@ -477,6 +762,7 @@ export function TournamentActions({
     startTransition(async () => {
       try {
         await generatePlayoffs(tournamentId);
+        setSuccessAction('playoffs');
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to start playoffs.');
       } finally {
@@ -491,6 +777,7 @@ export function TournamentActions({
     startTransition(async () => {
       try {
         await generateNextSwissRound(tournamentId);
+        setSuccessAction('generate-next');
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to generate next round.');
       } finally {
@@ -542,11 +829,13 @@ export function TournamentActions({
     allCurrentRoundComplete;
   const showReport = myPendingMatches.length > 0 && !inlineBracketFormat;
   const showEdit = isAdmin && completedMatches.length > 0 && !inlineBracketFormat;
+  const showResetRoster = isAdmin && canResetRoster && tournamentStatus === 'active';
   const hasContent =
     showJoinLeave ||
     showGenerate ||
     showStartPlayoffs ||
     showSwissNext ||
+    showResetRoster ||
     showReport ||
     showEdit;
 
@@ -565,15 +854,34 @@ export function TournamentActions({
         groupStageEnabled={groupStageEnabled}
       />
 
+      <ResetRosterConfirmModal
+        open={showResetRosterConfirm}
+        onClose={closeResetRosterConfirm}
+        onConfirm={handleResetRoster}
+        isPending={isPending && pendingAction === 'reset-roster'}
+        error={error}
+        participantCount={participantCount}
+      />
+
       {pendingAction === 'join' ||
       pendingAction === 'leave' ||
       pendingAction === 'generate' ||
       pendingAction === 'generate-next' ||
-      pendingAction === 'playoffs' ? (
+      pendingAction === 'playoffs' ||
+      pendingAction === 'reset-roster' ? (
         <ActionLoadingModal
           action={pendingAction}
           tournamentFormat={tournamentFormat}
           currentRound={currentRound}
+        />
+      ) : null}
+
+      {successAction ? (
+        <ActionSuccessNotice
+          action={successAction}
+          tournamentFormat={tournamentFormat}
+          currentRound={currentRound}
+          onDismiss={() => setSuccessAction(null)}
         />
       ) : null}
 
@@ -666,6 +974,21 @@ export function TournamentActions({
           onClick={openGenerateConfirm}
           disabled={isPending || participantCount < 2}
           isPending={isPending && pendingAction === 'generate'}
+          tone="admin"
+        />
+      )}
+
+      {showResetRoster && (
+        <TournamentActionCard
+          icon={RotateCcw}
+          eyebrow="Admin"
+          title="Late player or no-show?"
+          description="Cancel the current bracket, update the roster, and generate again. Only works before any match scores are reported."
+          buttonLabel="Edit roster"
+          pendingLabel="Resetting…"
+          onClick={openResetRosterConfirm}
+          disabled={isPending}
+          isPending={isPending && pendingAction === 'reset-roster'}
           tone="admin"
         />
       )}

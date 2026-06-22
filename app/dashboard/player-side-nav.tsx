@@ -3,44 +3,19 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  BarChart3,
-  Calendar,
-  LayoutDashboard,
-  Menu,
-  Trophy,
-  User,
-  Users,
-  UsersRound,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { Menu, Trophy, X, type LucideIcon } from 'lucide-react';
 import { SlidingDrawer } from '@/app/components/sliding-drawer';
+import {
+  getPlayerDashboardNav,
+  isPlayerDashboardNavActive,
+} from '@/lib/player-dashboard-nav';
 
 type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
 };
-
-const mainNav: NavItem[] = [
-  { href: '/dashboard', label: 'My arena', icon: LayoutDashboard },
-  { href: '/dashboard/profile', label: 'My profile', icon: User },
-];
-
-const siteNav: NavItem[] = [
-  { href: '/tournaments', label: 'Browse events', icon: Calendar },
-  { href: '/rankings', label: 'Rankings', icon: BarChart3 },
-  { href: '/players', label: 'Players', icon: Users },
-  { href: '/teams', label: 'Teams', icon: UsersRound },
-];
-
-function isActive(pathname: string, href: string) {
-  if (href === '/dashboard') {
-    return pathname === '/dashboard';
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 function NavLink({
   item,
@@ -68,51 +43,38 @@ function NavLink({
   );
 }
 
-function SideNavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function SideNavLinks({
+  pathname,
+  navItems,
+  onNavigate,
+}: {
+  pathname: string;
+  navItems: NavItem[];
+  onNavigate?: () => void;
+}) {
   return (
-    <nav className="space-y-6">
-      <div>
-        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-          My account
-        </p>
-        <div className="space-y-1">
-          {mainNav.map((item) => (
-            <NavLink
-              key={item.href}
-              item={item}
-              active={isActive(pathname, item.href)}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-          Explore
-        </p>
-        <div className="space-y-1">
-          {siteNav.map((item) => (
-            <NavLink
-              key={item.href}
-              item={item}
-              active={isActive(pathname, item.href)}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </div>
-      </div>
+    <nav className="space-y-1">
+      {navItems.map((item) => (
+        <NavLink
+          key={item.href}
+          item={item}
+          active={isPlayerDashboardNavActive(pathname, item.href)}
+          onNavigate={onNavigate}
+        />
+      ))}
     </nav>
   );
 }
 
 export function PlayerSideNav() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const allNav = [...mainNav, ...siteNav];
+  const navItems = getPlayerDashboardNav(session?.user?.role);
   const currentLabel =
-    allNav.find((item) => isActive(pathname, item.href))?.label ?? 'Navigate';
+    navItems.find((item) => isPlayerDashboardNavActive(pathname, item.href))?.label ??
+    'Player dashboard';
 
   const close = () => setMobileOpen(false);
 
@@ -140,7 +102,7 @@ export function PlayerSideNav() {
           className="flex w-full items-center justify-between rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm font-semibold text-white"
         >
           <span className="flex items-center gap-2">
-            <LayoutDashboard size={16} className="text-brand-400" />
+            <Trophy size={16} className="text-brand-400" />
             {currentLabel}
           </span>
           <span className="inline-flex items-center gap-1.5 text-xs text-slate-400">
@@ -161,14 +123,14 @@ export function PlayerSideNav() {
 
       <SlidingDrawer open={mobileOpen} onClose={close} title="Player dashboard" side="left">
         <div id="player-dashboard-drawer">
-          <SideNavLinks pathname={pathname} onNavigate={close} />
+          <SideNavLinks pathname={pathname} navItems={navItems} onNavigate={close} />
         </div>
       </SlidingDrawer>
 
-      <aside className="hidden lg:block lg:w-56 lg:shrink-0">
-        <div className="sticky top-20 rounded-2xl border border-slate-800 bg-slate-900/50 p-3">
+      <aside className="hidden lg:sticky lg:top-20 lg:z-30 lg:block lg:w-64 lg:shrink-0 lg:self-start">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-3">
           <p className="mb-3 px-3 text-xs font-semibold text-slate-300">Player dashboard</p>
-          <SideNavLinks pathname={pathname} />
+          <SideNavLinks pathname={pathname} navItems={navItems} />
         </div>
       </aside>
     </>

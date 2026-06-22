@@ -1,8 +1,12 @@
 import Link from 'next/link';
+import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
+import { YourTournamentsHero } from '@/app/components/your-tournaments-hero';
 import { ListSearch } from '@/app/components/list-search';
 import { Pagination } from '@/app/components/pagination';
 import { DeleteTournamentButton } from '@/app/tournaments/delete-tournament-button';
+import { authOptions } from '@/lib/auth';
+import { mergeTournamentHostScope } from '@/lib/tournament-host';
 import {
   ADMIN_TOURNAMENTS_PAGE_SIZE,
   parsePageParam,
@@ -41,17 +45,22 @@ export default async function DashboardTournamentsPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }) {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id ?? '';
+  const role = session?.user?.role ?? '';
+
   const { q: qParam, status: statusParam, page: pageParam } = await searchParams;
   const query = parseSearchQuery(qParam);
   const status = parseStatusFilter(statusParam);
-  const listWhere = tournamentSearchWhere(query, status);
+  const listWhere = mergeTournamentHostScope(tournamentSearchWhere(query, status), userId, role);
   const hasFilters = query.length > 0 || status !== 'all';
+  const hostScope = mergeTournamentHostScope({}, userId, role);
 
   const [totalCount, openCount, activeCount, completeCount, filteredCount] = await Promise.all([
-    prisma.tournament.count(),
-    prisma.tournament.count({ where: { status: 'open' } }),
-    prisma.tournament.count({ where: { status: 'active' } }),
-    prisma.tournament.count({ where: { status: 'complete' } }),
+    prisma.tournament.count({ where: hostScope }),
+    prisma.tournament.count({ where: { ...hostScope, status: 'open' } }),
+    prisma.tournament.count({ where: { ...hostScope, status: 'active' } }),
+    prisma.tournament.count({ where: { ...hostScope, status: 'complete' } }),
     prisma.tournament.count({ where: listWhere }),
   ]);
 
@@ -74,23 +83,8 @@ export default async function DashboardTournamentsPage({
   ];
 
   return (
-    <div>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-white">Tournament management</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Create, manage, and delete tournaments — {totalCount.toLocaleString()} total.
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <Link href="/tournaments" className="text-sm font-semibold text-brand-300 hover:text-brand-200">
-            View public page
-          </Link>
-          <Link href="/dashboard/tournaments/create" className="btn-primary">
-            Create tournament
-          </Link>
-        </div>
-      </div>
+    <div className="space-y-8">
+      <YourTournamentsHero createHref="/dashboard/tournaments/create" />
 
       {totalCount > 0 && (
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { parseAssignableRole } from '@/lib/roles';
 import { revalidatePath } from 'next/cache';
 
 export type UpdateUserInput = {
@@ -21,7 +22,11 @@ export async function updateUser(input: UpdateUserInput) {
 
   const username = input.username.trim();
   const email = input.email.trim().toLowerCase();
-  const role = input.role === 'admin' ? 'admin' : 'player';
+  const user = await prisma.user.findUnique({ where: { id: input.userId } });
+  if (!user) throw new Error('User not found.');
+
+  const role =
+    session.user.id === input.userId ? user.role : parseAssignableRole(input.role);
 
   if (!username || !email) throw new Error('Username and email are required.');
   if (username.length < 3) throw new Error('Username must be at least 3 characters.');
@@ -29,10 +34,7 @@ export async function updateUser(input: UpdateUserInput) {
     throw new Error('Stats cannot be negative.');
   }
 
-  const user = await prisma.user.findUnique({ where: { id: input.userId } });
-  if (!user) throw new Error('User not found.');
-
-  if (user.role === 'admin' && role === 'player') {
+  if (user.role === 'admin' && role !== 'admin') {
     const adminCount = await prisma.user.count({ where: { role: 'admin' } });
     if (adminCount <= 1) {
       throw new Error('Cannot remove the last admin account.');
@@ -67,22 +69,22 @@ export async function updateUserRole(userId: string, role: string) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== 'admin') throw new Error('Unauthorized.');
 
-  const nextRole = role === 'admin' ? 'admin' : 'player';
+  const nextRole = parseAssignableRole(role);
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error('User not found.');
 
+  if (session.user.id === userId && user.role !== nextRole) {
+    throw new Error('You cannot change your own role.');
+  }
+
   if (user.role === nextRole) return;
 
-  if (user.role === 'admin' && nextRole === 'player') {
+  if (user.role === 'admin' && nextRole !== 'admin') {
     const adminCount = await prisma.user.count({ where: { role: 'admin' } });
     if (adminCount <= 1) {
       throw new Error('Cannot remove the last admin account.');
     }
-  }
-
-  if (session.user.id === userId && nextRole === 'player') {
-    throw new Error('You cannot remove your own admin access.');
   }
 
   await prisma.user.update({

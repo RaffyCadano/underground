@@ -4,15 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Session } from 'next-auth';
-import {
-  ChevronDown,
-  ExternalLink,
-  LayoutDashboard,
-  LogOut,
-  User,
-} from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { PlayerAvatar } from '@/app/components/player-avatar';
 import { SignOutDialog } from '@/app/components/sign-out-dialog';
+import { isAdminRole } from '@/lib/roles';
 
 type ProfileMenuProps = {
   session: Session;
@@ -21,24 +16,34 @@ type ProfileMenuProps = {
   variant?: 'dropdown' | 'drawer';
 };
 
-function profileLinks(session: Session) {
+type MenuLink = {
+  href: string;
+  label: string;
+  count?: number;
+};
+
+function buildMenuLinks(session: Session): MenuLink[] {
   const username = session.user.name ?? 'player';
-  const dashboardHref = session.user.role === 'admin' ? '/dashboard/overview' : '/dashboard';
+  const role = session.user.role;
+  const dashboardHref =
+    role === 'admin'
+      ? '/dashboard/overview'
+      : role === 'organizer'
+        ? '/dashboard/tournaments'
+        : '/dashboard';
 
   return [
-    { href: dashboardHref, label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/dashboard/profile', label: 'Profile settings', icon: User },
-    {
-      href: `/players/${username.toLowerCase()}`,
-      label: 'Public profile',
-      icon: ExternalLink,
-    },
-  ] as const;
+    { href: dashboardHref, label: 'Dashboard' },
+    { href: `/players/${username.toLowerCase()}`, label: 'Public Profile' },
+    { href: '/profile', label: 'Settings' },
+    { href: '/messages', label: 'Messages', count: 0 },
+    { href: '/news', label: 'News', count: 2 },
+  ];
 }
 
 function isActive(pathname: string, href: string) {
-  if (href === '/dashboard/profile') {
-    return pathname === '/dashboard/profile';
+  if (href === '/profile') {
+    return pathname === '/profile' || pathname.startsWith('/profile/');
   }
 
   if (href === '/dashboard') {
@@ -48,8 +53,15 @@ function isActive(pathname: string, href: string) {
   if (href === '/dashboard/overview') {
     return (
       pathname === '/dashboard/overview' ||
-      (pathname.startsWith('/dashboard/') && pathname !== '/dashboard/profile')
+      (pathname.startsWith('/dashboard/') &&
+        pathname !== '/profile' &&
+        !pathname.startsWith('/profile/') &&
+        pathname !== '/dashboard/tournaments')
     );
+  }
+
+  if (href === '/dashboard/tournaments') {
+    return pathname === '/dashboard/tournaments' || pathname.startsWith('/dashboard/tournaments/');
   }
 
   if (href.startsWith('/players/')) {
@@ -57,6 +69,83 @@ function isActive(pathname: string, href: string) {
   }
 
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function premierBadge() {
+  return (
+    <span className="shrink-0 rounded border border-amber-500/50 bg-gradient-to-r from-amber-500/25 to-orange-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200">
+      Premier
+    </span>
+  );
+}
+
+function AccountMenuPanel({
+  session,
+  pathname,
+  onNavigate,
+  onLogOut,
+}: {
+  session: Session;
+  pathname: string;
+  onNavigate?: () => void;
+  onLogOut: () => void;
+}) {
+  const links = buildMenuLinks(session);
+  const showPremierUpgrade = !isAdminRole(session.user.role);
+
+  return (
+    <div>
+      <div className="border-b border-slate-800 px-4 py-3">
+        <p className="text-sm font-semibold text-white">Your Account</p>
+      </div>
+
+      <div className="py-1">
+        {links.map(({ href, label, count }) => {
+          const active = isActive(pathname, href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => onNavigate?.()}
+              className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition ${
+                active
+                  ? 'bg-brand-500/10 font-medium text-brand-200'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+              }`}
+            >
+              <span>{label}</span>
+              {count !== undefined && (
+                <span className="tabular-nums text-slate-500">({count})</span>
+              )}
+            </Link>
+          );
+        })}
+      </div>
+
+      {showPremierUpgrade && (
+        <div className="border-t border-slate-800 py-1">
+          <Link
+            href="/profile/subscriptions"
+            onClick={() => onNavigate?.()}
+            className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm text-slate-300 transition hover:bg-slate-800/80 hover:text-white"
+          >
+            <span>Upgrade to Premier</span>
+            {premierBadge()}
+          </Link>
+        </div>
+      )}
+
+      <div className="border-t border-slate-800 py-1">
+        <button
+          type="button"
+          onClick={onLogOut}
+          className="flex w-full px-4 py-2.5 text-left text-sm text-slate-400 transition hover:bg-slate-800/80 hover:text-white"
+        >
+          Log out
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function ProfileMenu({
@@ -71,8 +160,7 @@ export function ProfileMenu({
   const rootRef = useRef<HTMLDivElement>(null);
 
   const username = session.user.name ?? session.user.email?.split('@')[0] ?? 'Account';
-  const email = session.user.email;
-  const links = profileLinks(session);
+  const links = buildMenuLinks(session);
   const dashboardActive = isActive(pathname, links[0].href);
 
   useEffect(() => {
@@ -101,7 +189,7 @@ export function ProfileMenu({
     onNavigate?.();
   }
 
-  function openSignOut() {
+  function openLogOut() {
     if (variant === 'dropdown') setOpen(false);
     onNavigate?.();
     setSignOutOpen(true);
@@ -111,46 +199,12 @@ export function ProfileMenu({
     return (
       <>
         <div className="mt-auto border-t border-slate-800 pt-4">
-          <div className="mb-3 flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-3">
-            <PlayerAvatar username={username} avatar={avatar} size="md" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">{username}</p>
-              {email && <p className="truncate text-xs text-slate-500">{email}</p>}
-            </div>
-            <span className="shrink-0 rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              {session.user.role}
-            </span>
-          </div>
-
-          <div className="space-y-1">
-            {links.map(({ href, label, icon: Icon }) => {
-              const active = isActive(pathname, href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={closeAll}
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                    active
-                      ? 'bg-brand-500/10 text-brand-200'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                >
-                  <Icon size={16} className={active ? 'text-brand-400' : 'text-slate-500'} />
-                  {label}
-                </Link>
-              );
-            })}
-
-            <button
-              type="button"
-              onClick={openSignOut}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-red-500/10 hover:text-red-300"
-            >
-              <LogOut size={16} />
-              Sign out
-            </button>
-          </div>
+          <AccountMenuPanel
+            session={session}
+            pathname={pathname}
+            onNavigate={closeAll}
+            onLogOut={openLogOut}
+          />
         </div>
 
         <SignOutDialog
@@ -170,6 +224,7 @@ export function ProfileMenu({
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
           aria-haspopup="menu"
+          aria-label={`${username} account menu`}
           className={`inline-flex items-center gap-2 rounded-full border py-1 pl-1 pr-2.5 text-sm font-medium transition ${
             open || dashboardActive
               ? 'border-brand-500/30 bg-brand-500/10 text-white'
@@ -187,52 +242,15 @@ export function ProfileMenu({
         {open && (
           <div
             role="menu"
-            className="absolute right-0 top-[calc(100%+0.5rem)] z-[120] w-64 overflow-hidden rounded-xl border border-slate-800 bg-slate-950 shadow-xl shadow-black/40"
+            aria-label="Your account"
+            className="absolute right-0 top-[calc(100%+0.5rem)] z-[120] w-72 overflow-hidden rounded-xl border border-slate-800 bg-slate-950 shadow-xl shadow-black/40"
           >
-            <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <PlayerAvatar username={username} avatar={avatar} size="md" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-white">{username}</p>
-                  {email && <p className="truncate text-xs text-slate-500">{email}</p>}
-                </div>
-              </div>
-              <span className="mt-2 inline-flex rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                {session.user.role}
-              </span>
-            </div>
-
-            <div className="p-1.5">
-              {links.map(({ href, label, icon: Icon }) => {
-                const active = isActive(pathname, href);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    role="menuitem"
-                    onClick={() => setOpen(false)}
-                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                      active
-                        ? 'bg-brand-500/10 text-brand-200'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                    }`}
-                  >
-                    <Icon size={16} className={active ? 'text-brand-400' : 'text-slate-500'} />
-                    {label}
-                  </Link>
-                );
-              })}
-
-              <button
-                type="button"
-                role="menuitem"
-                onClick={openSignOut}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-red-500/10 hover:text-red-300"
-              >
-                <LogOut size={16} />
-                Sign out
-              </button>
-            </div>
+            <AccountMenuPanel
+              session={session}
+              pathname={pathname}
+              onNavigate={() => setOpen(false)}
+              onLogOut={openLogOut}
+            />
           </div>
         )}
       </div>

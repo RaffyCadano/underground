@@ -7,7 +7,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getSupabaseAdmin, TOURNAMENT_IMAGES_BUCKET } from '@/lib/supabase-admin';
 
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 500 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 function extensionForMime(mime: string): string {
@@ -47,6 +47,7 @@ async function deleteStoredAvatar(url: string | null | undefined) {
 function revalidateProfilePaths(username: string) {
   const slug = username.toLowerCase();
   revalidatePath('/dashboard');
+  revalidatePath('/profile');
   revalidatePath('/dashboard/profile');
   revalidatePath('/players');
   revalidatePath('/rankings');
@@ -79,7 +80,7 @@ export async function uploadProfileAvatar(
   }
 
   if (file.size > MAX_BYTES) {
-    return { error: 'Image must be 5 MB or smaller.' };
+    return { error: 'Image must be 500 KB or smaller.' };
   }
 
   const user = await prisma.user.findUnique({
@@ -151,5 +152,135 @@ export async function removeProfileAvatar(): Promise<{ error?: string }> {
   await deleteStoredAvatar(user.avatar);
   revalidateProfilePaths(user.username);
 
+  return {};
+}
+
+export type AccountSettingsState = { error?: string; success?: string } | null;
+
+function checkboxValue(formData: FormData, name: string) {
+  return formData.get(name) === 'on';
+}
+
+export async function updateAccountSettings(
+  _prev: AccountSettingsState,
+  formData: FormData,
+): Promise<AccountSettingsState> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return { error: 'Sign in to update your account.' };
+  }
+
+  const email = (formData.get('email') as string)?.trim().toLowerCase();
+  const username = (formData.get('username') as string)?.trim();
+  const fullName = (formData.get('fullName') as string)?.trim() || null;
+  const language = (formData.get('language') as string)?.trim() || 'en';
+  const timezone = (formData.get('timezone') as string)?.trim() || 'America/New_York';
+  const country = (formData.get('country') as string)?.trim() || 'US';
+
+  if (!email || !username) {
+    return { error: 'Email and username are required.' };
+  }
+  if (username.length < 3) {
+    return { error: 'Username must be at least 3 characters.' };
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: 'Enter a valid email address.' };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, username: true },
+  });
+  if (!user) {
+    return { error: 'Account not found.' };
+  }
+
+  const conflict = await prisma.user.findFirst({
+    where: {
+      id: { not: user.id },
+      OR: [{ email }, { username }],
+    },
+    select: { email: true, username: true },
+  });
+  if (conflict) {
+    if (conflict.email === email) return { error: 'That email is already in use.' };
+    return { error: 'That username is already taken.' };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      email,
+      username,
+      fullName,
+      language,
+      timezone,
+      country,
+      emailPrivateMessages: checkboxValue(formData, 'emailPrivateMessages'),
+      emailMatchNotifications: checkboxValue(formData, 'emailMatchNotifications'),
+      markReadOnEmail: checkboxValue(formData, 'markReadOnEmail'),
+      productUpdates: checkboxValue(formData, 'productUpdates'),
+      optOutPersonalizedAds: checkboxValue(formData, 'optOutPersonalizedAds'),
+    },
+  });
+
+  revalidateProfilePaths(username);
+  if (username !== user.username) {
+    revalidateProfilePaths(user.username);
+  }
+
+  return { success: 'Account settings saved.' };
+}
+
+export async function addBlockedUser(identifier: string): Promise<{ error?: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return { error: 'Sign in to block users.' };
+  }
+
+  const normalized = identifier.trim().toLowerCase();
+  if (!normalized) {
+    return { error: 'Enter a username or email to block.' };
+  }
+
+  const self = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { username: true, email: true },
+  });
+  if (!self) return { error: 'Account not found.' };
+  if (normalized === self.username.toLowerCase() || normalized === self.email.toLowerCase()) {
+    return { error: 'You cannot block yourself.' };
+  }
+
+  try {
+    await prisma.blockedUser.create({
+      data: {
+        userId: session.user.id,
+        identifier: normalized,
+      },
+    });
+  } catch {
+    return { error: 'That user is already blocked.' };
+  }
+
+  revalidatePath('/profile');
+  return {};
+}
+
+export async function removeBlockedUser(blockId: string): Promise<{ error?: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return { error: 'Sign in to manage blocked users.' };
+  }
+
+  const row = await prisma.blockedUser.findFirst({
+    where: { id: blockId, userId: session.user.id },
+  });
+  if (!row) {
+    return { error: 'Blocked user not found.' };
+  }
+
+  await prisma.blockedUser.delete({ where: { id: blockId } });
+  revalidatePath('/profile');
   return {};
 }

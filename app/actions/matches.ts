@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { assertCanManageTournament, canManageTournament } from '@/lib/tournament-host';
 import { advanceWinner } from '@/lib/bracket';
 import { advanceDoubleElimMatch } from '@/lib/double-elim';
 import { revalidatePath } from 'next/cache';
@@ -15,18 +16,20 @@ export async function reportResult(matchId: string, winnerId: string, score: str
   if (!match) throw new Error('Match not found.');
   if (match.status === 'complete') throw new Error('Match result already reported.');
 
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: match.tournamentId },
+    select: { format: true, isRanked: true, createdById: true },
+  });
+
   const isPlayer = match.player1Id === session.user.id || match.player2Id === session.user.id;
-  const isAdmin = session.user.role === 'admin';
-  if (!isPlayer && !isAdmin) throw new Error('You are not a participant in this match.');
+  const canManage = tournament
+    ? canManageTournament(tournament, session.user.id, session.user.role)
+    : false;
+  if (!isPlayer && !canManage) throw new Error('You are not a participant in this match.');
 
   if (winnerId !== match.player1Id && winnerId !== match.player2Id) {
     throw new Error('Winner must be one of the two players.');
   }
-
-  const tournament = await prisma.tournament.findUnique({
-    where: { id: match.tournamentId },
-    select: { format: true, isRanked: true },
-  });
 
   await prisma.match.update({
     where: { id: matchId },
@@ -66,10 +69,12 @@ export async function reportResult(matchId: string, winnerId: string, score: str
 
 export async function correctScore(matchId: string, newScore: string) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'admin') throw new Error('Admins only.');
+  if (!session) throw new Error('Unauthorized.');
 
   const match = await prisma.match.findUnique({ where: { id: matchId } });
   if (!match) throw new Error('Match not found.');
+
+  await assertCanManageTournament(match.tournamentId, session.user.id, session.user.role);
 
   await prisma.match.update({
     where: { id: matchId },

@@ -12,6 +12,7 @@ import {
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { canManageTournament as userCanManageTournament } from '@/lib/tournament-host';
 import { ScrollReveal } from '@/app/components/scroll-reveal';
 import { parseSearchQuery, parseStatusFilter, tournamentSearchWhere } from '@/lib/search';
 import { DeleteTournamentButton } from './delete-tournament-button';
@@ -76,7 +77,7 @@ function formatShortDate(date: Date) {
 
 function TournamentCard({
   tournament: t,
-  isAdmin,
+  canManage,
   featured = false,
 }: {
   tournament: {
@@ -87,23 +88,25 @@ function TournamentCard({
     location: string | null;
     format: string;
     status: string;
+    createdById: string | null;
     _count: { participants: number };
   };
-  isAdmin: boolean;
+  canManage: boolean;
   featured?: boolean;
 }) {
   const formatLabel = FORMAT_LABELS[t.format] ?? t.format;
   const formatShort = FORMAT_SHORT[t.format] ?? formatLabel;
+  const descriptionText = t.description ? descriptionPlainText(t.description) : '';
 
   return (
     <article
-      className={`group relative min-w-0 overflow-hidden rounded-2xl border bg-slate-900/60 transition hover:border-slate-700 ${
+      className={`group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border bg-slate-900/60 transition hover:border-slate-700 ${
         featured ? 'border-brand-500/25 shadow-lg shadow-brand-950/10' : 'border-slate-800'
       }`}
     >
       {featured && <div className="h-1 bg-gradient-to-r from-transparent via-brand-400 to-transparent" />}
 
-      <div className="flex h-full flex-col p-4 sm:p-6">
+      <div className="flex flex-1 flex-col p-4 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <span
             className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${statusStyles(t.status)}`}
@@ -120,40 +123,40 @@ function TournamentCard({
           </span>
         </div>
 
-        <Link href={`/tournaments/${t.id}`} className="mt-3 block min-w-0 flex-1 sm:mt-4">
-          <h2 className="break-words text-lg font-semibold leading-snug text-white transition group-hover:text-brand-200 sm:text-xl">
+        <Link href={`/tournaments/${t.id}`} className="mt-3 block min-w-0 sm:mt-4">
+          <h2 className="line-clamp-2 min-h-[2.75rem] break-words text-lg font-semibold leading-snug text-white transition group-hover:text-brand-200 sm:min-h-[3.25rem] sm:text-xl">
             {t.name}
           </h2>
-          {t.description && descriptionPlainText(t.description) && (
-            <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-400">
-              {descriptionPlainText(t.description)}
-            </p>
-          )}
+          <p className="mt-2 line-clamp-2 h-[2.625rem] text-sm leading-[1.3125rem] text-slate-400">
+            {descriptionText || '\u00A0'}
+          </p>
         </Link>
 
-        <div className="mt-4 space-y-2 text-xs text-slate-400 sm:mt-5 sm:text-sm">
-          <p className="flex items-start gap-2">
-            <Calendar size={14} className="mt-0.5 shrink-0 text-slate-500" />
-            <span className="min-w-0 break-words">
+        <ul className="mt-4 space-y-1.5 text-xs text-slate-400 sm:mt-5 sm:text-sm">
+          <li className="flex h-5 items-center gap-2.5">
+            <Calendar size={14} className="shrink-0 text-slate-500" />
+            <span className="min-w-0 truncate">
               <span className="sm:hidden">{formatCardDate(t.date)}</span>
               <span className="hidden sm:inline">{formatDate(t.date)}</span>
             </span>
-          </p>
-          {t.location && (
-            <p className="flex items-start gap-2">
-              <MapPin size={14} className="mt-0.5 shrink-0 text-slate-500" />
-              <span className="min-w-0 break-words">{t.location}</span>
-            </p>
-          )}
-          <p className="flex items-center gap-2">
+          </li>
+          <li className="flex h-5 items-center gap-2.5">
+            <MapPin size={14} className="shrink-0 text-slate-500" />
+            <span className={`min-w-0 truncate ${t.location ? 'text-slate-400' : 'text-slate-600'}`}>
+              {t.location ?? 'null'}
+            </span>
+          </li>
+          <li className="flex h-5 items-center gap-2.5">
             <Users size={14} className="shrink-0 text-slate-500" />
-            {t._count.participants} {t._count.participants === 1 ? 'player' : 'players'} registered
-          </p>
-        </div>
+            <span className="min-w-0 truncate">
+              {t._count.participants} {t._count.participants === 1 ? 'player' : 'players'} registered
+            </span>
+          </li>
+        </ul>
 
         <div
-          className={`mt-5 flex flex-col gap-3 border-t border-slate-800/80 pt-4 sm:mt-6 sm:flex-row sm:items-center sm:border-0 sm:pt-0 ${
-            isAdmin ? 'sm:justify-between' : ''
+          className={`mt-auto flex flex-col gap-3 border-t border-slate-800/80 pt-4 sm:flex-row sm:items-center ${
+            canManage ? 'sm:justify-between' : ''
           }`}
         >
           <Link
@@ -163,7 +166,7 @@ function TournamentCard({
             {t.status === 'complete' ? 'View results' : 'View bracket'}
             <ArrowRight size={14} className="transition group-hover:translate-x-0.5" />
           </Link>
-          {isAdmin && (
+          {canManage && (
             <div className="sm:shrink-0">
               <DeleteTournamentButton tournamentId={t.id} tournamentName={t.name} />
             </div>
@@ -180,7 +183,10 @@ export default async function TournamentsPage({
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
   const session = await getServerSession(authOptions);
-  const isAdmin = session?.user.role === 'admin';
+  const manageTournament = (t: { createdById: string | null }) =>
+    session
+      ? userCanManageTournament(t, session.user.id, session.user.role)
+      : false;
   const { q: qParam, status: statusParam } = await searchParams;
 
   const query = parseSearchQuery(qParam);
@@ -279,10 +285,10 @@ export default async function TournamentsPage({
               </h2>
             </div>
             </ScrollReveal>
-            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
+            <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
               {tournaments.map((t, i) => (
-                <ScrollReveal key={t.id} delay={i * 90}>
-                  <TournamentCard tournament={t} isAdmin={isAdmin} featured={i === 0} />
+                <ScrollReveal key={t.id} className="h-full" delay={i * 90}>
+                  <TournamentCard tournament={t} canManage={manageTournament(t)} featured={i === 0} />
                 </ScrollReveal>
               ))}
             </div>
@@ -301,10 +307,10 @@ export default async function TournamentsPage({
                   </h2>
                 </div>
                 </ScrollReveal>
-                <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
+                <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
                   {upcoming.map((t, i) => (
-                    <ScrollReveal key={t.id} delay={i * 90}>
-                      <TournamentCard tournament={t} isAdmin={isAdmin} featured={i === 0} />
+                    <ScrollReveal key={t.id} className="h-full" delay={i * 90}>
+                      <TournamentCard tournament={t} canManage={manageTournament(t)} featured={i === 0} />
                     </ScrollReveal>
                   ))}
                 </div>
@@ -363,7 +369,7 @@ export default async function TournamentsPage({
                             View results
                             <ArrowRight size={14} />
                           </Link>
-                          {isAdmin && (
+                          {manageTournament(t) && (
                             <DeleteTournamentButton tournamentId={t.id} tournamentName={t.name} />
                           )}
                         </div>

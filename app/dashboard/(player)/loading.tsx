@@ -2,41 +2,29 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={`animate-pulse rounded bg-slate-800 ${className ?? ''}`} />;
 }
 
-function StatCardSkeleton() {
-  return (
-    <div className="card p-6">
-      <Skeleton className="h-3 w-28" />
-      <Skeleton className="mt-3 h-9 w-20" />
-      <Skeleton className="mt-2 h-4 w-32" />
-    </div>
-  );
-}
-
-function ListCardSkeleton({ rows = 3 }: { rows?: number }) {
-  return (
-    <div className="card p-6">
-      <Skeleton className="mb-4 h-6 w-44" />
-      <div className="space-y-3">
-        {Array.from({ length: rows }, (_, i) => (
-          <Skeleton key={i} className="h-14 w-full rounded-xl" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function PlayerDashboardLoading() {
   return (
-    <div aria-busy="true" aria-label="Loading dashboard">
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <StatCardSkeleton />
-        <StatCardSkeleton />
-        <StatCardSkeleton />
+    <div className="space-y-8" aria-busy="true" aria-label="Loading dashboard">
+      <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-8 sm:p-10">
+        <Skeleton className="h-9 w-56" />
+        <Skeleton className="mt-4 h-7 w-40" />
+        <Skeleton className="mt-4 h-4 w-full max-w-md" />
+        <Skeleton className="mt-6 h-10 w-44 rounded-lg" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ListCardSkeleton />
-        <ListCardSkeleton rows={4} />
+      <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
+        <div className="border-b border-slate-800 px-6 py-4">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="mt-2 h-3 w-24" />
+        </div>
+        <div className="space-y-0 divide-y divide-slate-800">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="px-6 py-4">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="mt-2 h-3 w-32" />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

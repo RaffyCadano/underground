@@ -41,10 +41,10 @@ export function tournamentSearchWhere(
   return where;
 }
 
-export type AccountRoleFilter = 'all' | 'player' | 'admin';
+export type AccountRoleFilter = 'all' | 'player' | 'organizer' | 'admin' | 'guest';
 
 export function parseRoleFilter(value?: string): AccountRoleFilter {
-  if (value === 'player' || value === 'admin') return value;
+  if (value === 'player' || value === 'organizer' || value === 'admin' || value === 'guest') return value;
   return 'all';
 }
 

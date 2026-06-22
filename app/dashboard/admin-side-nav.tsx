@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   BarChart3,
   Calendar,
+  KeyRound,
   LayoutDashboard,
   Menu,
   Shield,
@@ -24,12 +26,19 @@ type NavItem = {
   icon: LucideIcon;
 };
 
-const mainNav: NavItem[] = [
+const adminMainNav: NavItem[] = [
   { href: '/dashboard/overview', label: 'Overview', icon: LayoutDashboard },
   { href: '/dashboard/tournaments', label: 'Tournaments', icon: Trophy },
   { href: '/dashboard/clubs', label: 'Community clubs', icon: UsersRound },
   { href: '/dashboard/accounts', label: 'Accounts', icon: Shield },
-  { href: '/dashboard/profile', label: 'My profile', icon: User },
+  { href: '/profile', label: 'Profile settings', icon: User },
+  { href: '/profile/password', label: 'Change password', icon: KeyRound },
+];
+
+const organizerMainNav: NavItem[] = [
+  { href: '/dashboard/tournaments', label: 'Tournaments', icon: Trophy },
+  { href: '/profile', label: 'Profile settings', icon: User },
+  { href: '/profile/password', label: 'Change password', icon: KeyRound },
 ];
 
 const siteNav: NavItem[] = [
@@ -42,6 +51,12 @@ const siteNav: NavItem[] = [
 function isActive(pathname: string, href: string) {
   if (href === '/dashboard/overview') {
     return pathname === '/dashboard/overview' || pathname === '/dashboard';
+  }
+  if (href === '/profile') {
+    return pathname === '/profile';
+  }
+  if (href === '/profile/password') {
+    return pathname === '/profile/password';
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -72,7 +87,15 @@ function NavLink({
   );
 }
 
-function SideNavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function SideNavLinks({
+  pathname,
+  mainNav,
+  onNavigate,
+}: {
+  pathname: string;
+  mainNav: NavItem[];
+  onNavigate?: () => void;
+}) {
   return (
     <nav className="space-y-6">
       <div>
@@ -112,7 +135,12 @@ function SideNavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?:
 
 export function AdminSideNav() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const isOrganizer = session?.user?.role === 'organizer';
+  const mainNav = isOrganizer ? organizerMainNav : adminMainNav;
+  const panelTitle = isOrganizer ? 'Organizer panel' : 'Admin panel';
 
   const allNav = [...mainNav, ...siteNav];
   const currentLabel =
@@ -163,16 +191,16 @@ export function AdminSideNav() {
         </button>
       </div>
 
-      <SlidingDrawer open={mobileOpen} onClose={close} title="Admin panel" side="left">
+      <SlidingDrawer open={mobileOpen} onClose={close} title={panelTitle} side="left">
         <div id="admin-dashboard-drawer">
-          <SideNavLinks pathname={pathname} onNavigate={close} />
+          <SideNavLinks pathname={pathname} mainNav={mainNav} onNavigate={close} />
         </div>
       </SlidingDrawer>
 
-      <aside className="hidden lg:block lg:w-56 lg:shrink-0">
-        <div className="sticky top-20 rounded-2xl border border-slate-800 bg-slate-900/50 p-3">
-          <p className="mb-3 px-3 text-xs font-semibold text-slate-300">Admin panel</p>
-          <SideNavLinks pathname={pathname} />
+      <aside className="hidden lg:sticky lg:top-20 lg:z-30 lg:block lg:w-56 lg:shrink-0 lg:self-start">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-3">
+          <p className="mb-3 px-3 text-xs font-semibold text-slate-300">{panelTitle}</p>
+          <SideNavLinks pathname={pathname} mainNav={mainNav} />
         </div>
       </aside>
     </>

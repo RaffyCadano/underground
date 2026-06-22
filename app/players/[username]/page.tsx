@@ -13,7 +13,7 @@ import { getServerSession } from 'next-auth';
 import { PlayerAvatar } from '@/app/components/player-avatar';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { rankedPlayerWhere } from '@/lib/rankings';
+import { roleBadgeClass, roleLabel } from '@/lib/roles';
 
 function formatDate(date: Date) {
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -128,13 +128,9 @@ export default async function PlayerProfile({
                 </h1>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <span
-                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider capitalize ${
-                      player.role === 'admin'
-                        ? 'border-brand-500/40 bg-brand-500/10 text-brand-300'
-                        : 'border-slate-700 bg-slate-800/60 text-slate-400'
-                    }`}
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider capitalize ${roleBadgeClass(player.role)}`}
                   >
-                    {player.role}
+                    {roleLabel(player.role)}
                   </span>
                   {circuitRank !== null && (
                     <span className="rounded-full border border-slate-700 bg-slate-900/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-300">
@@ -144,7 +140,7 @@ export default async function PlayerProfile({
                   <span className="text-sm text-slate-500">Joined {formatDate(player.createdAt)}</span>
                   {isOwnProfile && (
                     <Link
-                      href="/dashboard/profile"
+                      href="/profile"
                       className="text-sm font-semibold text-brand-300 hover:text-brand-200"
                     >
                       Edit profile photo

@@ -139,6 +139,7 @@ function MatchCard({
         <div
           role={isActionable ? 'button' : undefined}
           tabIndex={isActionable ? 0 : undefined}
+          data-pan-exclude={isActionable ? '' : undefined}
           onClick={openAction}
           onKeyDown={(e) => {
             if (isActionable && (e.key === 'Enter' || e.key === ' ')) {

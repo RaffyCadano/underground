@@ -86,7 +86,7 @@ export function UnderDevelopmentNotice() {
           </ul>
         </div>
 
-        <div className="border-t border-slate-800 bg-slate-950/50 px-6 py-4">
+        <div className="flex justify-center border-t border-slate-800 bg-slate-950/50 px-6 py-4">
           <button type="button" onClick={() => setOpen(false)} className="btn-primary w-full sm:w-auto">
             Got it, continue browsing
           </button>

@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { Shield, X } from 'lucide-react';
 import { updateUserRole } from '@/app/actions/users';
+import { ASSIGNABLE_ROLES, isAdminRole } from '@/lib/roles';
 
 export function AccountRoleButton({
   userId,
@@ -23,7 +24,7 @@ export function AccountRoleButton({
   const [error, setError] = useState('');
 
   const isSelf = userId === currentUserId;
-  const isAdmin = role === 'admin';
+  const isAdmin = isAdminRole(role);
 
   useEffect(() => setMounted(true), []);
 
@@ -64,6 +65,8 @@ export function AccountRoleButton({
     });
   }
 
+  if (isSelf) return null;
+
   return (
     <>
       <button
@@ -72,10 +75,12 @@ export function AccountRoleButton({
         className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
           isAdmin
             ? 'border-brand-500/35 bg-brand-500/10 text-brand-200 hover:border-brand-400/50 hover:bg-brand-500/20'
-            : 'border-slate-700 bg-slate-900/80 text-slate-300 hover:border-slate-600 hover:bg-slate-800 hover:text-white'
+            : role === 'organizer'
+              ? 'border-sky-500/35 bg-sky-500/10 text-sky-200 hover:border-sky-400/50 hover:bg-sky-500/20'
+              : 'border-slate-700 bg-slate-900/80 text-slate-300 hover:border-slate-600 hover:bg-slate-800 hover:text-white'
         }`}
       >
-        <Shield size={14} className={isAdmin ? 'text-brand-400' : 'text-slate-500'} />
+        <Shield size={14} className={isAdmin ? 'text-brand-400' : role === 'organizer' ? 'text-sky-400' : 'text-slate-500'} />
         Role
       </button>
 
@@ -143,16 +148,13 @@ export function AccountRoleButton({
                     disabled={isPending}
                     className="select mt-1"
                   >
-                    <option value="player">Player</option>
-                    <option value="admin">Admin</option>
+                    {ASSIGNABLE_ROLES.map(({ value, label }) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
                   </select>
                 </div>
-
-                {isSelf && selectedRole === 'player' && (
-                  <p className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">
-                    You cannot remove your own admin access from this account.
-                  </p>
-                )}
 
                 {error && (
                   <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
@@ -168,7 +170,7 @@ export function AccountRoleButton({
                 <button
                   type="button"
                   onClick={confirmRoleChange}
-                  disabled={isPending || selectedRole === role || (isSelf && selectedRole === 'player')}
+                  disabled={isPending || selectedRole === role}
                   className="btn-primary disabled:opacity-60"
                 >
                   {isPending ? 'Saving…' : 'Save role'}

@@ -531,7 +531,8 @@ export function ParticipantManager({
         </p>
         {canManage && (
           <p className="mt-1 text-sm text-slate-400">
-            Add players below, then generate the bracket when ready.
+            Add or remove players, then generate the bracket when ready. Organizers can add
+            walk-ins even when the public cap is full.
           </p>
         )}
       </div>
@@ -618,7 +619,7 @@ export function ParticipantManager({
         <div className="card-muted p-8 text-center text-slate-400">
           No players registered yet.
           {isAdmin && canManage && ' Use the form above to add players.'}
-          {!isAdmin && ' Sign in and register, or wait for an admin to add players.'}
+          {!isAdmin && ' Sign in and register, or wait for an organizer to add players.'}
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-slate-800">

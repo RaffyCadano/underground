@@ -3,6 +3,7 @@
 import { randomUUID } from 'crypto';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { canManageTournaments } from '@/lib/roles';
 import { getSupabaseAdmin, TOURNAMENT_IMAGES_BUCKET } from '@/lib/supabase-admin';
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -27,7 +28,7 @@ export async function uploadTournamentDescriptionImage(
   formData: FormData,
 ): Promise<{ url?: string; error?: string }> {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'admin') {
+  if (!session || !canManageTournaments(session.user.role)) {
     return { error: 'Unauthorized.' };
   }
 

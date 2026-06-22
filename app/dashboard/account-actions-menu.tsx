@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { deleteUser, updateUser } from '@/app/actions/users';
+import { ASSIGNABLE_ROLES } from '@/lib/roles';
 
 export type AccountUser = {
   id: string;
@@ -83,6 +84,7 @@ export function AccountActionsMenu({
   const menuPanelRef = useRef<HTMLDivElement>(null);
 
   const canDelete = user.id !== currentUserId;
+  const canChangeRole = user.id !== currentUserId;
   const profileHref = `/players/${user.username.toLowerCase()}`;
 
   const [form, setForm] = useState({
@@ -416,14 +418,24 @@ export function AccountActionsMenu({
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300">Role</label>
-              <select
-                value={form.role}
-                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-                className="select mt-1"
-              >
-                <option value="player">Player</option>
-                <option value="admin">Admin</option>
-              </select>
+              {canChangeRole ? (
+                <select
+                  value={form.role}
+                  onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+                  className="select mt-1"
+                >
+                  {ASSIGNABLE_ROLES.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="mt-1 text-sm capitalize text-slate-300">{user.role}</p>
+              )}
+              {!canChangeRole && (
+                <p className="mt-1.5 text-xs text-slate-500">You cannot change your own role.</p>
+              )}
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div>

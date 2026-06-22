@@ -182,6 +182,8 @@ export async function changePassword(
     prisma.passwordResetToken.deleteMany({ where: { userId: user.id } }),
   ]);
 
+  revalidatePath('/profile');
+  revalidatePath('/profile/password');
   revalidatePath('/dashboard/profile');
 
   return { success: true, message: 'Password updated successfully.' };

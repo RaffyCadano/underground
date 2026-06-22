@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getServerSession } from 'next-auth';
 import {
   ArrowRight,
   Calendar,
@@ -9,10 +10,13 @@ import {
   Zap,
 } from 'lucide-react';
 import { ScrollReveal } from '@/app/components/scroll-reveal';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { rankedPlayerWhere } from '@/lib/rankings';
+import { dashboardHrefForRole } from '@/lib/roles';
 import { CircuitSection } from './circuit-section';
 import { HowItWorksSection } from './how-it-works-section';
+import { PricingPlansSection } from './pricing-plans-section';
 import { UnderDevelopmentNotice } from './under-development-notice';
 
 function formatShortDate(date: Date) {
@@ -36,6 +40,10 @@ const FORMAT_LABELS: Record<string, string> = {
 };
 
 export default async function HomePage() {
+  const session = await getServerSession(authOptions);
+  const isLoggedIn = !!session;
+  const dashboardHref = session ? dashboardHrefForRole(session.user.role) : '/dashboard';
+
   const [upcomingTournaments, recentMatches, topPlayers, totalPlayers, totalMatches] = await Promise.all([
     prisma.tournament.findMany({
       where: { status: { in: ['open', 'active'] } },
@@ -109,9 +117,15 @@ export default async function HomePage() {
                     Browse tournaments
                     <ArrowRight size={16} />
                   </Link>
-                  <Link href="/register" className="btn-secondary w-full text-center sm:w-auto">
-                    Create account
-                  </Link>
+                  {isLoggedIn ? (
+                    <Link href={dashboardHref} className="btn-secondary w-full text-center sm:w-auto">
+                      Go to dashboard
+                    </Link>
+                  ) : (
+                    <Link href="/register" className="btn-secondary w-full text-center sm:w-auto">
+                      Create account
+                    </Link>
+                  )}
                 </div>
               </ScrollReveal>
 
@@ -253,6 +267,8 @@ export default async function HomePage() {
 
       <CircuitSection topPlayers={topPlayers} recentMatches={recentMatches} />
 
+      <PricingPlansSection />
+
       {/* CTA */}
       <section className="container py-10 sm:py-16">
         <ScrollReveal direction="scale">
@@ -262,16 +278,35 @@ export default async function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-400">Ready to compete?</p>
             <h2 className="mt-3 text-2xl font-semibold text-white sm:text-3xl md:text-4xl">Join the UGNCBBX circuit</h2>
             <p className="mx-auto mt-3 max-w-lg text-sm text-slate-400 sm:text-base">
-              Create a free account, enter your first tournament, and start climbing the rankings.
+              {isLoggedIn
+                ? 'Jump back into your dashboard, enter open brackets, and keep climbing the rankings.'
+                : 'Create a free account, enter your first tournament, and start climbing the rankings.'}
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:justify-center">
-              <Link href="/register" className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto">
-                Create account
-                <ArrowRight size={16} />
-              </Link>
-              <Link href="/tournaments" className="btn-secondary w-full sm:w-auto">
-                Browse tournaments
-              </Link>
+              {isLoggedIn ? (
+                <>
+                  <Link
+                    href={dashboardHref}
+                    className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+                  >
+                    Go to dashboard
+                    <ArrowRight size={16} />
+                  </Link>
+                  <Link href="/rankings" className="btn-secondary w-full sm:w-auto">
+                    View rankings
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/register" className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto">
+                    Create account
+                    <ArrowRight size={16} />
+                  </Link>
+                  <Link href="/tournaments" className="btn-secondary w-full sm:w-auto">
+                    Browse tournaments
+                  </Link>
+                </>
+              )}
             </div>
           </div>
           </div>
