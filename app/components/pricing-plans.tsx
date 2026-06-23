@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Check, Crown, Layers } from 'lucide-react';
 import { ScrollReveal } from '@/app/components/scroll-reveal';
 import { isAdminRole } from '@/lib/roles';
+import { userHasActivePremier } from '@/lib/sync-stripe-subscription';
 import {
   FREE_PLAN,
   FREE_PLAN_FEATURES,
@@ -122,7 +123,13 @@ export function PricingPlans({
 }) {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('annual');
   const { data: session } = useSession();
-  const showPremierUpgrade = !session?.user.role || !isAdminRole(session.user.role);
+  const showPremierUpgrade =
+    !session?.user.role ||
+    (!isAdminRole(session.user.role) &&
+      !userHasActivePremier(
+        session.user.subscriptionPlan ?? 'free',
+        session.user.subscriptionStatus,
+      ));
 
   const premierPrice =
     billingPeriod === 'annual'

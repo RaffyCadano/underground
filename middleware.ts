@@ -10,17 +10,42 @@ const ADMIN_ONLY_PREFIXES = [
 
 const TOURNAMENT_STAFF_PREFIXES = ['/dashboard/tournaments'];
 
+const PROTECTED_PREFIXES = [
+  '/dashboard',
+  '/admin',
+  '/profile',
+  '/messages',
+  '/news',
+];
+
 function matchesPrefix(pathname: string, prefixes: string[]) {
   return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+function isProtectedPath(pathname: string) {
+  return PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
 }
 
 function canAccessTournamentDashboard(role: string | undefined) {
   return role === 'admin' || role === 'organizer' || role === 'player';
 }
 
+function nextWithPathname(req: NextRequest) {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-pathname', req.nextUrl.pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
+
 export async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
+
+  if (!isProtectedPath(pathname)) {
+    return nextWithPathname(req);
+  }
+
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
   if (!token) {
     const signIn = new URL('/login', req.url);
@@ -40,9 +65,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
-  return NextResponse.next();
+  return nextWithPathname(req);
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/admin/:path*', '/profile', '/profile/:path*', '/messages', '/news'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|icon.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+  ],
 };

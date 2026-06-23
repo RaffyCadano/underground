@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { headers } from 'next/headers';
 import { Space_Grotesk, Space_Mono } from 'next/font/google';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -29,6 +30,8 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
+  const headersList = await headers();
+  const isEmbed = (headersList.get('x-pathname') ?? '').includes('/embed');
 
   let avatar: string | null = null;
 
@@ -40,17 +43,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     avatar = user?.avatar ?? null;
   }
 
+  const page = isEmbed ? (
+    <div className="min-h-screen bg-slate-950 text-slate-100">{children}</div>
+  ) : (
+    <SiteChrome session={session} avatar={avatar}>
+      <SmoothScrollProvider>{children}</SmoothScrollProvider>
+    </SiteChrome>
+  );
+
   return (
     <html lang="en">
       <body className={`${spaceGrotesk.variable} ${spaceMono.variable}`}>
         <AppSessionProvider>
           <SignedOutToast />
           <SignedInToast />
-          <SmoothScrollProvider>
-            <SiteChrome session={session} avatar={avatar}>
-              {children}
-            </SiteChrome>
-          </SmoothScrollProvider>
+          {page}
         </AppSessionProvider>
       </body>
     </html>

@@ -7,10 +7,9 @@ import { Crown, Loader2, X } from 'lucide-react';
 import {
   PREMIER_PLAN,
   formatPlanPrice,
+  type PremierBillingPeriod,
 } from '@/lib/subscriptions';
 import { SITE_NAME } from '@/lib/site';
-
-export type PremierBillingPeriod = 'annual' | 'monthly';
 
 type PremierUpgradeModalProps = {
   open: boolean;
@@ -63,10 +62,29 @@ export function PremierUpgradeModal({ open, onClose }: PremierUpgradeModalProps)
     setIsSubmitting(true);
     setSubmitMessage(null);
 
-    // Placeholder until Stripe checkout is wired up.
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setIsSubmitting(false);
-    setSubmitMessage('Subscription checkout is coming soon. Your plan selection has been saved.');
+    try {
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          billingPeriod,
+          promoCode: promoCode.trim() || undefined,
+        }),
+      });
+
+      const data = (await response.json()) as { url?: string; error?: string };
+
+      if (!response.ok || !data.url) {
+        setSubmitMessage(data.error ?? 'Could not start checkout. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch {
+      setSubmitMessage('Could not start checkout. Please try again.');
+      setIsSubmitting(false);
+    }
   }
 
   const canSubscribe = agreedToRefundPolicy && !isSubmitting;

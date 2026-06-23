@@ -76,9 +76,22 @@ export function SiteFooter({ session }: { session: Session | null }) {
         </div>
 
         <div className="mt-10 flex flex-col gap-4 border-t border-slate-800/80 pt-8 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-500">
-            © {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-slate-500">
+              © {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
+            </p>
+            <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              <Link href="/privacy" className="text-slate-500 transition hover:text-slate-300">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="text-slate-500 transition hover:text-slate-300">
+                Terms of Service
+              </Link>
+              <Link href="/refund-policy" className="text-slate-500 transition hover:text-slate-300">
+                Refund Policy
+              </Link>
+            </nav>
+          </div>
           <p className="text-sm text-slate-600">Built for Beyblade X tournament management and rankings.</p>
         </div>
       </div>

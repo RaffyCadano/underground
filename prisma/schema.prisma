@@ -24,6 +24,11 @@ model User {
   productUpdates          Boolean                 @default(false)
   optOutPersonalizedAds   Boolean                 @default(false)
   subscriptionPlan        String                  @default("free")
+  stripeCustomerId        String?                 @unique
+  stripeSubscriptionId    String?                 @unique
+  subscriptionStatus      String?
+  billingInterval         String?
+  currentPeriodEnd        DateTime?
   role                    String                  @default("player")
   rankPoints              Int                     @default(0)
   wins                    Int                     @default(0)

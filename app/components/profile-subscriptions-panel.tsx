@@ -1,14 +1,17 @@
+import { Suspense } from 'react';
 import { Crown } from 'lucide-react';
+import { ManageBillingButton } from '@/app/components/manage-billing-button';
 import { PremierUpgradeSection } from '@/app/components/premier-upgrade-section';
+import { SubscriptionCheckoutStatus } from '@/app/components/subscription-checkout-status';
 import { isAdminRole } from '@/lib/roles';
 import {
   BILLING_HISTORY_EMPTY,
   COMMUNITY_SUBSCRIPTIONS_EMPTY,
   FREE_PLAN,
   FREE_PLAN_DETAILS,
-  isPremierPlan,
   PREMIER_PLAN,
 } from '@/lib/subscriptions';
+import { userHasActivePremier } from '@/lib/sync-stripe-subscription';
 
 function SectionCard({
   title,
@@ -41,18 +44,38 @@ function premierBadge() {
   );
 }
 
+function formatRenewalDate(date: Date) {
+  return date.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 export function ProfileSubscriptionsPanel({
   role,
   subscriptionPlan = 'free',
+  subscriptionStatus = null,
+  billingInterval = null,
+  currentPeriodEnd = null,
+  hasStripeCustomer = false,
 }: {
   role: string;
   subscriptionPlan?: string;
+  subscriptionStatus?: string | null;
+  billingInterval?: string | null;
+  currentPeriodEnd?: Date | null;
+  hasStripeCustomer?: boolean;
 }) {
-  const showPremierUpgrade = !isAdminRole(role) && !isPremierPlan(subscriptionPlan);
-  const onPremier = isPremierPlan(subscriptionPlan);
+  const onPremier = userHasActivePremier(subscriptionPlan, subscriptionStatus);
+  const showPremierUpgrade = !isAdminRole(role) && !onPremier;
 
   return (
     <div className="space-y-6">
+      <Suspense fallback={null}>
+        <SubscriptionCheckoutStatus />
+      </Suspense>
+
       <SectionCard title="Current Plan">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -63,15 +86,26 @@ export function ProfileSubscriptionsPanel({
               {onPremier && premierBadge()}
             </div>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
-              {onPremier
-                ? PREMIER_PLAN.description
-                : FREE_PLAN_DETAILS}
+              {onPremier ? PREMIER_PLAN.description : FREE_PLAN_DETAILS}
             </p>
+            {onPremier && currentPeriodEnd && (
+              <p className="mt-2 text-sm text-slate-500">
+                {subscriptionStatus === 'canceled' ? 'Access until' : 'Renews on'}{' '}
+                {formatRenewalDate(currentPeriodEnd)}
+                {billingInterval ? ` · ${billingInterval === 'annual' ? 'Annual' : 'Monthly'} billing` : ''}
+              </p>
+            )}
           </div>
           <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
             {onPremier ? PREMIER_PLAN.badge : FREE_PLAN.label}
           </span>
         </div>
+
+        {onPremier && hasStripeCustomer && (
+          <div className="mt-6">
+            <ManageBillingButton />
+          </div>
+        )}
 
         {showPremierUpgrade && <PremierUpgradeSection />}
       </SectionCard>
@@ -81,7 +115,11 @@ export function ProfileSubscriptionsPanel({
       </SectionCard>
 
       <SectionCard title="Billing History">
-        <p className="text-sm leading-relaxed text-slate-400">{BILLING_HISTORY_EMPTY}</p>
+        <p className="text-sm leading-relaxed text-slate-400">
+          {onPremier && hasStripeCustomer
+            ? 'View invoices and update your payment method in the billing portal.'
+            : BILLING_HISTORY_EMPTY}
+        </p>
       </SectionCard>
     </div>
   );

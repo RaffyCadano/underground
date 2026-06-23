@@ -1,6 +1,3 @@
-'use client';
-
-import { usePathname } from 'next/navigation';
 import type { Session } from 'next-auth';
 import { AdcashDashboardShell } from '@/app/components/adcash-dashboard-shell';
 import { SiteBrand } from '@/app/components/site-brand';
@@ -16,13 +13,6 @@ export function SiteChrome({
   session: Session | null;
   avatar: string | null;
 }) {
-  const pathname = usePathname();
-  const isEmbed = pathname.includes('/embed');
-
-  if (isEmbed) {
-    return <div className="min-h-screen bg-slate-950 text-slate-100">{children}</div>;
-  }
-
   return (
     <div className="flex min-h-screen flex-col text-slate-100">
       <header className="site-chrome relative sticky top-0 z-50 border-b border-slate-800 bg-slate-950/80 backdrop-blur">

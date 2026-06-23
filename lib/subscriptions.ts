@@ -10,6 +10,8 @@ export const FREE_PLAN = {
   description: 'Everything you need to run locals and grow your scene — on us.',
 } as const;
 
+export type PremierBillingPeriod = 'annual' | 'monthly';
+
 export const SUBSCRIPTION_PLANS = ['free', 'premier'] as const;
 export type SubscriptionPlan = (typeof SUBSCRIPTION_PLANS)[number];
 

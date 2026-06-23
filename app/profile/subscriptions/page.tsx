@@ -5,15 +5,20 @@ import { prisma } from '@/lib/prisma';
 
 export default async function SubscriptionsPage() {
   const session = await getServerSession(authOptions);
-  const subscriptionPlan =
+
+  const billing =
     session?.user?.id != null
-      ? (
-          await prisma.user.findUnique({
-            where: { id: session.user.id },
-            select: { subscriptionPlan: true },
-          })
-        )?.subscriptionPlan ?? 'free'
-      : 'free';
+      ? await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: {
+            subscriptionPlan: true,
+            subscriptionStatus: true,
+            billingInterval: true,
+            currentPeriodEnd: true,
+            stripeCustomerId: true,
+          },
+        })
+      : null;
 
   return (
     <div className="space-y-6">
@@ -26,7 +31,11 @@ export default async function SubscriptionsPage() {
 
       <ProfileSubscriptionsPanel
         role={session?.user.role ?? 'player'}
-        subscriptionPlan={subscriptionPlan}
+        subscriptionPlan={billing?.subscriptionPlan ?? 'free'}
+        subscriptionStatus={billing?.subscriptionStatus}
+        billingInterval={billing?.billingInterval}
+        currentPeriodEnd={billing?.currentPeriodEnd}
+        hasStripeCustomer={Boolean(billing?.stripeCustomerId)}
       />
     </div>
   );

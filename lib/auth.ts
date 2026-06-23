@@ -37,12 +37,20 @@ export const authOptions: NextAuthOptions = {
       if (token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, username: true, email: true },
+          select: {
+            role: true,
+            username: true,
+            email: true,
+            subscriptionPlan: true,
+            subscriptionStatus: true,
+          },
         });
         if (dbUser) {
           token.role = dbUser.role;
           token.name = dbUser.username;
           token.email = dbUser.email;
+          token.subscriptionPlan = dbUser.subscriptionPlan;
+          token.subscriptionStatus = dbUser.subscriptionStatus;
         }
       }
 
@@ -54,6 +62,8 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string;
         if (token.name) session.user.name = token.name as string;
         if (token.email) session.user.email = token.email as string;
+        session.user.subscriptionPlan = (token.subscriptionPlan as string | undefined) ?? 'free';
+        session.user.subscriptionStatus = (token.subscriptionStatus as string | null | undefined) ?? null;
       }
       return session;
     },

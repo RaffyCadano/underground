@@ -9,6 +9,7 @@ import { ChevronDown } from 'lucide-react';
 import { PlayerAvatar } from '@/app/components/player-avatar';
 import { SignOutDialog } from '@/app/components/sign-out-dialog';
 import { isAdminRole } from '@/lib/roles';
+import { userHasActivePremier } from '@/lib/sync-stripe-subscription';
 import { playerProfilePath } from '@/lib/player-profile';
 
 type ProfileMenuProps = {
@@ -93,7 +94,12 @@ function AccountMenuPanel({
   onLogOut: () => void;
 }) {
   const links = buildMenuLinks(session);
-  const showPremierUpgrade = !isAdminRole(session.user.role);
+  const showPremierUpgrade =
+    !isAdminRole(session.user.role) &&
+    !userHasActivePremier(
+      session.user.subscriptionPlan ?? 'free',
+      session.user.subscriptionStatus,
+    );
 
   return (
     <div>

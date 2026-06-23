@@ -137,6 +137,11 @@ pre {
 }
 
 @media print {
+  header,
+  footer {
+    display: none !important;
+  }
+
   body * {
     visibility: hidden;
   }
