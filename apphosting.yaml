@@ -31,3 +31,15 @@ env:
     secret: STRIPE_PRICE_PREMIER_MONTHLY
   - variable: STRIPE_PRICE_PREMIER_ANNUAL
     secret: STRIPE_PRICE_PREMIER_ANNUAL
+  - variable: SMTP_HOST
+    secret: SMTP_HOST
+  - variable: SMTP_PORT
+    secret: SMTP_PORT
+  - variable: SMTP_SECURE
+    secret: SMTP_SECURE
+  - variable: SMTP_USER
+    secret: SMTP_USER
+  - variable: SMTP_PASS
+    secret: SMTP_PASS
+  - variable: EMAIL_FROM
+    secret: EMAIL_FROM

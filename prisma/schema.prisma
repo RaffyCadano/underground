@@ -40,6 +40,7 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   clubRequests            ClubRequest[]
   organizerRequests       OrganizerRequest[]
+  contactMessages         ContactMessage[]
   blockedUsers            BlockedUser[]           @relation("UserBlocks")
   hostedTournaments       Tournament[]            @relation("TournamentCreator")
   hostedEvents            Event[]                 @relation("EventHost")
@@ -115,6 +116,23 @@ model OrganizerRequest {
 
   @@index([status, createdAt(sort: Desc)])
   @@index([userId, status])
+}
+
+model ContactMessage {
+  id         String    @id @default(cuid())
+  name       String
+  email      String
+  subject    String
+  message    String
+  category   String    @default("general")
+  status     String    @default("pending")
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId     String?
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([userId])
 }
 
 model Event {

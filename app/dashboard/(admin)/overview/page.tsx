@@ -74,6 +74,7 @@ export default async function DashboardOverviewPage() {
     rankedCount,
     pendingClubRequests,
     pendingOrganizerRequests,
+    pendingContactMessages,
     templateCount,
     publishedEventCount,
   ] = await Promise.all([
@@ -106,11 +107,12 @@ export default async function DashboardOverviewPage() {
     prisma.user.count({ where: { rankPoints: { gt: 0 } } }),
     prisma.clubRequest.count({ where: { status: 'pending' } }),
     prisma.organizerRequest.count({ where: { status: 'pending' } }),
+    prisma.contactMessage.count({ where: { status: 'pending' } }),
     prisma.tournamentTemplate.count(),
     prisma.event.count({ where: { status: 'published' } }),
   ]);
 
-  const pendingTotal = pendingClubRequests + pendingOrganizerRequests;
+  const pendingTotal = pendingClubRequests + pendingOrganizerRequests + pendingContactMessages;
 
   const stats: {
     label: string;
@@ -178,8 +180,8 @@ export default async function DashboardOverviewPage() {
     {
       label: 'Pending review',
       value: pendingTotal,
-      detail: `${pendingOrganizerRequests} organizer · ${pendingClubRequests} club request${pendingClubRequests === 1 ? '' : 's'}`,
-      href: '/dashboard/accounts',
+      detail: `${pendingContactMessages} contact · ${pendingOrganizerRequests} organizer · ${pendingClubRequests} club`,
+      href: pendingContactMessages > 0 ? '/dashboard/contact' : '/dashboard/accounts',
       icon: Flag,
     },
     {

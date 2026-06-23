@@ -148,15 +148,11 @@ export default function PrivacyPolicyPage() {
           <section className="space-y-3">
             <h2 className="text-base font-semibold text-white">Contact</h2>
             <p>
-              Questions about this policy? Reach out through your{' '}
-              <Link href="/profile" className="text-brand-300 hover:text-brand-200">
-                account profile
-              </Link>{' '}
-              or the contact method listed on our{' '}
-              <Link href="/about" className="text-brand-300 hover:text-brand-200">
-                About
-              </Link>{' '}
-              page.
+              Questions about this policy?{' '}
+              <Link href="/contact" className="text-brand-300 hover:text-brand-200">
+                Contact us
+              </Link>
+              .
             </p>
           </section>
         </div>

@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
 /** Bump when schema changes so dev hot-reload discards a stale cached client. */
-const PRISMA_SCHEMA_VERSION = 7;
+const PRISMA_SCHEMA_VERSION = 8;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -14,6 +14,7 @@ const DELEGATE_KEYS = [
   'communityClub',
   'clubRequest',
   'organizerRequest',
+  'contactMessage',
   'tournament',
   'tournamentParticipant',
   'match',

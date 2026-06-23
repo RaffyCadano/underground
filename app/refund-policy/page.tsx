@@ -28,7 +28,11 @@ export default function RefundPolicyPage() {
             non-refundable once the billing period has started.
           </p>
           <p>
-            For billing questions, contact support through your{' '}
+            For billing questions, use{' '}
+            <Link href="/contact" className="text-brand-300 hover:text-brand-200">
+              contact support
+            </Link>{' '}
+            or your{' '}
             <Link href="/profile/subscriptions" className="text-brand-300 hover:text-brand-200">
               subscription settings
             </Link>

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Session } from 'next-auth';
-import { BarChart3, CreditCard, Info, Layers, LayoutDashboard, LogIn, Trophy, UserPlus, Users, UsersRound } from 'lucide-react';
+import { BarChart3, CreditCard, Info, Layers, LayoutDashboard, LogIn, Mail, Trophy, UserPlus, Users, UsersRound } from 'lucide-react';
 import { SiteBrand } from '@/app/components/site-brand';
 import { SITE_FULL_NAME, SITE_NAME } from '@/lib/site';
 
@@ -12,6 +12,7 @@ const exploreLinks = [
   { href: '/rankings', label: 'Rankings', icon: BarChart3 },
   { href: '/players', label: 'Players', icon: Users },
   { href: '/teams', label: 'Teams', icon: UsersRound },
+  { href: '/contact', label: 'Contact', icon: Mail },
 ];
 
 export function SiteFooter({ session }: { session: Session | null }) {
@@ -86,6 +87,9 @@ export function SiteFooter({ session }: { session: Session | null }) {
               </Link>
               <Link href="/terms" className="text-slate-500 transition hover:text-slate-300">
                 Terms of Service
+              </Link>
+              <Link href="/contact" className="text-slate-500 transition hover:text-slate-300">
+                Contact
               </Link>
               <Link href="/refund-policy" className="text-slate-500 transition hover:text-slate-300">
                 Refund Policy
