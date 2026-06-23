@@ -2,7 +2,9 @@ import { getServerSession } from 'next-auth';
 import { ProfileSubscriptionsPanel } from '@/app/components/profile-subscriptions-panel';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getStripe } from '@/lib/stripe';
 import { listCustomerInvoices } from '@/lib/stripe-invoices';
+import { userHasActivePremier } from '@/lib/sync-stripe-subscription';
 
 export default async function SubscriptionsPage() {
   const session = await getServerSession(authOptions);
@@ -17,11 +19,13 @@ export default async function SubscriptionsPage() {
             billingInterval: true,
             currentPeriodEnd: true,
             stripeCustomerId: true,
+            stripeSubscriptionId: true,
           },
         })
       : null;
 
   let invoices: Awaited<ReturnType<typeof listCustomerInvoices>> = [];
+  let cancelAtPeriodEnd = false;
 
   if (billing?.stripeCustomerId) {
     try {
@@ -30,6 +34,20 @@ export default async function SubscriptionsPage() {
       console.error('Failed to load billing history:', error);
     }
   }
+
+  if (billing?.stripeSubscriptionId) {
+    try {
+      const subscription = await getStripe().subscriptions.retrieve(billing.stripeSubscriptionId);
+      cancelAtPeriodEnd = subscription.cancel_at_period_end;
+    } catch (error) {
+      console.error('Failed to load subscription status:', error);
+    }
+  }
+
+  const onPremier = userHasActivePremier(
+    billing?.subscriptionPlan ?? 'free',
+    billing?.subscriptionStatus,
+  );
 
   return (
     <div className="space-y-6">
@@ -48,6 +66,8 @@ export default async function SubscriptionsPage() {
         currentPeriodEnd={billing?.currentPeriodEnd}
         hasStripeCustomer={Boolean(billing?.stripeCustomerId)}
         invoices={invoices}
+        cancelAtPeriodEnd={cancelAtPeriodEnd}
+        canCancelPremier={onPremier && Boolean(billing?.stripeSubscriptionId) && !cancelAtPeriodEnd}
       />
     </div>
   );

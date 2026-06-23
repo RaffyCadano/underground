@@ -1,5 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Script from 'next/script';
+import { AdcashEmbedStrip } from '@/app/components/adcash-embed-strip';
+import { getViewerShowAds } from '@/lib/ads';
 import { prisma } from '@/lib/prisma';
 import { BracketTree } from '@/app/tournaments/[id]/bracket-tree';
 import { BracketSwiss } from '@/app/tournaments/[id]/bracket-swiss';
@@ -22,6 +25,7 @@ export default async function TournamentEmbedPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const showAds = await getViewerShowAds();
 
   const tournament = await prisma.tournament.findUnique({
     where: { id },
@@ -65,7 +69,16 @@ export default async function TournamentEmbedPage({
   const sortedRounds = Array.from(roundMap.entries()).sort((a, b) => a[0] - b[0]);
 
   return (
-    <div className="p-4 sm:p-6" id="tournament-bracket-print">
+    <div className="flex min-h-screen flex-col">
+      {showAds && (
+        <Script
+          id="aclib-embed"
+          src="https://acscdn.com/script/aclib.js"
+          strategy="afterInteractive"
+        />
+      )}
+      {showAds && <AdcashEmbedStrip slot="top" />}
+      <div className="flex-1 p-4 sm:p-6" id="tournament-bracket-print">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
@@ -122,6 +135,8 @@ export default async function TournamentEmbedPage({
       ) : (
         <p className="py-10 text-center text-sm text-slate-500">Bracket not generated yet.</p>
       )}
+      </div>
+      {showAds && <AdcashEmbedStrip slot="bottom" />}
     </div>
   );
 }

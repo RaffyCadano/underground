@@ -19,7 +19,7 @@ export function BracketShareActions({ tournamentId }: { tournamentId: string }) 
     if (!embedOpen) return;
     const origin = window.location.origin;
     setEmbedCode(
-      `<iframe src="${origin}/tournaments/${tournamentId}/embed" width="100%" height="500" frameborder="0" scrolling="auto" allowtransparency="true" title="Tournament bracket"></iframe>`,
+      `<iframe src="${origin}/tournaments/${tournamentId}/embed" width="100%" height="640" frameborder="0" scrolling="auto" allowtransparency="true" title="Tournament bracket"></iframe>`,
     );
     setCopied(false);
   }, [embedOpen, tournamentId]);

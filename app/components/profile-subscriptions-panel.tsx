@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { Crown } from 'lucide-react';
 import { BillingHistoryList } from '@/app/components/billing-history-list';
+import { CancelPremierButton } from '@/app/components/cancel-premier-button';
 import { ManageBillingButton } from '@/app/components/manage-billing-button';
 import { PremierUpgradeSection } from '@/app/components/premier-upgrade-section';
 import { SubscriptionCheckoutStatus } from '@/app/components/subscription-checkout-status';
@@ -61,6 +62,8 @@ export function ProfileSubscriptionsPanel({
   currentPeriodEnd = null,
   hasStripeCustomer = false,
   invoices = [],
+  cancelAtPeriodEnd = false,
+  canCancelPremier = false,
 }: {
   role: string;
   subscriptionPlan?: string;
@@ -69,6 +72,8 @@ export function ProfileSubscriptionsPanel({
   currentPeriodEnd?: Date | null;
   hasStripeCustomer?: boolean;
   invoices?: BillingInvoice[];
+  cancelAtPeriodEnd?: boolean;
+  canCancelPremier?: boolean;
 }) {
   const onPremier = userHasActivePremier(subscriptionPlan, subscriptionStatus);
   const showPremierUpgrade = !isAdminRole(role) && !onPremier;
@@ -93,7 +98,7 @@ export function ProfileSubscriptionsPanel({
             </p>
             {onPremier && currentPeriodEnd && (
               <p className="mt-2 text-sm text-slate-500">
-                {subscriptionStatus === 'canceled' ? 'Access until' : 'Renews on'}{' '}
+                {cancelAtPeriodEnd || subscriptionStatus === 'canceled' ? 'Access until' : 'Renews on'}{' '}
                 {formatRenewalDate(currentPeriodEnd)}
                 {billingInterval ? ` · ${billingInterval === 'annual' ? 'Annual' : 'Monthly'} billing` : ''}
               </p>
@@ -105,8 +110,13 @@ export function ProfileSubscriptionsPanel({
         </div>
 
         {onPremier && hasStripeCustomer && (
-          <div className="mt-6">
+          <div className="mt-6 space-y-3">
             <ManageBillingButton />
+            <CancelPremierButton
+              currentPeriodEnd={currentPeriodEnd?.toISOString() ?? null}
+              cancelAtPeriodEnd={cancelAtPeriodEnd}
+              canCancel={canCancelPremier}
+            />
           </div>
         )}
 
@@ -121,7 +131,7 @@ export function ProfileSubscriptionsPanel({
         <BillingHistoryList invoices={invoices} hasStripeCustomer={hasStripeCustomer} />
         {hasStripeCustomer && (
           <p className="mt-4 text-xs text-slate-500">
-            Need to update your card or cancel? Use <strong className="font-medium text-slate-400">Manage billing</strong> above.
+            Update your payment method in <strong className="font-medium text-slate-400">Manage billing</strong>, or cancel Premier from your current plan above.
           </p>
         )}
       </SectionCard>

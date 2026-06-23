@@ -2,14 +2,17 @@ import { adcashMountScript } from '@/lib/adcash-mount';
 
 export function AdcashZone({
   zoneId,
+  idSuffix,
   slotClassName,
   label = 'Advertisement',
 }: {
   zoneId: string;
+  /** Disambiguates multiple slots using the same zone on one page (e.g. embed top/bottom). */
+  idSuffix?: string;
   slotClassName?: string;
   label?: string;
 }) {
-  const containerId = `adcash-zone-${zoneId}`;
+  const containerId = idSuffix ? `adcash-zone-${zoneId}-${idSuffix}` : `adcash-zone-${zoneId}`;
 
   return (
     <div

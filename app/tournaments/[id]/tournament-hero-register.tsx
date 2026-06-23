@@ -59,7 +59,7 @@ export function TournamentHeroRegister({
   }
 
   return (
-    <div className="mt-6">
+    <div className="mt-5 sm:mt-6">
       {error && (
         <p className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
           {error}
@@ -68,18 +68,18 @@ export function TournamentHeroRegister({
 
       {!isLoggedIn ? (
         <div className="flex flex-col gap-4 rounded-xl border border-brand-500/25 bg-gradient-to-br from-brand-500/10 via-slate-950/40 to-slate-950 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div>
+          <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
               Open registration
             </p>
             <p className="mt-1 text-sm font-semibold text-white">Want to compete in this event?</p>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs leading-relaxed text-slate-400">
               {playerCountLabel} so far.{!isRanked ? ' Unranked event.' : ''}
             </p>
           </div>
           <Link
             href={loginHref}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-400"
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-400 sm:w-auto"
           >
             <LogIn size={16} />
             Sign in to register
@@ -88,16 +88,16 @@ export function TournamentHeroRegister({
         </div>
       ) : isJoined ? (
         <div className="flex flex-col gap-4 rounded-xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 via-slate-950/40 to-slate-950 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div className="flex items-start gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
               <CheckCircle2 size={18} />
             </span>
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
                 Registered
               </p>
               <p className="mt-1 text-sm font-semibold text-white">You&apos;re in the bracket pool</p>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs leading-relaxed text-slate-400">
                 {playerCountLabel} — waiting for the bracket to start.
               </p>
             </div>
@@ -106,7 +106,7 @@ export function TournamentHeroRegister({
             type="button"
             onClick={handleLeave}
             disabled={isPending}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-red-500/35 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-200 transition hover:border-red-400/50 hover:bg-red-500/15 disabled:opacity-60"
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg border border-red-500/35 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-200 transition hover:border-red-400/50 hover:bg-red-500/15 disabled:opacity-60 sm:w-auto"
           >
             {isPending ? (
               <>
@@ -119,27 +119,27 @@ export function TournamentHeroRegister({
           </button>
         </div>
       ) : registrationFull ? (
-        <div className="rounded-xl border border-slate-700 bg-slate-900/50 px-5 py-4">
+        <div className="rounded-xl border border-slate-700 bg-slate-900/50 px-4 py-4 sm:px-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
             Registration full
           </p>
           <p className="mt-1 text-sm font-semibold text-white">{playerCountLabel}</p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">
             This event has reached its player cap. Check back if someone drops out.
           </p>
         </div>
       ) : (
         <div className="flex flex-col gap-4 rounded-xl border border-brand-500/25 bg-gradient-to-br from-brand-500/10 via-slate-950/40 to-slate-950 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div className="flex items-start gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/10 text-brand-300">
               <UserPlus size={18} />
             </span>
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
                 Open registration
               </p>
               <p className="mt-1 text-sm font-semibold text-white">Join this tournament</p>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs leading-relaxed text-slate-400">
                 {playerCountLabel} so far. Claim your spot before the bracket is generated.
                 {!isRanked ? ' Unranked — no rank points.' : ''}
               </p>
@@ -149,7 +149,7 @@ export function TournamentHeroRegister({
             type="button"
             onClick={handleJoin}
             disabled={isPending}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-400 disabled:opacity-60"
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-400 disabled:opacity-60 sm:w-auto"
           >
             {isPending ? (
               <>
@@ -158,7 +158,8 @@ export function TournamentHeroRegister({
               </>
             ) : (
               <>
-                Register for this tournament
+                <span className="sm:hidden">Register</span>
+                <span className="hidden sm:inline">Register for this tournament</span>
                 <ArrowRight size={15} className="opacity-80" />
               </>
             )}

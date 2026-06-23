@@ -22,5 +22,6 @@ declare module 'next-auth/jwt' {
     role: string;
     subscriptionPlan?: string;
     subscriptionStatus?: string | null;
+    userRefreshedAt?: number;
   }
 }

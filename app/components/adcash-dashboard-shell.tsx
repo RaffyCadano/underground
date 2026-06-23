@@ -1,28 +1,9 @@
-import { getServerSession } from 'next-auth';
 import Script from 'next/script';
-import { authOptions } from '@/lib/auth';
 import { AdcashBanner } from '@/app/components/adcash-banner';
 import { AdcashSkyscraper } from '@/app/components/adcash-skyscraper';
-import { shouldShowAds } from '@/lib/ads';
+import { getViewerShowAds } from '@/lib/ads';
 import { getSkyscraperZoneIds } from '@/lib/adcash-mount';
 import { ADCASH_MAIN_COLUMN_ID } from '@/lib/adcash-layout';
-import { prisma } from '@/lib/prisma';
-
-export async function getViewerShowAds() {
-  const session = await getServerSession(authOptions);
-  if (session?.user?.id == null) return true;
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      optOutPersonalizedAds: true,
-      subscriptionPlan: true,
-      subscriptionStatus: true,
-    },
-  });
-
-  return shouldShowAds(user, session.user.role);
-}
 
 export async function AdcashDashboardShell({ children }: { children: React.ReactNode }) {
   const showAds = await getViewerShowAds();

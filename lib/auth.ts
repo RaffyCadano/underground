@@ -3,6 +3,9 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
+/** How often to re-fetch user fields from the database inside the JWT callback. */
+const JWT_USER_REFRESH_MS = 5 * 60 * 1000;
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt' },
   providers: [
@@ -35,22 +38,32 @@ export const authOptions: NextAuthOptions = {
       }
 
       if (token.id) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: {
-            role: true,
-            username: true,
-            email: true,
-            subscriptionPlan: true,
-            subscriptionStatus: true,
-          },
-        });
-        if (dbUser) {
-          token.role = dbUser.role;
-          token.name = dbUser.username;
-          token.email = dbUser.email;
-          token.subscriptionPlan = dbUser.subscriptionPlan;
-          token.subscriptionStatus = dbUser.subscriptionStatus;
+        const lastRefresh = token.userRefreshedAt ?? 0;
+        const shouldRefresh = Date.now() - lastRefresh > JWT_USER_REFRESH_MS;
+
+        if (shouldRefresh) {
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { id: token.id as string },
+              select: {
+                role: true,
+                username: true,
+                email: true,
+                subscriptionPlan: true,
+                subscriptionStatus: true,
+              },
+            });
+            if (dbUser) {
+              token.role = dbUser.role;
+              token.name = dbUser.username;
+              token.email = dbUser.email;
+              token.subscriptionPlan = dbUser.subscriptionPlan;
+              token.subscriptionStatus = dbUser.subscriptionStatus;
+            }
+            token.userRefreshedAt = Date.now();
+          } catch (error) {
+            console.error('JWT user refresh failed — using cached session data:', error);
+          }
         }
       }
 

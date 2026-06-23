@@ -17,6 +17,7 @@ import {
   Trophy,
   Users,
   X,
+  ArrowRight,
 } from 'lucide-react';
 import { createTournament, updateTournament } from '@/app/actions/tournaments';
 import type { TournamentFormInitial } from '@/lib/tournament-form';
@@ -25,6 +26,7 @@ import { TournamentDescriptionEditor } from '@/app/components/tournament-descrip
 import { generateTournamentDescription } from '@/lib/tournament-description';
 import { GAME_TYPE_OPTIONS, GRAND_FINALS_OPTIONS } from '@/lib/tournament-options';
 import { formatEventTime, formatScheduleLine } from '@/lib/tournament-schedule';
+import { formatUsdDisplay } from '@/lib/money';
 
 const FORMAT_OPTIONS = [
   {
@@ -232,6 +234,21 @@ function formatConfirmDate(date: string) {
   });
 }
 
+function ConfirmSummaryRow({
+  icon: Icon,
+  children,
+}: {
+  icon: typeof Calendar;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <Icon size={14} className="mt-0.5 shrink-0 text-brand-400/80" />
+      <span className="min-w-0 text-sm leading-relaxed text-slate-300">{children}</span>
+    </div>
+  );
+}
+
 function CreateTournamentConfirmModal({
   open,
   onClose,
@@ -247,7 +264,6 @@ function CreateTournamentConfirmModal({
   groupSize,
   advancePerGroup,
   grandFinalsModifier,
-  hasDescription,
   entryFee,
   prizePool,
   playerCap,
@@ -268,7 +284,6 @@ function CreateTournamentConfirmModal({
   groupSize: string;
   advancePerGroup: string;
   grandFinalsModifier: string;
-  hasDescription: boolean;
   entryFee: string;
   prizePool: string;
   playerCap: string;
@@ -297,134 +312,132 @@ function CreateTournamentConfirmModal({
 
   const gfLabel = GRAND_FINALS_OPTIONS.find((o) => o.value === grandFinalsModifier)?.label;
   const isEdit = mode === 'edit';
+  const displayName = name.trim() || 'Untitled';
+  const checkIn = formatEventTime(checkInTime);
+  const eventStart = formatEventTime(eventStartTime);
+
+  const whenParts = [formatConfirmDate(date), location.trim()].filter(Boolean);
+  const timeParts = [
+    checkIn && `Check-in ${checkIn}`,
+    eventStart && `Start ${eventStart}`,
+  ].filter(Boolean);
+  const registrationParts = [
+    entryFee.trim() ? `${formatUsdDisplay(entryFee)} entry` : 'Free entry',
+    playerCap.trim() ? `${playerCap} player cap` : null,
+    prizePool.trim() ? `Prize ${formatUsdDisplay(prizePool)}` : null,
+  ].filter(Boolean);
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-tournament-confirm-title"
-      onClick={onClose}
     >
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
+        onClick={onClose}
+        aria-label="Close dialog"
+      />
+
       <div
-        className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl shadow-black/50"
+        className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-brand-500/20 bg-slate-950 shadow-2xl shadow-black/50"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-brand-500/20 bg-brand-500/5 px-5 py-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/10 text-brand-400">
-                <Trophy size={20} />
-              </span>
-              <div>
-                <h2 id="create-tournament-confirm-title" className="text-lg font-semibold text-white">
-                  {isEdit ? 'Save changes?' : 'Create tournament?'}
-                </h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  {isEdit
-                    ? 'Review your updates before applying them.'
-                    : 'Review details before publishing this event.'}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-white"
-              aria-label="Close"
-            >
-              <X size={18} />
-            </button>
+        <div className="h-1 bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
+
+        <div className="flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/90 px-5 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/10 text-brand-400">
+              <Trophy size={18} />
+            </span>
+            <h2 id="create-tournament-confirm-title" className="text-lg font-semibold text-white">
+              {isEdit ? 'Save changes?' : 'Create tournament?'}
+            </h2>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-lg border border-slate-700 bg-slate-800 p-1.5 text-slate-400 transition hover:text-white"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        <div className="space-y-3 px-5 py-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Event</p>
-            <p className="mt-1 font-semibold text-white">{name.trim() || 'Untitled'}</p>
-            <p className="mt-2 text-sm text-slate-400">{formatConfirmDate(date)}</p>
-            {location.trim() && (
-              <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-400">
-                <MapPin size={13} className="shrink-0 text-slate-500" />
-                {location.trim()}
+        <div className="px-5 py-4">
+          <div className="overflow-hidden rounded-xl border border-slate-800 bg-gradient-to-br from-brand-500/[0.07] via-slate-900/80 to-slate-950">
+            <div className="border-b border-slate-800/80 px-4 py-3.5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Event</p>
+              <p className="mt-1 break-words text-base font-semibold leading-snug text-white">
+                {displayName}
               </p>
-            )}
-            {(checkInTime.trim() || eventStartTime.trim()) && (
-              <ul className="mt-2 space-y-1 text-sm text-slate-400">
-                {formatScheduleLine('Check-In Open', checkInTime) && (
-                  <li className="flex items-center gap-1.5">
-                    <Clock size={13} className="shrink-0 text-slate-500" />
-                    {formatScheduleLine('Check-In Open', checkInTime)}
-                  </li>
-                )}
-                {formatScheduleLine('Event Start', eventStartTime) && (
-                  <li className="flex items-center gap-1.5">
-                    <Clock size={13} className="shrink-0 text-slate-500" />
-                    {formatScheduleLine('Event Start', eventStartTime)}
-                  </li>
-                )}
-              </ul>
+            </div>
+
+            <div className="space-y-2.5 px-4 py-3.5">
+              {whenParts.length > 0 && (
+                <ConfirmSummaryRow icon={Calendar}>{whenParts.join(' · ')}</ConfirmSummaryRow>
+              )}
+              {timeParts.length > 0 && (
+                <ConfirmSummaryRow icon={Clock}>{timeParts.join(' · ')}</ConfirmSummaryRow>
+              )}
+
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                  <Trophy size={10} className="text-slate-500" />
+                  {FORMAT_LABELS[format] ?? format}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                  <Gamepad2 size={10} className="text-slate-500" />
+                  {GAME_TYPE_LABELS[gameType] ?? gameType}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                    isRanked
+                      ? 'border-brand-500/35 bg-brand-500/10 text-brand-200'
+                      : 'border-slate-700 bg-slate-900/80 text-slate-400'
+                  }`}
+                >
+                  <Medal size={10} className={isRanked ? 'text-brand-400' : 'text-slate-500'} />
+                  {isRanked ? 'Ranked' : 'Unranked'}
+                </span>
+              </div>
+
+              {format === 'double_elimination' && (groupStageEnabled || gfLabel) && (
+                <ConfirmSummaryRow icon={Layers}>
+                  {[
+                    groupStageEnabled &&
+                      `Groups of ${groupSize}, top ${advancePerGroup} advance`,
+                    gfLabel,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </ConfirmSummaryRow>
+              )}
+            </div>
+
+            {registrationParts.length > 0 && (
+              <div className="border-t border-slate-800/80 bg-slate-950/40 px-4 py-3">
+                <ConfirmSummaryRow icon={DollarSign}>
+                  {registrationParts.join(' · ')}
+                </ConfirmSummaryRow>
+              </div>
             )}
           </div>
-
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Registration</p>
-            <ul className="mt-2 space-y-1 text-sm text-slate-300">
-              <li>{GAME_TYPE_LABELS[gameType] ?? gameType}</li>
-              <li>{isRanked ? 'Ranked — rank points on wins' : 'Unranked — no rank points'}</li>
-              {playerCap.trim() ? <li>Player cap: {playerCap}</li> : <li>No player cap</li>}
-              {entryFee.trim() && <li>Entry: {entryFee.trim()}</li>}
-              {prizePool.trim() && <li>Prize: {prizePool.trim()}</li>}
-            </ul>
-          </div>
-
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Format</p>
-            <p className="mt-1 font-semibold text-white">{FORMAT_LABELS[format] ?? format}</p>
-            {format === 'double_elimination' && (
-              <ul className="mt-2 space-y-1 text-xs text-slate-400">
-                {groupStageEnabled && (
-                  <li>
-                    Group stage → playoffs ({groupSize} per group, top {advancePerGroup} advance)
-                  </li>
-                )}
-                {gfLabel && <li>{gfLabel}</li>}
-              </ul>
-            )}
-          </div>
-
-          {hasDescription && (
-            <p className="text-xs text-slate-500">Includes a public description for players.</p>
-          )}
-
-          <p className="text-sm text-slate-400">{isEdit ? 'This will update:' : 'This will:'}</p>
-          <ul className="space-y-1.5 text-sm text-slate-300">
-            {(isEdit
-              ? [
-                  'Event details on the public tournament page',
-                  'Registration info shown to players',
-                  'The tournament description and schedule',
-                ]
-              : [
-                  'Create the tournament with Open registration',
-                  'Show it on the public tournaments page',
-                  'Let you add players and generate the bracket next',
-                ]
-            ).map((item) => (
-              <li key={item} className="flex items-center gap-2">
-                <span className="h-1 w-1 shrink-0 rounded-full bg-brand-400/80" />
-                {item}
-              </li>
-            ))}
-          </ul>
         </div>
 
-        <div className="flex flex-col-reverse gap-2 border-t border-slate-800 bg-slate-900/40 px-5 py-4 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-2.5 border-t border-slate-800 bg-slate-950/90 px-5 py-4 sm:flex-row sm:justify-end">
           <button type="button" onClick={onClose} className="btn-secondary w-full sm:w-auto">
             Go back
           </button>
-          <button type="button" onClick={onConfirm} className="btn-primary w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+          >
             {isEdit ? 'Save changes' : 'Create tournament'}
+            <ArrowRight size={15} className="opacity-80" />
           </button>
         </div>
       </div>
@@ -995,7 +1008,6 @@ export function CreateTournamentForm({
         groupSize={groupSize}
         advancePerGroup={advancePerGroup}
         grandFinalsModifier={grandFinalsModifier}
-        hasDescription={description.trim().length > 0}
         entryFee={entryFee}
         prizePool={prizePool}
         playerCap={playerCap}

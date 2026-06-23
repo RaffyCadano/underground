@@ -44,72 +44,126 @@ export function TournamentParticipantList({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-800">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-slate-800 bg-slate-900">
-            <th className="w-10 px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              #
-            </th>
-            <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Player
-            </th>
-            <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Rating
-            </th>
-            {canRemove && (
-              <th className="w-20 px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Remove
-              </th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {participants.map((p, i) => {
-            const displayName = participantDisplayName(p);
-            const walkIn = isWalkInDisplay(p);
-            return (
-            <tr key={p.id} className="border-b border-slate-800 last:border-0">
-              <td className="px-4 py-2.5 tabular-nums text-slate-400">{i + 1}</td>
-              <td className="px-4 py-2.5">
-                <div className="flex flex-wrap items-center gap-2">
+    <>
+      <ul className="divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800 sm:hidden">
+        {participants.map((p, i) => {
+          const displayName = participantDisplayName(p);
+          const walkIn = isWalkInDisplay(p);
+          return (
+            <li key={p.id} className="flex items-center justify-between gap-3 px-3 py-3">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <span className="w-5 shrink-0 tabular-nums text-xs text-slate-500">{i + 1}</span>
+                <div className="min-w-0">
                   {walkIn ? (
-                    <span className="font-semibold text-white">{displayName}</span>
+                    <span className="block truncate font-semibold text-white">{displayName}</span>
                   ) : (
                     <Link
                       href={playerProfilePath(p.user.username)}
-                      className="font-semibold text-white transition hover:text-brand-300"
+                      className="block truncate font-semibold text-white transition hover:text-brand-300"
                     >
                       {displayName}
                     </Link>
                   )}
                   {walkIn && (
-                    <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    <span className="mt-1 inline-flex rounded-full border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                       Walk-in
                     </span>
                   )}
                 </div>
-              </td>
-              <td className="px-4 py-2.5 text-right tabular-nums text-slate-400">
-                {walkIn ? '—' : p.user.rankPoints}
-              </td>
-              {canRemove && (
-                <td className="px-4 py-2.5 text-right">
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <span className="tabular-nums text-sm font-medium text-slate-300">
+                  {walkIn ? '—' : p.user.rankPoints}
+                </span>
+                {!walkIn && (
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Rating</span>
+                )}
+                {canRemove && (
                   <button
                     type="button"
-                    onClick={() => onRemove(p.userId, displayName, walkIn)}
+                    onClick={() => onRemove!(p.userId, displayName, walkIn)}
                     disabled={removeDisabled}
-                    className="text-xs font-semibold text-red-400 transition hover:text-red-300 disabled:opacity-60"
+                    className="mt-1 text-xs font-semibold text-red-400 transition hover:text-red-300 disabled:opacity-60"
                   >
                     Remove
                   </button>
-                </td>
-              )}
-            </tr>
-          );})}
-        </tbody>
-      </table>
-    </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="hidden overflow-x-auto sm:block">
+        <div className="overflow-hidden rounded-xl border border-slate-800">
+          <table className="w-full min-w-[280px] text-sm">
+            <thead>
+              <tr className="border-b border-slate-800 bg-slate-900">
+                <th className="w-10 px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  #
+                </th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Player
+                </th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Rating
+                </th>
+                {canRemove && (
+                  <th className="w-20 px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Remove
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {participants.map((p, i) => {
+                const displayName = participantDisplayName(p);
+                const walkIn = isWalkInDisplay(p);
+                return (
+                  <tr key={p.id} className="border-b border-slate-800 last:border-0">
+                    <td className="px-4 py-2.5 tabular-nums text-slate-400">{i + 1}</td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {walkIn ? (
+                          <span className="font-semibold text-white">{displayName}</span>
+                        ) : (
+                          <Link
+                            href={playerProfilePath(p.user.username)}
+                            className="font-semibold text-white transition hover:text-brand-300"
+                          >
+                            {displayName}
+                          </Link>
+                        )}
+                        {walkIn && (
+                          <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            Walk-in
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-slate-400">
+                      {walkIn ? '—' : p.user.rankPoints}
+                    </td>
+                    {canRemove && (
+                      <td className="px-4 py-2.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => onRemove(p.userId, displayName, walkIn)}
+                          disabled={removeDisabled}
+                          className="text-xs font-semibold text-red-400 transition hover:text-red-300 disabled:opacity-60"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
   );
 }
 

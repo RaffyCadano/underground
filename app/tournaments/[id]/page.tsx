@@ -146,128 +146,132 @@ export default async function TournamentDetail({
         isAdmin={isAdmin}
       />
 
-      <div className="container flex min-h-0 flex-col gap-6 pb-10 pt-6 lg:flex-row">
-        <aside className="w-full shrink-0 space-y-4 lg:w-72">
-          <div className="card p-5">
-            <div className="mb-4 border-b border-slate-800 pb-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Bracket info</p>
+      <div className="container flex min-h-0 flex-col gap-4 pb-8 pt-4 sm:gap-6 sm:pb-10 sm:pt-6 lg:flex-row lg:items-start">
+        <aside className="order-2 w-full min-w-0 shrink-0 lg:order-1 lg:w-72 xl:w-80">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+            <div className="card p-4 sm:p-5">
+              <div className="mb-4 border-b border-slate-800 pb-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Bracket info</p>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3 lg:grid-cols-1 lg:gap-y-4">
+                {[
+                  { label: 'Format', value: FORMAT_LABELS[tournament.format] ?? tournament.format },
+                  { label: 'Status', value: tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1) },
+                  { label: 'Players', value: formatPlayerCapLabel(tournament.participants.length, tournament.playerCap) },
+                  { label: 'Game', value: GAME_TYPE_LABELS[tournament.gameType] ?? tournament.gameType },
+                  { label: 'Ranking', value: tournament.isRanked ? 'Ranked' : 'Unranked' },
+                  ...(tournament.entryFee
+                    ? [{ label: 'Entry fee', value: formatUsdDisplay(tournament.entryFee) }]
+                    : []),
+                  ...(tournament.prizePool
+                    ? [{ label: 'Prize pool', value: formatUsdDisplay(tournament.prizePool) }]
+                    : []),
+                  ...(tournament.format === 'double_elimination' && tournament.groupStageEnabled
+                    ? [
+                        {
+                          label: 'Structure',
+                          value: `Groups of ${tournament.groupSize} → top ${tournament.advancePerGroup} advance`,
+                          wide: true,
+                        },
+                      ]
+                    : []),
+                  ...(tournament.format === 'double_elimination'
+                    ? [
+                        {
+                          label: 'Grand finals',
+                          value:
+                            tournament.grandFinalsModifier === 'single_match'
+                              ? 'Single match'
+                              : tournament.grandFinalsModifier === 'skip'
+                                ? 'Skipped (WB champ wins)'
+                                : 'Default + bracket reset',
+                          wide: true,
+                        },
+                      ]
+                    : []),
+                  ...(tournament.phase
+                    ? [
+                        {
+                          label: 'Phase',
+                          value:
+                            tournament.phase === 'group'
+                              ? 'Group stage'
+                              : tournament.phase === 'playoffs'
+                                ? 'Playoffs'
+                                : tournament.phase,
+                        },
+                      ]
+                    : []),
+                ].map(({ label, value, wide }: { label: string; value: string; wide?: boolean }) => (
+                  <div key={label} className={`min-w-0 ${wide ? 'col-span-2 lg:col-span-1' : ''}`}>
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400 sm:text-[11px]">{label}</p>
+                    <p className="mt-0.5 break-words text-sm font-semibold leading-snug text-white">{value}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="space-y-4">
-              {[
-                { label: 'Format', value: FORMAT_LABELS[tournament.format] ?? tournament.format },
-                { label: 'Status', value: tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1) },
-                { label: 'Players', value: formatPlayerCapLabel(tournament.participants.length, tournament.playerCap) },
-                { label: 'Game', value: GAME_TYPE_LABELS[tournament.gameType] ?? tournament.gameType },
-                { label: 'Ranking', value: tournament.isRanked ? 'Ranked' : 'Unranked' },
-                ...(tournament.entryFee
-                  ? [{ label: 'Entry fee', value: formatUsdDisplay(tournament.entryFee) }]
-                  : []),
-                ...(tournament.prizePool
-                  ? [{ label: 'Prize pool', value: formatUsdDisplay(tournament.prizePool) }]
-                  : []),
-                ...(tournament.format === 'double_elimination' && tournament.groupStageEnabled
-                  ? [
-                      {
-                        label: 'Structure',
-                        value: `Groups of ${tournament.groupSize} → top ${tournament.advancePerGroup} advance`,
-                      },
-                    ]
-                  : []),
-                ...(tournament.format === 'double_elimination'
-                  ? [
-                      {
-                        label: 'Grand finals',
-                        value:
-                          tournament.grandFinalsModifier === 'single_match'
-                            ? 'Single match'
-                            : tournament.grandFinalsModifier === 'skip'
-                              ? 'Skipped (WB champ wins)'
-                              : 'Default + bracket reset',
-                      },
-                    ]
-                  : []),
-                ...(tournament.phase
-                  ? [
-                      {
-                        label: 'Phase',
-                        value:
-                          tournament.phase === 'group'
-                            ? 'Group stage'
-                            : tournament.phase === 'playoffs'
-                              ? 'Playoffs'
-                              : tournament.phase,
-                      },
-                    ]
-                  : []),
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <p className="text-[11px] uppercase tracking-wider text-slate-400">{label}</p>
-                  <p className="mt-1 text-sm font-semibold text-white">{value}</p>
+
+            <TournamentFormatGuide
+              format={tournament.format}
+              status={tournament.status}
+              hasBracket={hasBracket}
+              isAdmin={isAdmin}
+              groupStageEnabled={tournament.groupStageEnabled}
+              phase={tournament.phase}
+              grandFinalsModifier={tournament.grandFinalsModifier}
+              groupSize={tournament.groupSize}
+              advancePerGroup={tournament.advancePerGroup}
+            />
+
+            {tournament.status !== 'complete' && (
+              <div className="card overflow-hidden empty:hidden md:col-span-2 lg:col-span-1">
+                <div className="border-b border-slate-800 bg-slate-900/50 px-4 py-3.5 sm:px-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Actions</p>
+                  <p className="mt-0.5 text-sm font-semibold text-white">
+                    {tournament.status === 'open' ? 'Registration open' : 'Tournament in progress'}
+                  </p>
                 </div>
-              ))}
-            </div>
+                <div className="space-y-4 p-4 sm:p-5">
+                  <TournamentActions
+                    tournamentId={tournament.id}
+                    tournamentStatus={tournament.status}
+                    tournamentFormat={tournament.format}
+                    participantCount={tournament.participants.length}
+                    playerCap={tournament.playerCap}
+                    isRanked={tournament.isRanked}
+                    groupStageEnabled={tournament.groupStageEnabled}
+                    phase={tournament.phase}
+                    groupStageComplete={groupStageComplete}
+                    isJoined={isJoined}
+                    isLoggedIn={isLoggedIn}
+                    isAdmin={isAdmin}
+                    userId={session?.user.id ?? null}
+                    pendingMatches={pendingMatches}
+                    completedMatches={completedMatches}
+                    currentRound={currentRound}
+                    allCurrentRoundComplete={allCurrentRoundComplete}
+                    canResetRoster={canResetRoster}
+                  />
+                </div>
+              </div>
+            )}
           </div>
-
-          <TournamentFormatGuide
-            format={tournament.format}
-            status={tournament.status}
-            hasBracket={hasBracket}
-            isAdmin={isAdmin}
-            groupStageEnabled={tournament.groupStageEnabled}
-            phase={tournament.phase}
-            grandFinalsModifier={tournament.grandFinalsModifier}
-            groupSize={tournament.groupSize}
-            advancePerGroup={tournament.advancePerGroup}
-          />
-
-          {tournament.status !== 'complete' && (
-            <div className="card overflow-hidden empty:hidden">
-              <div className="border-b border-slate-800 bg-slate-900/50 px-5 py-3.5">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Actions</p>
-                <p className="mt-0.5 text-sm font-semibold text-white">
-                  {tournament.status === 'open' ? 'Registration open' : 'Tournament in progress'}
-                </p>
-              </div>
-              <div className="space-y-4 p-5">
-                <TournamentActions
-                  tournamentId={tournament.id}
-                  tournamentStatus={tournament.status}
-                  tournamentFormat={tournament.format}
-                  participantCount={tournament.participants.length}
-                  playerCap={tournament.playerCap}
-                  isRanked={tournament.isRanked}
-                  groupStageEnabled={tournament.groupStageEnabled}
-                  phase={tournament.phase}
-                  groupStageComplete={groupStageComplete}
-                  isJoined={isJoined}
-                  isLoggedIn={isLoggedIn}
-                  isAdmin={isAdmin}
-                  userId={session?.user.id ?? null}
-                  pendingMatches={pendingMatches}
-                  completedMatches={completedMatches}
-                  currentRound={currentRound}
-                  allCurrentRoundComplete={allCurrentRoundComplete}
-                  canResetRoster={canResetRoster}
-                />
-              </div>
-            </div>
-          )}
         </aside>
 
-        <div className="min-w-0 flex-1 space-y-6">
+        <div className="order-1 min-w-0 flex-1 space-y-4 sm:space-y-6 lg:order-2">
           {tournament.description && (
             <div className="card overflow-hidden">
-              <div className="border-b border-slate-800 bg-slate-900/50 px-5 py-4">
+              <div className="border-b border-slate-800 bg-slate-900/50 px-4 py-3.5 sm:px-5 sm:py-4">
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">About</p>
                 <h2 className="mt-0.5 text-sm font-semibold text-white">Event details</h2>
               </div>
-              <div className="p-5 sm:p-6">
+              <div className="p-4 sm:p-6">
                 <TournamentDescriptionContent content={tournament.description} featured />
               </div>
             </div>
           )}
 
-          <div className="card p-6" id="tournament-bracket-print">
+          <div className="card p-4 sm:p-6" id="tournament-bracket-print">
             {sortedRounds.length > 0 ? (
               <>
                 {tournament.format !== 'double_elimination' && (

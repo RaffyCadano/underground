@@ -43,7 +43,7 @@ export function TournamentDescriptionContent({
   return (
     <div
       className={`space-y-4 leading-relaxed text-slate-300 ${
-        featured ? 'text-base sm:text-[15px]' : 'text-sm'
+        featured ? 'text-base leading-relaxed sm:text-[15px]' : 'text-sm'
       } ${className}`.trim()}
     >
       {blocks.map((block, index) => {

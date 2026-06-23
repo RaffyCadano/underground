@@ -98,7 +98,7 @@ function getSteps(
         title: isAdmin ? 'Add players' : 'Register',
         body: isAdmin
           ? 'Search and select players to add — you can pick several at once.'
-          : 'Sign in and hit “Register for this tournament” in the sidebar.',
+          : 'Sign in and use “Register for this tournament” at the top of the page or in Actions below.',
       },
       {
         step: '2',
@@ -158,7 +158,7 @@ function getSteps(
         title: 'Find your next match',
         body: isDe
           ? 'Open the Bracket tab (Full, Winners, or Losers). Your next game is the leftmost pending match with your name and a real opponent — look for the blue left edge.'
-          : 'Check the bracket below or “Report match result” in the sidebar for pending games.',
+          : 'Check the bracket below or “Report match result” in Actions for pending games.',
       },
       {
         step: '2',
@@ -229,14 +229,14 @@ export function TournamentFormatGuide({
   const rules = getFormatRules(format, opts);
 
   return (
-    <div className="card p-5">
+    <div className="card min-w-0 p-4 sm:p-5">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
         <CircleHelp size={14} className="shrink-0 text-brand-400" />
         How this works
       </div>
 
-      <div className="mt-4 space-y-4">
-          <p className="text-sm text-slate-300">
+      <div className="mt-4 min-w-0 space-y-4">
+          <p className="text-sm leading-relaxed text-slate-300">
             <span className="font-semibold text-white">{getStatusLine(format, hasBracket, status, opts)}</span>
           </p>
 
@@ -246,7 +246,7 @@ export function TournamentFormatGuide({
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-800 text-[11px] font-bold text-brand-300">
                   {step}
                 </span>
-                <div className="min-w-0 pt-0.5">
+                <div className="min-w-0 flex-1 pt-0.5">
                   <p className="text-sm font-semibold text-white">{title}</p>
                   <p className="mt-0.5 text-xs leading-relaxed text-slate-400">{body}</p>
                 </div>
@@ -254,15 +254,15 @@ export function TournamentFormatGuide({
             ))}
           </ol>
 
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+          <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 sm:p-4">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
               {formatLabel} rules
             </p>
-            <ul className="mt-2 space-y-1.5">
+            <ul className="mt-2 space-y-2">
               {rules.map((rule) => (
                 <li key={rule} className="flex gap-2 text-xs leading-relaxed text-slate-400">
                   <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-brand-500/80" />
-                  {rule}
+                  <span className="min-w-0 break-words">{rule}</span>
                 </li>
               ))}
             </ul>

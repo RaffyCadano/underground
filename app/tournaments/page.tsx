@@ -11,6 +11,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { isPrismaConnectionError } from '@/lib/prisma-errors';
+import { DatabaseUnavailable } from '@/app/components/database-unavailable';
 import { playerProfilePath } from '@/lib/player-profile';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -216,20 +218,62 @@ export default async function TournamentsPage({
   const hasFilters = query.length > 0 || status !== 'all';
   const listWhere = tournamentSearchWhere(query, status);
 
-  const [totalCount, openCount, activeCount, completeCount, tournaments] = await Promise.all([
-    prisma.tournament.count(),
-    prisma.tournament.count({ where: { status: 'open' } }),
-    prisma.tournament.count({ where: { status: 'active' } }),
-    prisma.tournament.count({ where: { status: 'complete' } }),
-    prisma.tournament.findMany({
-      where: listWhere,
-      orderBy: { date: 'asc' },
-      include: {
-        _count: { select: { participants: true } },
-        createdBy: { select: { username: true } },
-      },
-    }),
-  ]);
+  type TournamentListItem = Awaited<
+    ReturnType<
+      typeof prisma.tournament.findMany<{
+        include: {
+          _count: { select: { participants: true } };
+          createdBy: { select: { username: true } };
+        };
+      }>
+    >
+  >[number];
+
+  let totalCount = 0;
+  let openCount = 0;
+  let activeCount = 0;
+  let completeCount = 0;
+  let tournaments: TournamentListItem[] = [];
+  let databaseUnavailable = false;
+
+  try {
+    [totalCount, openCount, activeCount, completeCount, tournaments] = await Promise.all([
+      prisma.tournament.count(),
+      prisma.tournament.count({ where: { status: 'open' } }),
+      prisma.tournament.count({ where: { status: 'active' } }),
+      prisma.tournament.count({ where: { status: 'complete' } }),
+      prisma.tournament.findMany({
+        where: listWhere,
+        orderBy: { date: 'asc' },
+        include: {
+          _count: { select: { participants: true } },
+          createdBy: { select: { username: true } },
+        },
+      }),
+    ]);
+  } catch (error) {
+    if (!isPrismaConnectionError(error)) throw error;
+    databaseUnavailable = true;
+  }
+
+  if (databaseUnavailable) {
+    return (
+      <div className="w-full overflow-x-hidden">
+        <TournamentDeletedToast />
+        <TournamentsHero
+          stats={[
+            { label: 'Total events', shortLabel: 'Total', value: 0, icon: Trophy },
+            { label: 'Open registration', shortLabel: 'Open', value: 0, icon: Zap },
+            { label: 'Live now', shortLabel: 'Live', value: 0, icon: Layers },
+            { label: 'Completed', shortLabel: 'Done', value: 0, icon: CheckCircle2 },
+          ]}
+        />
+        <section className="container py-8 sm:py-12 lg:py-16">
+          <DatabaseUnavailable />
+        </section>
+      </div>
+    );
+  }
 
   const openTournaments = tournaments.filter((t) => t.status === 'open');
   const activeTournaments = tournaments.filter((t) => t.status === 'active');
