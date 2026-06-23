@@ -12,10 +12,18 @@ import { TournamentDoubleElimTabs } from './tournament-double-elim-tabs';
 import { TournamentFormatGuide } from './tournament-format-guide';
 import { isGroupStageComplete } from '@/lib/group-stage';
 import { GAME_TYPE_LABELS } from '@/lib/tournament-options';
-import { formatPlayerCapLabel } from '@/lib/tournament-registration';
+import {
+  formatPlayerCapLabel,
+  isTournamentFull,
+  tournamentPlayerPickerWhere,
+} from '@/lib/tournament-registration';
 import { canResetBracketForRoster } from '@/lib/tournament-roster';
 import { TournamentDescriptionContent } from '@/app/components/tournament-description-content';
 import { TournamentHero } from './tournament-hero';
+import { TournamentCreatedToast } from './tournament-created-toast';
+import { TournamentUpdatedToast } from './tournament-updated-toast';
+import { formatUsdDisplay } from '@/lib/money';
+import { buildPlayerNameMap } from '@/lib/tournament-participant';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +63,20 @@ export default async function TournamentDetail({
 
   if (!tournament) notFound();
 
+  const playerNames = buildPlayerNameMap(tournament.participants);
+
+  function displayPlayer(player: { id: string; username: string } | null) {
+    if (!player) return null;
+    return { ...player, username: playerNames[player.id] ?? player.username };
+  }
+
+  const displayMatches = tournament.matches.map((match) => ({
+    ...match,
+    player1: displayPlayer(match.player1),
+    player2: displayPlayer(match.player2),
+    winner: displayPlayer(match.winner),
+  }));
+
   const isLoggedIn = !!session;
   const isAdmin = canManageTournament(
     tournament,
@@ -66,35 +88,33 @@ export default async function TournamentDetail({
     : false;
 
   // Group matches by round
-  const roundMap = new Map<number, typeof tournament.matches>();
-  for (const m of tournament.matches) {
+  const roundMap = new Map<number, typeof displayMatches>();
+  for (const m of displayMatches) {
     if (!roundMap.has(m.round)) roundMap.set(m.round, []);
     roundMap.get(m.round)!.push(m);
   }
   const sortedRounds = Array.from(roundMap.entries()).sort((a, b) => a[0] - b[0]);
   const totalRounds = sortedRounds.length;
 
-  const pendingMatches = tournament.matches.filter(
+  const pendingMatches = displayMatches.filter(
     (m) => m.status === 'pending' && m.player1Id && m.player2Id,
   );
-  const completedMatches = tournament.matches.filter((m) => m.status === 'complete');
+  const completedMatches = displayMatches.filter((m) => m.status === 'complete');
 
   const currentRound = sortedRounds.length > 0 ? sortedRounds[sortedRounds.length - 1][0] : 0;
   const currentRoundMatches = roundMap.get(currentRound) ?? [];
   const allCurrentRoundComplete =
     currentRoundMatches.length > 0 && currentRoundMatches.every((m) => m.status === 'complete');
 
-  const canManagePlayers = tournament.status === 'open' && tournament.matches.length === 0;
-  const hasBracket = tournament.matches.length > 0;
-  const canResetRoster = isAdmin && canResetBracketForRoster(tournament.matches);
-  const groupStageComplete = isGroupStageComplete(tournament.matches);
+  const canManagePlayers = tournament.status === 'open' && displayMatches.length === 0;
+  const hasBracket = displayMatches.length > 0;
+  const canResetRoster = isAdmin && canResetBracketForRoster(displayMatches);
+  const groupStageComplete = isGroupStageComplete(displayMatches);
 
   const availableUsers =
     isAdmin && canManagePlayers
       ? await prisma.user.findMany({
-          where: {
-            id: { notIn: tournament.participants.map((p) => p.userId) },
-          },
+          where: tournamentPlayerPickerWhere(tournament.participants.map((p) => p.userId)),
           orderBy: { username: 'asc' },
           select: { id: true, username: true, rankPoints: true },
         })
@@ -102,6 +122,8 @@ export default async function TournamentDetail({
 
   return (
     <div className="w-full">
+      <TournamentCreatedToast tournamentName={tournament.name} enabled={isAdmin} />
+      <TournamentUpdatedToast tournamentName={tournament.name} enabled={isAdmin} />
       <TournamentHero
         name={tournament.name}
         status={tournament.status}
@@ -137,10 +159,10 @@ export default async function TournamentDetail({
                 { label: 'Game', value: GAME_TYPE_LABELS[tournament.gameType] ?? tournament.gameType },
                 { label: 'Ranking', value: tournament.isRanked ? 'Ranked' : 'Unranked' },
                 ...(tournament.entryFee
-                  ? [{ label: 'Entry fee', value: tournament.entryFee }]
+                  ? [{ label: 'Entry fee', value: formatUsdDisplay(tournament.entryFee) }]
                   : []),
                 ...(tournament.prizePool
-                  ? [{ label: 'Prize pool', value: tournament.prizePool }]
+                  ? [{ label: 'Prize pool', value: formatUsdDisplay(tournament.prizePool) }]
                   : []),
                 ...(tournament.format === 'double_elimination' && tournament.groupStageEnabled
                   ? [
@@ -250,13 +272,13 @@ export default async function TournamentDetail({
                 <BracketSwiss
                   rounds={sortedRounds}
                   participants={tournament.participants}
-                  allMatches={tournament.matches}
+                  allMatches={displayMatches}
                   isAdmin={isAdmin}
                   userId={session?.user.id ?? null}
                 />
               ) : tournament.format === 'double_elimination' ? (
                 <TournamentDoubleElimTabs
-                  matches={tournament.matches}
+                  matches={displayMatches}
                   participants={tournament.participants}
                   tournamentStatus={tournament.status}
                   phase={tournament.phase}

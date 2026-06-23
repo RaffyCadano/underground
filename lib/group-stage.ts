@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { generateDoubleEliminationBracket } from '@/lib/double-elim';
 import { isPowerOfTwo } from '@/lib/tournament-options';
+import { participantDisplayName } from '@/lib/tournament-participant';
 
 /** Snake-draft participants into balanced groups (Challonge-style). */
 export function assignSnakeGroups(
@@ -49,7 +50,11 @@ export type GroupStanding = {
 export function computeGroupStandings(
   groupId: number,
   memberIds: string[],
-  participants: { userId: string; user: { username: string; rankPoints: number } }[],
+  participants: {
+    userId: string;
+    walkInName?: string | null;
+    user: { username: string; rankPoints: number };
+  }[],
   matches: {
     bracketSide: string | null;
     groupId?: number | null;
@@ -63,7 +68,7 @@ export function computeGroupStandings(
     const p = participants.find((x) => x.userId === id);
     return {
       userId: id,
-      username: p?.user.username ?? 'Unknown',
+      username: p ? participantDisplayName(p) : 'Unknown',
       wins: 0,
       losses: 0,
       rankPoints: p?.user.rankPoints ?? 0,
@@ -253,6 +258,7 @@ export function buildGroupStageView(
   participants: {
     userId: string;
     groupId?: number | null;
+    walkInName?: string | null;
     user: { username: string; rankPoints: number };
   }[],
   matches: {

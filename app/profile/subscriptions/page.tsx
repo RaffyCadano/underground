@@ -1,9 +1,19 @@
 import { getServerSession } from 'next-auth';
 import { ProfileSubscriptionsPanel } from '@/app/components/profile-subscriptions-panel';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export default async function SubscriptionsPage() {
   const session = await getServerSession(authOptions);
+  const subscriptionPlan =
+    session?.user?.id != null
+      ? (
+          await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { subscriptionPlan: true },
+          })
+        )?.subscriptionPlan ?? 'free'
+      : 'free';
 
   return (
     <div className="space-y-6">
@@ -14,7 +24,10 @@ export default async function SubscriptionsPage() {
         </p>
       </div>
 
-      <ProfileSubscriptionsPanel role={session?.user.role ?? 'player'} />
+      <ProfileSubscriptionsPanel
+        role={session?.user.role ?? 'player'}
+        subscriptionPlan={subscriptionPlan}
+      />
     </div>
   );
 }

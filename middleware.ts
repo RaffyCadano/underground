@@ -1,5 +1,6 @@
-import { withAuth } from 'next-auth/middleware';
+import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 const ADMIN_ONLY_PREFIXES = [
   '/dashboard/overview',
@@ -17,9 +18,17 @@ function canAccessTournamentDashboard(role: string | undefined) {
   return role === 'admin' || role === 'organizer' || role === 'player';
 }
 
-export default withAuth(function middleware(req) {
+export async function middleware(req: NextRequest) {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
-  const role = req.nextauth.token?.role;
+
+  if (!token) {
+    const signIn = new URL('/login', req.url);
+    signIn.searchParams.set('callbackUrl', pathname);
+    return NextResponse.redirect(signIn);
+  }
+
+  const role = token.role as string | undefined;
 
   if (matchesPrefix(pathname, ADMIN_ONLY_PREFIXES) && role !== 'admin') {
     return NextResponse.redirect(
@@ -32,11 +41,7 @@ export default withAuth(function middleware(req) {
   }
 
   return NextResponse.next();
-}, {
-  pages: {
-    signIn: '/login',
-  },
-});
+}
 
 export const config = {
   matcher: ['/dashboard/:path*', '/admin/:path*', '/profile', '/profile/:path*', '/messages', '/news'],

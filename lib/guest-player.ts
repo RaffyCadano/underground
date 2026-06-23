@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import type { PrismaClient } from '@prisma/client';
 
 export function normalizeGuestDisplayName(name: string): string {
@@ -49,6 +50,18 @@ export async function uniqueGuestUsername(
     if (available) return available;
   }
   return `Guest${Date.now().toString(36)}`;
+}
+
+export async function uniqueInternalWalkInUsername(prisma: PrismaClient): Promise<string> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const candidate = `walkin_${randomBytes(12).toString('hex')}`;
+    const existing = await prisma.user.findUnique({
+      where: { username: candidate },
+      select: { id: true },
+    });
+    if (!existing) return candidate;
+  }
+  return `walkin_${Date.now().toString(36)}`;
 }
 
 export function guestEmail(username: string): string {

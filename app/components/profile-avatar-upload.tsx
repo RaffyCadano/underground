@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Camera, ImagePlus, Loader2, Trash2, Upload } from 'lucide-react';
 import { removeProfileAvatar, uploadProfileAvatar } from '@/app/actions/profile';
 import { PlayerAvatar } from '@/app/components/player-avatar';
+import { prepareAvatarFile } from '@/lib/avatar-upload-client';
 
 type Props = {
   username: string;
@@ -17,21 +18,30 @@ export function ProfileAvatarUpload({ username, avatarUrl, uploadEnabled }: Prop
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
+  const [removePending, startRemoveTransition] = useTransition();
 
-  function uploadFile(file: File) {
-    const formData = new FormData();
-    formData.append('file', file);
+  async function uploadFile(file: File) {
+    setIsPending(true);
+    setError('');
 
-    startTransition(async () => {
+    try {
+      const prepared = await prepareAvatarFile(file);
+      const formData = new FormData();
+      formData.append('file', prepared);
+
       const result = await uploadProfileAvatar(formData);
       if (result.error) {
         setError(result.error);
         return;
       }
-      setError('');
+
       router.refresh();
-    });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
+    } finally {
+      setIsPending(false);
+    }
   }
 
   function handlePick() {
@@ -44,12 +54,12 @@ export function ProfileAvatarUpload({ username, avatarUrl, uploadEnabled }: Prop
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    uploadFile(file);
+    void uploadFile(file);
   }
 
   function handleRemove() {
     setError('');
-    startTransition(async () => {
+    startRemoveTransition(async () => {
       const result = await removeProfileAvatar();
       if (result.error) {
         setError(result.error);
@@ -85,7 +95,7 @@ export function ProfileAvatarUpload({ username, avatarUrl, uploadEnabled }: Prop
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
     setError('');
-    uploadFile(file);
+    void uploadFile(file);
   }
 
   return (
@@ -126,7 +136,7 @@ export function ProfileAvatarUpload({ username, avatarUrl, uploadEnabled }: Prop
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
-                disabled={isPending}
+                disabled={isPending || removePending}
                 className={`w-full rounded-xl border border-dashed px-4 py-5 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
                   dragActive
                     ? 'border-brand-400/60 bg-brand-500/10'
@@ -173,7 +183,7 @@ export function ProfileAvatarUpload({ username, avatarUrl, uploadEnabled }: Prop
               <button
                 type="button"
                 onClick={handleRemove}
-                disabled={isPending}
+                disabled={isPending || removePending}
                 className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 transition hover:text-red-300 disabled:opacity-60"
               >
                 <Trash2 size={13} />

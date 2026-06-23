@@ -26,9 +26,10 @@ const PLACEMENT_META: Record<
 
 type Props = {
   entries: PodiumEntry[];
+  walkInUserIds?: Set<string>;
 };
 
-export function TournamentPodium({ entries }: Props) {
+export function TournamentPodium({ entries, walkInUserIds }: Props) {
   if (entries.length === 0) return null;
 
   return (
@@ -40,15 +41,14 @@ export function TournamentPodium({ entries }: Props) {
         {entries.map((entry) => {
           const meta = PLACEMENT_META[entry.placement];
           const Icon = meta.icon;
-
-          return (
-            <Link
-              key={entry.userId}
-              href={playerProfilePath(entry.username)}
-              className={`group flex items-center gap-3 rounded-xl border px-4 py-3 transition hover:brightness-110 ${meta.className} ${
-                entry.placement === 1 ? 'sm:-mt-0.5 sm:shadow-lg sm:shadow-amber-950/20' : ''
-              }`}
-            >
+          const isWalkIn = walkInUserIds?.has(entry.userId) ?? false;
+          const cardClassName = `group flex items-center gap-3 rounded-xl border px-4 py-3 transition ${
+            isWalkIn ? '' : 'hover:brightness-110'
+          } ${meta.className} ${
+            entry.placement === 1 ? 'sm:-mt-0.5 sm:shadow-lg sm:shadow-amber-950/20' : ''
+          }`;
+          const inner = (
+            <>
               <span
                 className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${meta.className}`}
               >
@@ -58,10 +58,24 @@ export function TournamentPodium({ entries }: Props) {
                 <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">
                   Top {entry.placement} · {meta.label}
                 </p>
-                <p className="truncate text-sm font-semibold text-white group-hover:text-brand-200">
+                <p className={`truncate text-sm font-semibold text-white ${isWalkIn ? '' : 'group-hover:text-brand-200'}`}>
                   {entry.username}
                 </p>
               </div>
+            </>
+          );
+
+          return isWalkIn ? (
+            <div key={entry.userId} className={cardClassName}>
+              {inner}
+            </div>
+          ) : (
+            <Link
+              key={entry.userId}
+              href={playerProfilePath(entry.username)}
+              className={cardClassName}
+            >
+              {inner}
             </Link>
           );
         })}

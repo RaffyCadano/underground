@@ -18,7 +18,8 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { createTournament } from '@/app/actions/tournaments';
+import { createTournament, updateTournament } from '@/app/actions/tournaments';
+import type { TournamentFormInitial } from '@/lib/tournament-form';
 import { TournamentDescriptionContent } from '@/app/components/tournament-description-content';
 import { TournamentDescriptionEditor } from '@/app/components/tournament-description-editor';
 import { generateTournamentDescription } from '@/lib/tournament-description';
@@ -235,6 +236,7 @@ function CreateTournamentConfirmModal({
   open,
   onClose,
   onConfirm,
+  mode,
   name,
   date,
   location,
@@ -255,6 +257,7 @@ function CreateTournamentConfirmModal({
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  mode: 'create' | 'edit';
   name: string;
   date: string;
   location: string;
@@ -293,6 +296,7 @@ function CreateTournamentConfirmModal({
   if (!open || !mounted) return null;
 
   const gfLabel = GRAND_FINALS_OPTIONS.find((o) => o.value === grandFinalsModifier)?.label;
+  const isEdit = mode === 'edit';
 
   return createPortal(
     <div
@@ -314,10 +318,12 @@ function CreateTournamentConfirmModal({
               </span>
               <div>
                 <h2 id="create-tournament-confirm-title" className="text-lg font-semibold text-white">
-                  Create tournament?
+                  {isEdit ? 'Save changes?' : 'Create tournament?'}
                 </h2>
                 <p className="mt-1 text-sm text-slate-400">
-                  Review details before publishing this event.
+                  {isEdit
+                    ? 'Review your updates before applying them.'
+                    : 'Review details before publishing this event.'}
                 </p>
               </div>
             </div>
@@ -391,13 +397,20 @@ function CreateTournamentConfirmModal({
             <p className="text-xs text-slate-500">Includes a public description for players.</p>
           )}
 
-          <p className="text-sm text-slate-400">This will:</p>
+          <p className="text-sm text-slate-400">{isEdit ? 'This will update:' : 'This will:'}</p>
           <ul className="space-y-1.5 text-sm text-slate-300">
-            {[
-              'Create the tournament with Open registration',
-              'Show it on the public tournaments page',
-              'Let you add players and generate the bracket next',
-            ].map((item) => (
+            {(isEdit
+              ? [
+                  'Event details on the public tournament page',
+                  'Registration info shown to players',
+                  'The tournament description and schedule',
+                ]
+              : [
+                  'Create the tournament with Open registration',
+                  'Show it on the public tournaments page',
+                  'Let you add players and generate the bracket next',
+                ]
+            ).map((item) => (
               <li key={item} className="flex items-center gap-2">
                 <span className="h-1 w-1 shrink-0 rounded-full bg-brand-400/80" />
                 {item}
@@ -411,7 +424,7 @@ function CreateTournamentConfirmModal({
             Go back
           </button>
           <button type="button" onClick={onConfirm} className="btn-primary w-full sm:w-auto">
-            Create tournament
+            {isEdit ? 'Save changes' : 'Create tournament'}
           </button>
         </div>
       </div>
@@ -420,7 +433,7 @@ function CreateTournamentConfirmModal({
   );
 }
 
-function CreateTournamentLoadingModal() {
+function CreateTournamentLoadingModal({ message }: { message: string }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -446,51 +459,71 @@ function CreateTournamentLoadingModal() {
       <div className="card w-full max-w-sm p-8 text-center shadow-2xl shadow-black/40">
         <Loader2 className="mx-auto h-10 w-10 animate-spin text-brand-400" aria-hidden="true" />
         <h2 id="create-tournament-loading-title" className="mt-4 text-lg font-semibold text-white">
-          Creating tournament
+          {message}
         </h2>
-        <p className="mt-2 text-sm text-slate-400">Setting up your event…</p>
+        <p className="mt-2 text-sm text-slate-400">
+          {message === 'Creating tournament' ? 'Setting up your event…' : 'Applying your updates…'}
+        </p>
       </div>
     </div>,
     document.body,
   );
 }
 
-export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUploadEnabled?: boolean }) {
-  const [state, action, pending] = useActionState(createTournament, null);
+export function CreateTournamentForm({
+  imageUploadEnabled = false,
+  tournamentId,
+  initial,
+  lockFormat = false,
+  cancelHref = '/dashboard/tournaments',
+}: {
+  imageUploadEnabled?: boolean;
+  tournamentId?: string;
+  initial?: TournamentFormInitial;
+  lockFormat?: boolean;
+  cancelHref?: string;
+}) {
+  const isEdit = Boolean(tournamentId);
+  const [state, action, pending] = useActionState(
+    isEdit ? updateTournament : createTournament,
+    null,
+  );
   const formRef = useRef<HTMLFormElement>(null);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [name, setName] = useState('');
-  const [date, setDate] = useState('');
-  const [checkInTime, setCheckInTime] = useState('');
-  const [eventStartTime, setEventStartTime] = useState('');
-  const [location, setLocation] = useState('');
-  const [format, setFormat] = useState('single_elimination');
-  const [groupStageEnabled, setGroupStageEnabled] = useState(false);
-  const [grandFinalsModifier, setGrandFinalsModifier] = useState('default');
-  const [groupSize, setGroupSize] = useState('4');
-  const [advancePerGroup, setAdvancePerGroup] = useState('2');
-  const [description, setDescription] = useState('');
-  const [entryFee, setEntryFee] = useState('');
-  const [prizePool, setPrizePool] = useState('');
-  const [playerCap, setPlayerCap] = useState('');
-  const [isRanked, setIsRanked] = useState(true);
-  const [gameType, setGameType] = useState('beyblade_x');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [name, setName] = useState(initial?.name ?? '');
+  const [date, setDate] = useState(initial?.date ?? '');
+  const [checkInTime, setCheckInTime] = useState(initial?.checkInTime ?? '');
+  const [eventStartTime, setEventStartTime] = useState(initial?.eventStartTime ?? '');
+  const [location, setLocation] = useState(initial?.location ?? '');
+  const [format, setFormat] = useState(initial?.format ?? 'single_elimination');
+  const [groupStageEnabled, setGroupStageEnabled] = useState(initial?.groupStageEnabled ?? false);
+  const [grandFinalsModifier, setGrandFinalsModifier] = useState(
+    initial?.grandFinalsModifier ?? 'default',
+  );
+  const [groupSize, setGroupSize] = useState(initial?.groupSize ?? '4');
+  const [advancePerGroup, setAdvancePerGroup] = useState(initial?.advancePerGroup ?? '2');
+  const [description, setDescription] = useState(initial?.description ?? '');
+  const [entryFee, setEntryFee] = useState(initial?.entryFee ?? '');
+  const [prizePool, setPrizePool] = useState(initial?.prizePool ?? '');
+  const [playerCap, setPlayerCap] = useState(initial?.playerCap ?? '');
+  const [isRanked, setIsRanked] = useState(initial?.isRanked ?? true);
+  const [gameType, setGameType] = useState(initial?.gameType ?? 'beyblade_x');
 
   useEffect(() => {
-    if (isCreating && !pending && state?.error) {
-      setIsCreating(false);
+    if (isSubmitting && !pending && state?.error) {
+      setIsSubmitting(false);
     }
-  }, [isCreating, pending, state?.error]);
+  }, [isSubmitting, pending, state?.error]);
 
-  function handleCreateClick() {
+  function handleSubmitClick() {
     if (!formRef.current?.reportValidity()) return;
     setShowConfirm(true);
   }
 
-  function handleConfirmCreate() {
+  function handleConfirmSubmit() {
     setShowConfirm(false);
-    setIsCreating(true);
+    setIsSubmitting(true);
     formRef.current?.requestSubmit();
   }
 
@@ -517,6 +550,7 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
   return (
     <div className="w-full min-w-0 xl:grid xl:grid-cols-[minmax(0,1fr)_240px] xl:items-start xl:gap-6">
       <form ref={formRef} action={action} className="min-w-0">
+        {tournamentId && <input type="hidden" name="tournamentId" value={tournamentId} />}
         {state?.error && (
           <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
             {state.error}
@@ -765,13 +799,24 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
         </FormSection>
 
         <FormSection grouped title="Format" description="Choose how matches and advancement work.">
-          <div className="grid min-w-0 gap-2 md:grid-cols-2">
+          {lockFormat && (
+            <>
+              <input type="hidden" name="format" value={format} />
+              <input type="hidden" name="groupStageEnabled" value={groupStageEnabled ? 'on' : ''} />
+              <input type="hidden" name="groupSize" value={groupSize} />
+              <input type="hidden" name="advancePerGroup" value={advancePerGroup} />
+              <input type="hidden" name="grandFinalsModifier" value={grandFinalsModifier} />
+            </>
+          )}
+          <div className={`grid min-w-0 gap-2 md:grid-cols-2 ${lockFormat ? 'pointer-events-none opacity-60' : ''}`}>
             {FORMAT_OPTIONS.map(({ value, label, description: desc, icon: Icon }) => {
               const selected = format === value;
               return (
                 <label
                   key={value}
-                  className={`flex cursor-pointer gap-3 rounded-xl border p-3.5 transition ${
+                  className={`flex gap-3 rounded-xl border p-3.5 transition ${
+                    lockFormat ? 'cursor-default' : 'cursor-pointer'
+                  } ${
                     selected
                       ? 'border-brand-500/60 bg-brand-500/10 ring-1 ring-brand-500/30'
                       : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'
@@ -779,10 +824,11 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
                 >
                   <input
                     type="radio"
-                    name="format"
+                    name={lockFormat ? undefined : 'format'}
                     value={value}
                     checked={selected}
-                    onChange={(e) => setFormat(e.target.value)}
+                    onChange={(e) => !lockFormat && setFormat(e.target.value)}
+                    disabled={lockFormat}
                     className="sr-only"
                   />
                   <span
@@ -804,17 +850,22 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
         </div>
 
           {format === 'double_elimination' && (
-            <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+            <div
+              className={`space-y-4 rounded-xl border border-slate-800 bg-slate-950/50 p-4 ${
+                lockFormat ? 'pointer-events-none opacity-60' : ''
+              }`}
+            >
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Double elimination options
               </p>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-800 bg-slate-900/40 p-3 transition hover:border-slate-700">
+              <label className={`flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-900/40 p-3 transition ${lockFormat ? '' : 'cursor-pointer hover:border-slate-700'}`}>
                 <input
                   type="checkbox"
-                  name="groupStageEnabled"
+                  name={lockFormat ? undefined : 'groupStageEnabled'}
                   checked={groupStageEnabled}
                   onChange={(e) => setGroupStageEnabled(e.target.checked)}
+                  disabled={lockFormat}
                   className="mt-0.5 rounded border-slate-600"
                 />
                 <span>
@@ -833,9 +884,10 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
                     <FieldLabel htmlFor="groupSize">Group size</FieldLabel>
           <select
                       id="groupSize"
-                      name="groupSize"
+                      name={lockFormat ? undefined : 'groupSize'}
                       value={groupSize}
                       onChange={(e) => setGroupSize(e.target.value)}
+                      disabled={lockFormat}
                       className="select mt-2"
                     >
                       <option value="3">3</option>
@@ -848,9 +900,10 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
                     <FieldLabel htmlFor="advancePerGroup">Advance per group</FieldLabel>
                     <select
                       id="advancePerGroup"
-                      name="advancePerGroup"
+                      name={lockFormat ? undefined : 'advancePerGroup'}
                       value={advancePerGroup}
                       onChange={(e) => setAdvancePerGroup(e.target.value)}
+                      disabled={lockFormat}
                       className="select mt-2"
                     >
                       <option value="1">1</option>
@@ -876,10 +929,11 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
                     >
                       <input
                         type="radio"
-                        name="grandFinalsModifier"
+                        name={lockFormat ? undefined : 'grandFinalsModifier'}
                         value={opt.value}
                         checked={selected}
                         onChange={(e) => setGrandFinalsModifier(e.target.value)}
+                        disabled={lockFormat}
                         className="mt-1 shrink-0"
                       />
                       <span className="min-w-0">
@@ -912,16 +966,16 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
         </div>
 
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Link href="/dashboard/tournaments" className="btn-secondary text-center">
+          <Link href={cancelHref} className="btn-secondary text-center">
             Cancel
           </Link>
         <button
             type="button"
-            onClick={handleCreateClick}
-            disabled={pending || isCreating}
+            onClick={handleSubmitClick}
+            disabled={pending || isSubmitting}
             className="btn-primary disabled:opacity-60"
           >
-            Create tournament
+            {isEdit ? 'Save changes' : 'Create tournament'}
         </button>
         </div>
       </form>
@@ -929,7 +983,8 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
       <CreateTournamentConfirmModal
         open={showConfirm}
         onClose={() => setShowConfirm(false)}
-        onConfirm={handleConfirmCreate}
+        onConfirm={handleConfirmSubmit}
+        mode={isEdit ? 'edit' : 'create'}
         name={name}
         date={date}
         location={location}
@@ -948,7 +1003,9 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
         gameType={gameType}
       />
 
-      {isCreating && <CreateTournamentLoadingModal />}
+      {isSubmitting && (
+        <CreateTournamentLoadingModal message={isEdit ? 'Saving changes' : 'Creating tournament'} />
+      )}
 
       <aside className="hidden min-w-0 xl:block">
         <div className="sticky top-24 space-y-2">
@@ -967,7 +1024,9 @@ export function CreateTournamentForm({ imageUploadEnabled = false }: { imageUplo
             gameType={gameType}
           />
           <p className="px-1 text-[11px] leading-relaxed text-slate-600">
-            Updates as you fill in the form. Status starts as Open until you generate a bracket.
+            {isEdit
+              ? 'Updates as you edit. Format cannot change after the bracket is generated.'
+              : 'Updates as you fill in the form. Status starts as Open until you generate a bracket.'}
           </p>
         </div>
       </aside>

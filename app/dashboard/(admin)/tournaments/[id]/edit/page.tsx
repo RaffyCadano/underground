@@ -1,0 +1,64 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
+import { getServerSession } from 'next-auth';
+import { prisma } from '@/lib/prisma';
+import { authOptions } from '@/lib/auth';
+import { canManageTournament } from '@/lib/tournament-host';
+import { CreateTournamentForm } from '@/app/admin/create-tournament-form';
+import { isSupabaseStorageConfigured } from '@/lib/supabase-admin';
+import { tournamentToFormInitial } from '@/lib/tournament-form';
+
+export default async function EditTournamentPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const session = await getServerSession(authOptions);
+
+  const tournament = await prisma.tournament.findUnique({
+    where: { id },
+    include: { _count: { select: { matches: true } } },
+  });
+
+  if (
+    !tournament ||
+    !session ||
+    !canManageTournament(tournament, session.user.id, session.user.role)
+  ) {
+    notFound();
+  }
+
+  const imageUploadEnabled = isSupabaseStorageConfigured();
+  const lockFormat = tournament._count.matches > 0;
+
+  return (
+    <div className="w-full min-w-0">
+      <Link
+        href={`/tournaments/${id}`}
+        className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-brand-300"
+      >
+        <ArrowLeft size={16} />
+        Back to tournament
+      </Link>
+
+      <div className="mb-6">
+        <span className="badge">Edit event</span>
+        <h2 className="mt-2 text-2xl font-semibold text-white">Edit tournament</h2>
+        <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-slate-400">
+          Update schedule, registration details, and description.
+          {lockFormat && ' Format settings are locked because the bracket has already been generated.'}
+        </p>
+      </div>
+
+      <CreateTournamentForm
+        tournamentId={id}
+        initial={tournamentToFormInitial(tournament)}
+        lockFormat={lockFormat}
+        cancelHref={`/tournaments/${id}`}
+        imageUploadEnabled={imageUploadEnabled}
+      />
+    </div>
+  );
+}

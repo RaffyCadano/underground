@@ -6,6 +6,7 @@ import {
   Gamepad2,
   MapPin,
   Medal,
+  Pencil,
   Trophy,
   UserRound,
   Users,
@@ -13,6 +14,7 @@ import {
 import { GAME_TYPE_LABELS } from '@/lib/tournament-options';
 import { formatPlayerCapLabel } from '@/lib/tournament-registration';
 import { formatEventTime } from '@/lib/tournament-schedule';
+import { formatUsdDisplay } from '@/lib/money';
 import { playerProfilePath } from '@/lib/player-profile';
 import { TournamentHeroRegister } from './tournament-hero-register';
 
@@ -108,8 +110,8 @@ export function TournamentHero({
     ...(checkIn ? [{ icon: Clock, label: 'Check-in open', value: checkIn }] : []),
     ...(eventStart ? [{ icon: Clock, label: 'Event start', value: eventStart }] : []),
     { icon: Users, label: 'Players', value: playersLabel },
-    ...(entryFee ? [{ icon: Trophy, label: 'Entry', value: entryFee }] : []),
-    ...(prizePool ? [{ icon: Medal, label: 'Prizes', value: prizePool }] : []),
+    ...(entryFee ? [{ icon: Trophy, label: 'Entry', value: formatUsdDisplay(entryFee) }] : []),
+    ...(prizePool ? [{ icon: Medal, label: 'Prizes', value: formatUsdDisplay(prizePool) }] : []),
   ];
 
   return (
@@ -126,6 +128,15 @@ export function TournamentHero({
             <ArrowLeft size={16} />
             Back to tournaments
           </Link>
+          {isAdmin && (
+            <Link
+              href={`/dashboard/tournaments/${tournamentId}/edit`}
+              className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-brand-500/40 hover:bg-slate-900 hover:text-white"
+            >
+              <Pencil size={15} />
+              Edit tournament
+            </Link>
+          )}
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-2">

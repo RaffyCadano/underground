@@ -12,6 +12,7 @@ import {
   type TournamentMatch,
   type TournamentParticipant,
 } from '@/lib/tournament-stats';
+import { isWalkInDisplay } from '@/lib/tournament-participant';
 
 type MainTab = 'bracket' | 'groups' | 'rankings';
 type BracketView = 'full' | 'winners' | 'losers';
@@ -105,6 +106,11 @@ export function TournamentDoubleElimTabs({
     [participants, matches, tournamentStatus],
   );
 
+  const walkInUserIds = useMemo(
+    () => new Set(participants.filter(isWalkInDisplay).map((p) => p.userId)),
+    [participants],
+  );
+
   const podium = useMemo(
     () =>
       computeTournamentPodium(
@@ -138,7 +144,7 @@ export function TournamentDoubleElimTabs({
   return (
     <div>
       {tournamentStatus === 'complete' && podium.length > 0 && (
-        <TournamentPodium entries={podium} />
+        <TournamentPodium entries={podium} walkInUserIds={walkInUserIds} />
       )}
 
       <TabBar tabs={visibleMainTabs} active={mainTab} onChange={setMainTab} />

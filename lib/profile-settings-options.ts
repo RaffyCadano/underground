@@ -18,6 +18,8 @@ export const TIMEZONE_OPTIONS = [
   { value: 'Europe/London', label: '(+00:00) London' },
   { value: 'Europe/Paris', label: '(+01:00) Central European Time' },
   { value: 'Asia/Tokyo', label: '(+09:00) Tokyo' },
+  { value: 'Asia/Shanghai', label: '(GMT+08:00) Asia/Shanghai' },
+  { value: 'Asia/Manila', label: '(GMT+08:00) Manila' },
 ] as const;
 
 export const COUNTRY_OPTIONS = [

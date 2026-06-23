@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Loader2, Trash2, X } from 'lucide-react';
 import { deleteTournament } from '@/app/actions/tournaments';
@@ -12,6 +13,8 @@ export function DeleteTournamentButton({
   tournamentId: string;
   tournamentName: string;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -52,11 +55,20 @@ export function DeleteTournamentButton({
   function confirmDelete() {
     setError('');
     startTransition(async () => {
-      try {
-        await deleteTournament(tournamentId);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to delete tournament.');
+      const result = await deleteTournament(tournamentId);
+
+      if ('error' in result) {
+        setError(result.error);
+        return;
       }
+
+      setOpen(false);
+
+      const targetPath =
+        pathname === `/tournaments/${tournamentId}` ? '/dashboard/tournaments' : pathname;
+      const params = new URLSearchParams({ deleted: '1', name: result.name });
+      router.replace(`${targetPath}?${params.toString()}`, { scroll: false });
+      router.refresh();
     });
   }
 

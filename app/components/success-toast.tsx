@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, X } from 'lucide-react';
 
@@ -21,8 +21,12 @@ export function SuccessToast({
 }: Props) {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
+  const onDismissRef = useRef(onDismiss);
 
   useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
 
   useEffect(() => {
     if (!open || !mounted) {
@@ -31,12 +35,12 @@ export function SuccessToast({
     }
 
     const frame = requestAnimationFrame(() => setVisible(true));
-    const timer = window.setTimeout(onDismiss, autoDismissMs);
+    const timer = window.setTimeout(() => onDismissRef.current(), autoDismissMs);
     return () => {
       cancelAnimationFrame(frame);
       window.clearTimeout(timer);
     };
-  }, [open, mounted, onDismiss, autoDismissMs]);
+  }, [open, mounted, autoDismissMs]);
 
   if (!mounted || !open) return null;
 

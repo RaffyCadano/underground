@@ -9,7 +9,7 @@ export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number]['value'];
 export const ACCOUNT_ROLE_FILTER_OPTIONS = [
   { value: 'all', label: 'All roles' },
   ...ASSIGNABLE_ROLES,
-  { value: 'guest', label: 'Guests' },
+  { value: 'guest', label: 'Walk-ins (internal)' },
 ];
 
 export function parseAssignableRole(value: string): AssignableRole {

@@ -8,9 +8,41 @@ import { prisma } from '@/lib/prisma';
 import { isAdminRole } from '@/lib/roles';
 import { playerProfilePath } from '@/lib/player-profile';
 import { getSupabaseAdmin, TOURNAMENT_IMAGES_BUCKET } from '@/lib/supabase-admin';
+import { validateUsername } from '@/lib/username';
 
 const MAX_BYTES = 500 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const UPLOAD_TIMEOUT_MS = 30_000;
+
+const EXTENSION_MIME: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  gif: 'image/gif',
+};
+
+function mimeFromFile(file: File): string | null {
+  if (file.type && ALLOWED_TYPES.has(file.type)) {
+    return file.type;
+  }
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  return EXTENSION_MIME[ext] ?? null;
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(message)), ms);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
 
 function extensionForMime(mime: string): string {
   switch (mime) {
@@ -77,7 +109,8 @@ export async function uploadProfileAvatar(
     return { error: 'Choose an image to upload.' };
   }
 
-  if (!ALLOWED_TYPES.has(file.type)) {
+  const mime = mimeFromFile(file);
+  if (!mime) {
     return { error: 'Use a JPEG, PNG, WebP, or GIF image.' };
   }
 
@@ -93,23 +126,35 @@ export async function uploadProfileAvatar(
     return { error: 'Account not found.' };
   }
 
-  const ext = extensionForMime(file.type);
+  const ext = extensionForMime(mime);
   const path = `avatars/${user.id}/${randomUUID()}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  const { error } = await supabase.storage.from(TOURNAMENT_IMAGES_BUCKET).upload(path, buffer, {
-    contentType: file.type,
-    cacheControl: '3600',
-    upsert: false,
-  });
+  let uploadError: { message: string } | null = null;
+  try {
+    const result = await withTimeout(
+      supabase.storage.from(TOURNAMENT_IMAGES_BUCKET).upload(path, buffer, {
+        contentType: mime,
+        cacheControl: '3600',
+        upsert: false,
+      }),
+      UPLOAD_TIMEOUT_MS,
+      'Upload timed out. Check your connection and Supabase storage settings.',
+    );
+    uploadError = result.error;
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : 'Upload failed.',
+    };
+  }
 
-  if (error) {
-    if (error.message.toLowerCase().includes('bucket')) {
+  if (uploadError) {
+    if (uploadError.message.toLowerCase().includes('bucket')) {
       return {
         error: `Storage bucket "${TOURNAMENT_IMAGES_BUCKET}" was not found. Create a public bucket with that name in Supabase Storage.`,
       };
     }
-    return { error: error.message || 'Upload failed.' };
+    return { error: uploadError.message || 'Upload failed.' };
   }
 
   const { data } = supabase.storage.from(TOURNAMENT_IMAGES_BUCKET).getPublicUrl(path);
@@ -122,7 +167,12 @@ export async function uploadProfileAvatar(
     data: { avatar: data.publicUrl },
   });
 
-  await deleteStoredAvatar(user.avatar);
+  try {
+    await deleteStoredAvatar(user.avatar);
+  } catch (err) {
+    console.error('[avatar] failed to delete previous photo:', err);
+  }
+
   revalidateProfilePaths(user.username);
 
   return { url: data.publicUrl };
@@ -180,7 +230,7 @@ export async function updateAccountSettings(
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, username: true, email: true, role: true },
+    select: { id: true, username: true, email: true, role: true, optOutPersonalizedAds: true },
   });
   if (!user) {
     return { error: 'Account not found.' };
@@ -190,11 +240,9 @@ export async function updateAccountSettings(
   const username = canEditUsername ? usernameInput : user.username;
 
   if (canEditUsername) {
-    if (!username) {
-      return { error: 'Username is required.' };
-    }
-    if (username.length < 3) {
-      return { error: 'Username must be at least 3 characters.' };
+    const usernameError = validateUsername(username);
+    if (usernameError) {
+      return { error: usernameError };
     }
   } else if (usernameInput && usernameInput !== user.username) {
     return { error: 'Only admins can change their username.' };
@@ -213,6 +261,8 @@ export async function updateAccountSettings(
     return { error: 'That username is already taken.' };
   }
 
+  const optOutPersonalizedAds = checkboxValue(formData, 'optOutPersonalizedAds');
+
   await prisma.user.update({
     where: { id: user.id },
     data: {
@@ -225,13 +275,16 @@ export async function updateAccountSettings(
       emailMatchNotifications: checkboxValue(formData, 'emailMatchNotifications'),
       markReadOnEmail: checkboxValue(formData, 'markReadOnEmail'),
       productUpdates: checkboxValue(formData, 'productUpdates'),
-      optOutPersonalizedAds: checkboxValue(formData, 'optOutPersonalizedAds'),
+      optOutPersonalizedAds,
     },
   });
 
   revalidateProfilePaths(username);
   if (username !== user.username) {
     revalidateProfilePaths(user.username);
+  }
+  if (optOutPersonalizedAds !== user.optOutPersonalizedAds) {
+    revalidatePath('/', 'layout');
   }
 
   return { success: 'Account settings saved.' };

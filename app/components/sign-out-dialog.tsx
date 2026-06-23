@@ -5,8 +5,7 @@ import { createPortal } from 'react-dom';
 import { ArrowRight, LogOut, ShieldCheck, X } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 
-export function SignOutDialog({
-  open,
+export function SignOutDialog({  open,
   onClose,
   onBeforeSignOut,
 }: {
@@ -49,10 +48,10 @@ export function SignOutDialog({
   function confirmSignOut() {
     onBeforeSignOut?.();
     startTransition(async () => {
-      await signOut({ callbackUrl: '/' });
+      await signOut({ redirect: false });
+      window.location.assign('/?signedOut=1');
     });
   }
-
   if (!mounted || !open) return null;
 
   return createPortal(

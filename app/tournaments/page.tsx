@@ -18,6 +18,7 @@ import { canManageTournament as userCanManageTournament } from '@/lib/tournament
 import { ScrollReveal } from '@/app/components/scroll-reveal';
 import { parseSearchQuery, parseStatusFilter, tournamentSearchWhere } from '@/lib/search';
 import { DeleteTournamentButton } from './delete-tournament-button';
+import { TournamentDeletedToast } from './tournament-deleted-toast';
 import { TournamentsEmptyState } from './tournaments-empty-state';
 import { TournamentsHero } from './tournaments-hero';
 import { TournamentsSearchSection } from './tournaments-search-section';
@@ -244,6 +245,7 @@ export default async function TournamentsPage({
 
   return (
     <div className="w-full overflow-x-hidden">
+      <TournamentDeletedToast />
       <TournamentsHero stats={stats} />
 
       <section className="container py-8 sm:py-12 lg:py-16">

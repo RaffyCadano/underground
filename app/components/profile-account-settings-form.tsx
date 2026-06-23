@@ -1,9 +1,10 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
+import { useActionState, useEffect, useId, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { createPortal } from 'react-dom';
 import { Info, Loader2, X } from 'lucide-react';
 import {
   addBlockedUser,
@@ -13,6 +14,7 @@ import {
 } from '@/app/actions/profile';
 import { PlayerAvatar } from '@/app/components/player-avatar';
 import { SuccessToast } from '@/app/components/success-toast';
+import { prepareAvatarFile } from '@/lib/avatar-upload-client';
 import {
   COUNTRY_OPTIONS,
   LANGUAGE_OPTIONS,
@@ -48,22 +50,62 @@ type Props = {
 };
 
 function LabelTooltip({ text }: { text: string }) {
+  const tooltipId = useId();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => setMounted(true), []);
+
+  function updatePosition() {
+    const button = buttonRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    setPosition({
+      top: rect.bottom + 8,
+      left: rect.left + rect.width / 2,
+    });
+  }
+
+  function show() {
+    updatePosition();
+    setOpen(true);
+  }
+
+  function hide() {
+    setOpen(false);
+  }
+
   return (
-    <span className="group relative ml-1.5 inline-flex align-middle">
+    <>
       <button
+        ref={buttonRef}
         type="button"
-        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition hover:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+        className="ml-1.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full align-middle text-slate-500 transition hover:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
         aria-label={text}
+        aria-describedby={open ? tooltipId : undefined}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
       >
         <Info size={14} />
       </button>
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-48 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs leading-relaxed text-slate-300 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100"
-      >
-        {text}
-      </span>
-    </span>
+      {mounted &&
+        open &&
+        createPortal(
+          <div
+            id={tooltipId}
+            role="tooltip"
+            style={{ top: position.top, left: position.left }}
+            className="pointer-events-none fixed z-[100] w-52 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs leading-relaxed text-slate-300 shadow-xl shadow-black/40"
+          >
+            {text}
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
 
@@ -134,38 +176,52 @@ export function ProfileAccountSettingsForm({ user, uploadEnabled, canEditUsernam
   const [selectedFileName, setSelectedFileName] = useState('');
   const [blockInput, setBlockInput] = useState('');
   const [blockError, setBlockError] = useState('');
-  const [uploadPending, startUploadTransition] = useTransition();
+  const [uploadPending, setUploadPending] = useState(false);
   const [blockPending, startBlockTransition] = useTransition();
+  const prevSaveStateRef = useRef(state);
 
   useEffect(() => {
+    if (state === prevSaveStateRef.current) return;
+    prevSaveStateRef.current = state;
     if (!state?.success) return;
+
     setSuccessToastOpen(true);
     void update();
     router.refresh();
-  }, [state?.success, update, router]);
+    // Only react to new action results — not session/router identity changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
-  function uploadFile(file: File) {
-    const formData = new FormData();
-    formData.append('file', file);
+  async function uploadFile(file: File) {
+    setUploadPending(true);
+    setUploadError('');
 
-    startUploadTransition(async () => {
+    try {
+      const prepared = await prepareAvatarFile(file);
+      const formData = new FormData();
+      formData.append('file', prepared);
+
       const result = await uploadProfileAvatar(formData);
       if (result.error) {
         setUploadError(result.error);
         return;
       }
-      setUploadError('');
+
+      setSelectedFileName('');
       router.refresh();
-    });
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
+    } finally {
+      setUploadPending(false);
+    }
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    setUploadError('');
     setSelectedFileName(file.name);
-    uploadFile(file);
+    void uploadFile(file);
   }
 
   function handleAddBlock(e: React.FormEvent) {
@@ -192,7 +248,7 @@ export function ProfileAccountSettingsForm({ user, uploadEnabled, canEditUsernam
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
+    <div className="rounded-2xl border border-slate-800 bg-slate-950/60">
       <SuccessToast
         open={successToastOpen}
         title="Account settings saved"
@@ -378,6 +434,7 @@ export function ProfileAccountSettingsForm({ user, uploadEnabled, canEditUsernam
           <CheckboxField
             name="optOutPersonalizedAds"
             label="Opt out of personalized ads"
+            hint="Site ads will not be shown on your account while this is enabled."
             defaultChecked={user.optOutPersonalizedAds}
           />
         </div>

@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import type { Session } from 'next-auth';
-import { BarChart3, Info, LayoutDashboard, LogIn, Trophy, UserPlus, Users, UsersRound } from 'lucide-react';
+import { BarChart3, CreditCard, Info, Layers, LayoutDashboard, LogIn, Trophy, UserPlus, Users, UsersRound } from 'lucide-react';
 import { SiteBrand } from '@/app/components/site-brand';
 import { SITE_FULL_NAME, SITE_NAME } from '@/lib/site';
 
 const exploreLinks = [
   { href: '/about', label: 'About', icon: Info },
+  { href: '/pricing', label: 'Pricing', icon: CreditCard },
+  { href: '/features', label: 'Features', icon: Layers },
   { href: '/tournaments', label: 'Tournaments', icon: Trophy },
   { href: '/rankings', label: 'Rankings', icon: BarChart3 },
   { href: '/players', label: 'Players', icon: Users },

@@ -14,6 +14,7 @@ import {
   hashResetToken,
   resetTokenExpiresAt,
 } from '@/lib/password-reset';
+import { validateUsername } from '@/lib/username';
 
 const RESET_SUCCESS_MESSAGE =
   'If an account exists for that email, we sent password reset instructions. Check your inbox and spam folder.';
@@ -27,9 +28,12 @@ export async function registerUser(_prev: { error?: string } | null, formData: F
   if (!username || !email || !password || !confirm) {
     return { error: 'All fields are required.' };
   }
-  if (username.length < 3) {
-    return { error: 'Username must be at least 3 characters.' };
+
+  const usernameError = validateUsername(username);
+  if (usernameError) {
+    return { error: usernameError };
   }
+
   if (password.length < 8) {
     return { error: 'Password must be at least 8 characters.' };
   }
@@ -44,7 +48,20 @@ export async function registerUser(_prev: { error?: string } | null, formData: F
   try {
     await prisma.user.create({ data: { username, email, password: hash, role } });
   } catch {
-    return { error: 'Username or email is already taken.' };
+    const [usernameTaken, emailTaken] = await Promise.all([
+      prisma.user.findFirst({
+        where: { username: { equals: username, mode: 'insensitive' } },
+        select: { id: true },
+      }),
+      prisma.user.findUnique({ where: { email }, select: { id: true } }),
+    ]);
+    if (usernameTaken) {
+      return { error: 'Username is already taken.' };
+    }
+    if (emailTaken) {
+      return { error: 'Email is already registered.' };
+    }
+    return { error: 'Could not create account. Please try again.' };
   }
 
   redirect('/login?registered=1');

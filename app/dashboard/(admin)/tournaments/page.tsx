@@ -5,6 +5,7 @@ import { YourTournamentsHero } from '@/app/components/your-tournaments-hero';
 import { ListSearch } from '@/app/components/list-search';
 import { Pagination } from '@/app/components/pagination';
 import { DeleteTournamentButton } from '@/app/tournaments/delete-tournament-button';
+import { TournamentDeletedToast } from '@/app/tournaments/tournament-deleted-toast';
 import { authOptions } from '@/lib/auth';
 import { mergeTournamentHostScope } from '@/lib/tournament-host';
 import {
@@ -84,6 +85,7 @@ export default async function DashboardTournamentsPage({
 
   return (
     <div className="space-y-8">
+      <TournamentDeletedToast />
       <YourTournamentsHero createHref="/dashboard/tournaments/create" />
 
       {totalCount > 0 && (

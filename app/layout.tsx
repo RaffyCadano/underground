@@ -8,6 +8,9 @@ import { SmoothScrollProvider } from '@/app/components/smooth-scroll-provider';
 import { SiteBrand } from '@/app/components/site-brand';
 import { SiteFooter } from '@/app/components/site-footer';
 import { SiteNav } from '@/app/components/site-nav';
+import { SignedOutToast } from '@/app/components/signed-out-toast';
+import { SignedInToast } from '@/app/components/signed-in-toast';
+import { AdcashDashboardShell } from '@/app/components/adcash-dashboard-shell';
 import { prisma } from '@/lib/prisma';
 import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
 
@@ -30,20 +33,22 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
 
-  const avatar =
-    session?.user?.id != null
-      ? (
-          await prisma.user.findUnique({
-            where: { id: session.user.id },
-            select: { avatar: true },
-          })
-        )?.avatar ?? null
-      : null;
+  let avatar: string | null = null;
+
+  if (session?.user?.id != null) {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { avatar: true },
+    });
+    avatar = user?.avatar ?? null;
+  }
 
   return (
     <html lang="en">
       <body className={`${spaceGrotesk.variable} ${spaceMono.variable}`}>
         <AppSessionProvider>
+          <SignedOutToast />
+          <SignedInToast />
           <SmoothScrollProvider>
             <div className="flex min-h-screen flex-col text-slate-100">
               <header className="relative sticky top-0 z-50 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
@@ -52,7 +57,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <SiteNav session={session} avatar={avatar} />
                 </div>
               </header>
-              <main className="flex-1">{children}</main>
+              <main className="min-w-0 flex-1">
+                <AdcashDashboardShell>{children}</AdcashDashboardShell>
+              </main>
               <SiteFooter session={session} />
             </div>
           </SmoothScrollProvider>

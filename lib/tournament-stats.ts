@@ -1,3 +1,5 @@
+import { participantDisplayName } from '@/lib/tournament-participant';
+
 export type TournamentMatch = {
   id: string;
   round: number;
@@ -18,6 +20,7 @@ export type TournamentParticipant = {
   userId: string;
   seed: number | null;
   groupId?: number | null;
+  walkInName?: string | null;
   user: { id: string; username: string; rankPoints: number };
 };
 
@@ -189,7 +192,7 @@ export function computeTournamentStandings(
       const status = getBracketStatus(matches, p.userId, tournamentStatus);
       return {
         userId: p.userId,
-        username: p.user.username,
+        username: participantDisplayName(p),
         seed: p.seed,
         rankPoints: p.user.rankPoints,
         wins: countWins(matches, p.userId),
@@ -227,7 +230,7 @@ export function computeBracketGroups(
         playerIds: slice.map((p) => p.userId),
         players: slice.map((p) => ({
           userId: p.userId,
-          username: p.user.username,
+          username: participantDisplayName(p),
           wins: countWins(matches, p.userId),
           losses: countLosses(matches, p.userId),
         })),
@@ -263,7 +266,7 @@ export function computeBracketGroups(
           const p = participants.find((x) => x.userId === userId);
           return {
             userId,
-            username: p?.user.username ?? 'Unknown',
+            username: p ? participantDisplayName(p) : 'Unknown',
             wins: countWins(matches, userId),
             losses: countLosses(matches, userId),
           };

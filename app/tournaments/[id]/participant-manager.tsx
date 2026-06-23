@@ -1,16 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, ChevronDown, Loader2, Search, UserMinus, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { AlertTriangle, ChevronDown, Loader2, Search, UserMinus, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { addGuestPlayerToTournament, addPlayerToTournament, removePlayerFromTournament } from '@/app/actions/tournaments';
+import { SuccessToast } from '@/app/components/success-toast';
 import { normalizeGuestDisplayName } from '@/lib/guest-player';
+import { isWalkInDisplay, participantDisplayName } from '@/lib/tournament-participant';
 import { playerProfilePath } from '@/lib/player-profile';
 
 type Participant = {
   id: string;
   userId: string;
+  walkInName?: string | null;
   user: { id: string; username: string; rankPoints: number; role: string };
 };
 
@@ -61,22 +65,25 @@ export function TournamentParticipantList({
           </tr>
         </thead>
         <tbody>
-          {participants.map((p, i) => (
+          {participants.map((p, i) => {
+            const displayName = participantDisplayName(p);
+            const walkIn = isWalkInDisplay(p);
+            return (
             <tr key={p.id} className="border-b border-slate-800 last:border-0">
               <td className="px-4 py-2.5 tabular-nums text-slate-400">{i + 1}</td>
               <td className="px-4 py-2.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  {p.user.role === 'guest' ? (
-                    <span className="font-semibold text-white">{p.user.username}</span>
+                  {walkIn ? (
+                    <span className="font-semibold text-white">{displayName}</span>
                   ) : (
                     <Link
                       href={playerProfilePath(p.user.username)}
                       className="font-semibold text-white transition hover:text-brand-300"
                     >
-                      {p.user.username}
+                      {displayName}
                     </Link>
                   )}
-                  {p.user.role === 'guest' && (
+                  {walkIn && (
                     <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                       Walk-in
                     </span>
@@ -84,13 +91,13 @@ export function TournamentParticipantList({
                 </div>
               </td>
               <td className="px-4 py-2.5 text-right tabular-nums text-slate-400">
-                {p.user.role === 'guest' ? '—' : p.user.rankPoints}
+                {walkIn ? '—' : p.user.rankPoints}
               </td>
               {canRemove && (
                 <td className="px-4 py-2.5 text-right">
                   <button
                     type="button"
-                    onClick={() => onRemove(p.userId, p.user.username, p.user.role === 'guest')}
+                    onClick={() => onRemove(p.userId, displayName, walkIn)}
                     disabled={removeDisabled}
                     className="text-xs font-semibold text-red-400 transition hover:text-red-300 disabled:opacity-60"
                   >
@@ -99,7 +106,7 @@ export function TournamentParticipantList({
                 </td>
               )}
             </tr>
-          ))}
+          );})}
         </tbody>
       </table>
     </div>
@@ -358,6 +365,174 @@ function AddingPlayersModal({ current, total }: { current: number; total: number
   );
 }
 
+type AddTarget =
+  | { type: 'accounts'; userIds: string[]; labels: string[] }
+  | { type: 'guest'; name: string };
+
+function AddPlayersConfirmModal({
+  open,
+  target,
+  onClose,
+  onConfirm,
+  isPending,
+  error,
+}: {
+  open: boolean;
+  target: AddTarget | null;
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+  error: string;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !isPending) onClose();
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, isPending, onClose]);
+
+  if (!open || !target || !mounted) return null;
+
+  const isGuest = target.type === 'guest';
+  const count = isGuest ? 1 : target.userIds.length;
+  const confirmLabel = count === 1 ? 'Add player' : `Add ${count} players`;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-players-title"
+      onClick={() => !isPending && onClose()}
+    >
+      <div
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl shadow-black/50"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-brand-500/20 bg-gradient-to-br from-brand-500/10 to-transparent px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/10 text-brand-400">
+                <UserPlus size={20} />
+              </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-300/80">
+                  Register players
+                </p>
+                <h2 id="add-players-title" className="mt-1 text-lg font-semibold text-white">
+                  Add to tournament?
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Registration is open — the bracket has not been generated yet.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isPending}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-white disabled:opacity-50"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 px-5 py-4">
+          <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              {count === 1 ? 'Player' : `${count} players`}
+            </p>
+            {isGuest ? (
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-white">{target.name}</p>
+                <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  Walk-in
+                </span>
+              </div>
+            ) : (
+              <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+                {target.labels.slice(0, 6).map((label, index) => (
+                  <li key={target.userIds[index]} className="font-semibold text-white">
+                    {label}
+                  </li>
+                ))}
+                {target.labels.length > 6 && (
+                  <li className="text-slate-500">+ {target.labels.length - 6} more</li>
+                )}
+              </ul>
+            )}
+          </div>
+
+          <div>
+            <p className="text-sm text-slate-400">This will:</p>
+            <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+              {[
+                'Add them to the registered players list',
+                'Count toward the player cap if one is set',
+                'Let you remove them before you generate the bracket',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-brand-400/80" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {error && (
+            <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-800 bg-slate-900/40 px-5 py-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="btn-secondary w-full sm:w-auto disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isPending}
+            className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+          >
+            {isPending ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                Adding…
+              </>
+            ) : (
+              <>
+                <UserPlus size={15} />
+                {confirmLabel}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function RemovePlayerConfirmModal({
   open,
   playerName,
@@ -521,6 +696,7 @@ export function ParticipantManager({
   isAdmin,
   canManage,
 }: Props) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -532,37 +708,80 @@ export function ParticipantManager({
     isGuest: boolean;
   } | null>(null);
   const [removeError, setRemoveError] = useState('');
+  const [addTarget, setAddTarget] = useState<AddTarget | null>(null);
+  const [addError, setAddError] = useState('');
+  const [successToastOpen, setSuccessToastOpen] = useState(false);
+  const [successToastTitle, setSuccessToastTitle] = useState('');
+  const [successToastBody, setSuccessToastBody] = useState('');
 
-  function handleAdd() {
+  function openAddAccountsConfirm() {
     if (selectedUserIds.length === 0) return;
-    const ids = [...selectedUserIds];
-    setError('');
-    setAddProgress({ current: 0, total: ids.length });
-    startTransition(async () => {
-      try {
-        for (let i = 0; i < ids.length; i++) {
-          await addPlayerToTournament(tournamentId, ids[i]);
-          setAddProgress({ current: i + 1, total: ids.length });
-        }
-        setSelectedUserIds([]);
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'Failed to add players.');
-      } finally {
-        setAddProgress(null);
-      }
-    });
+    const labels = selectedUserIds.map(
+      (id) => availableUsers.find((u) => u.id === id)?.username ?? 'Player',
+    );
+    setAddError('');
+    setAddTarget({ type: 'accounts', userIds: [...selectedUserIds], labels });
   }
 
-  function handleAddCustomName() {
+  function openAddGuestConfirm() {
     const name = normalizeGuestDisplayName(customName);
     if (!name) return;
+    setAddError('');
+    setAddTarget({ type: 'guest', name });
+  }
+
+  function closeAddConfirm() {
+    if (isPending) return;
+    setAddTarget(null);
+    setAddError('');
+  }
+
+  function confirmAdd() {
+    if (!addTarget) return;
+    const target = addTarget;
     setError('');
+    setAddError('');
+
+    if (target.type === 'accounts') {
+      const { userIds, labels } = target;
+      setAddTarget(null);
+      setAddProgress({ current: 0, total: userIds.length });
+      startTransition(async () => {
+        try {
+          for (let i = 0; i < userIds.length; i++) {
+            await addPlayerToTournament(tournamentId, userIds[i]);
+            setAddProgress({ current: i + 1, total: userIds.length });
+          }
+          setSelectedUserIds([]);
+          setSuccessToastTitle(userIds.length === 1 ? 'Player added' : 'Players added');
+          setSuccessToastBody(
+            userIds.length === 1
+              ? `${labels[0]} was registered for this tournament.`
+              : `${userIds.length} players were registered for this tournament.`,
+          );
+          setSuccessToastOpen(true);
+          router.refresh();
+        } catch (e: unknown) {
+          setError(e instanceof Error ? e.message : 'Failed to add players.');
+        } finally {
+          setAddProgress(null);
+        }
+      });
+      return;
+    }
+
+    const guestName = target.name;
+    setAddTarget(null);
     setAddProgress({ current: 0, total: 1 });
     startTransition(async () => {
       try {
-        await addGuestPlayerToTournament(tournamentId, name);
+        await addGuestPlayerToTournament(tournamentId, guestName);
         setCustomName('');
         setAddProgress({ current: 1, total: 1 });
+        setSuccessToastTitle('Player added');
+        setSuccessToastBody(`${guestName} was added as a walk-in for this tournament.`);
+        setSuccessToastOpen(true);
+        router.refresh();
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to add player.');
       } finally {
@@ -584,12 +803,17 @@ export function ParticipantManager({
 
   function confirmRemove() {
     if (!removeTarget) return;
+    const { userId, username } = removeTarget;
     setError('');
     setRemoveError('');
     startTransition(async () => {
       try {
-        await removePlayerFromTournament(tournamentId, removeTarget.userId);
+        await removePlayerFromTournament(tournamentId, userId);
         setRemoveTarget(null);
+        setSuccessToastTitle('Player removed');
+        setSuccessToastBody(`${username} was removed from the tournament.`);
+        setSuccessToastOpen(true);
+        router.refresh();
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : 'Failed to remove player.';
         setRemoveError(message);
@@ -600,7 +824,22 @@ export function ParticipantManager({
 
   return (
     <div className="space-y-5">
+      <SuccessToast
+        open={successToastOpen}
+        title={successToastTitle}
+        body={successToastBody}
+        onDismiss={() => setSuccessToastOpen(false)}
+      />
       {addProgress && <AddingPlayersModal current={addProgress.current} total={addProgress.total} />}
+
+      <AddPlayersConfirmModal
+        open={addTarget !== null}
+        target={addTarget}
+        onClose={closeAddConfirm}
+        onConfirm={confirmAdd}
+        isPending={isPending && addTarget !== null}
+        error={addError}
+      />
 
       <RemovePlayerConfirmModal
         open={removeTarget !== null}
@@ -632,12 +871,12 @@ export function ParticipantManager({
               users={availableUsers}
               value={selectedUserIds}
               onChange={setSelectedUserIds}
-              disabled={isPending || addProgress !== null || availableUsers.length === 0}
+              disabled={isPending || addProgress !== null || addTarget !== null || availableUsers.length === 0}
             />
             <button
               type="button"
-              onClick={handleAdd}
-              disabled={isPending || addProgress !== null || selectedUserIds.length === 0}
+              onClick={openAddAccountsConfirm}
+              disabled={isPending || addProgress !== null || addTarget !== null || selectedUserIds.length === 0}
               className="btn-primary w-full shrink-0 disabled:opacity-60 sm:w-auto"
             >
               {addProgress
@@ -665,26 +904,26 @@ export function ParticipantManager({
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
                 placeholder="Walk-in player name"
-                disabled={isPending || addProgress !== null}
+                disabled={isPending || addProgress !== null || addTarget !== null}
                 className="input min-w-0 flex-1"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    handleAddCustomName();
+                    openAddGuestConfirm();
                   }
                 }}
               />
               <button
                 type="button"
-                onClick={handleAddCustomName}
-                disabled={isPending || addProgress !== null || !customName.trim()}
+                onClick={openAddGuestConfirm}
+                disabled={isPending || addProgress !== null || addTarget !== null || !customName.trim()}
                 className="btn-secondary w-full shrink-0 disabled:opacity-60 sm:w-auto"
               >
                 Add custom
               </button>
             </div>
             <p className="mt-1.5 text-[11px] text-slate-600">
-              For players without a UGNCBBX account — they won&apos;t appear on rankings.
+              Walk-in names are only for this tournament — not UGNCBBX accounts and not on rankings.
             </p>
           </div>
         </div>

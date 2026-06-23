@@ -23,6 +23,7 @@ model User {
   markReadOnEmail         Boolean                 @default(true)
   productUpdates          Boolean                 @default(false)
   optOutPersonalizedAds   Boolean                 @default(false)
+  subscriptionPlan        String                  @default("free")
   role                    String                  @default("player")
   rankPoints              Int                     @default(0)
   wins                    Int                     @default(0)
@@ -37,6 +38,7 @@ model User {
   blockedUsers            BlockedUser[]           @relation("UserBlocks")
   hostedTournaments       Tournament[]            @relation("TournamentCreator")
   hostedEvents            Event[]                 @relation("EventHost")
+  tournamentTemplates     TournamentTemplate[]
   createdAt               DateTime                @default(now())
 
   @@index([role, rankPoints(sort: Desc), wins(sort: Desc)])
@@ -167,12 +169,35 @@ model Tournament {
   @@index([createdById])
 }
 
+model TournamentTemplate {
+  id                  String   @id @default(cuid())
+  name                String
+  description         String?
+  format              String   @default("single_elimination")
+  groupStageEnabled   Boolean  @default(false)
+  groupSize           Int      @default(4)
+  advancePerGroup     Int      @default(2)
+  grandFinalsModifier String   @default("default")
+  entryFee            String?
+  prizePool           String?
+  playerCap           Int?
+  isRanked            Boolean  @default(true)
+  gameType            String   @default("beyblade_x")
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+}
+
 model TournamentParticipant {
   id           String     @id @default(cuid())
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   tournamentId String
   user         User       @relation(fields: [userId], references: [id])
   userId       String
+  walkInName   String?
   seed         Int?
   groupId      Int?
   placement    Int?

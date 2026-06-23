@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { registerUser } from '@/app/actions/auth';
 import Link from 'next/link';
 import {
@@ -9,12 +9,15 @@ import {
   Mail,
   Shield,
   Trophy,
-  User,
   UserPlus,
   Zap,
 } from 'lucide-react';
 import { PasswordInput } from '@/app/components/password-input';
 import { SiteLogo } from '@/app/components/site-logo';
+import {
+  UsernameAvailabilityField,
+  type UsernameStatus,
+} from '@/app/components/username-availability-field';
 
 const steps = [
   { step: '01', title: 'Create your profile', body: 'Pick a blader name and set up your account in seconds.' },
@@ -24,6 +27,9 @@ const steps = [
 
 function RegisterForm() {
   const [state, action, pending] = useActionState(registerUser, null);
+  const [username, setUsername] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
+  const usernameReady = usernameStatus === 'available';
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-xl shadow-black/20">
@@ -53,26 +59,12 @@ function RegisterForm() {
           )}
 
           <div className="grid gap-4 min-[480px]:grid-cols-2">
-            <div className="space-y-2">
-              <label htmlFor="username" className="block text-sm font-medium text-slate-300">
-                Username
-              </label>
-              <div className="relative">
-                <User
-                  size={16}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-                />
-                <input
-                  id="username"
-                  type="text"
-                  name="username"
-                  required
-                  autoComplete="username"
-                  placeholder="BladeQueen"
-                  className="input pl-9"
-                />
-              </div>
-            </div>
+            <UsernameAvailabilityField
+              value={username}
+              onChange={setUsername}
+              onStatusChange={setUsernameStatus}
+              disabled={pending}
+            />
             <div className="space-y-2">
               <label htmlFor="email" className="block text-sm font-medium text-slate-300">
                 Email
@@ -124,7 +116,7 @@ function RegisterForm() {
 
           <button
             type="submit"
-            disabled={pending}
+            disabled={pending || !usernameReady}
             className="btn-primary inline-flex w-full items-center justify-center gap-2 py-3 disabled:opacity-60 sm:py-2.5"
           >
             {pending ? (

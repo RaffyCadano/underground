@@ -20,8 +20,11 @@ export type SwissMatch = {
   winnerId: string | null;
 };
 
+import { participantDisplayName } from '@/lib/tournament-participant';
+
 type Participant = {
   userId: string;
+  walkInName?: string | null;
   user: { id: string; username: string; rankPoints: number };
 };
 
@@ -95,7 +98,12 @@ export function BracketSwiss({ rounds, participants, allMatches, isAdmin, userId
   const stats = new Map(
     participants.map((p) => [
       p.userId,
-      { username: p.user.username, rankPoints: p.user.rankPoints, wins: 0, losses: 0 },
+      {
+        username: participantDisplayName(p),
+        rankPoints: p.user.rankPoints,
+        wins: 0,
+        losses: 0,
+      },
     ]),
   );
 

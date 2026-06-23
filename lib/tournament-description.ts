@@ -1,3 +1,5 @@
+import { formatUsdDisplay } from '@/lib/money';
+
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: 'single elimination',
   double_elimination: 'double elimination',
@@ -96,8 +98,8 @@ export function generateTournamentDescription(input: {
   const eventStart = formatScheduleLine('Event Start', input.eventStartTime);
   if (checkIn) extras.push(`${checkIn}.`);
   if (eventStart) extras.push(`${eventStart}.`);
-  if (entryFee) extras.push(`Entry: ${entryFee}.`);
-  if (prizePool) extras.push(`Prizes: ${prizePool}.`);
+  if (entryFee) extras.push(`Entry: ${formatUsdDisplay(entryFee)}.`);
+  if (prizePool) extras.push(`Prizes: ${formatUsdDisplay(prizePool)}.`);
   if (playerCap) extras.push(`Limited to ${playerCap} players.`);
 
   const extrasText = extras.length > 0 ? ` ${extras.join(' ')}` : '';

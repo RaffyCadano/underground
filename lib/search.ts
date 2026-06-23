@@ -48,21 +48,28 @@ export function parseRoleFilter(value?: string): AccountRoleFilter {
   return 'all';
 }
 
+/** Real site accounts — excludes internal walk-in guest records. */
+export function registeredAccountsWhere(): Prisma.UserWhereInput {
+  return { role: { not: 'guest' } };
+}
+
 export function accountSearchWhere(
   query: string,
   role: AccountRoleFilter,
 ): Prisma.UserWhereInput {
-  const where: Prisma.UserWhereInput = {};
+  const searchOr: Prisma.UserWhereInput['OR'] = [
+    { username: { contains: query, mode: 'insensitive' } },
+    { email: { contains: query, mode: 'insensitive' } },
+  ];
 
-  if (role !== 'all') {
-    where.role = role;
+  if (role === 'all') {
+    return { ...registeredAccountsWhere(), ...(query ? { OR: searchOr } : {}) };
   }
 
+  const where: Prisma.UserWhereInput = { role };
+
   if (query) {
-    where.OR = [
-      { username: { contains: query, mode: 'insensitive' } },
-      { email: { contains: query, mode: 'insensitive' } },
-    ];
+    where.OR = searchOr;
   }
 
   return where;
