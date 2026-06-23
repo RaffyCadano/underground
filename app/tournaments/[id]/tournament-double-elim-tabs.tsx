@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { BracketDoubleElim } from './bracket-double-elim';
+import { BracketShareActions } from './bracket-share-actions';
 import { GroupStagePanel } from './group-stage-panel';
 import { TournamentPodium } from './tournament-podium';
 import { buildGroupStageView } from '@/lib/group-stage';
@@ -18,6 +19,7 @@ type MainTab = 'bracket' | 'groups' | 'rankings';
 type BracketView = 'full' | 'winners' | 'losers';
 
 type Props = {
+  tournamentId: string;
   matches: TournamentMatch[];
   participants: TournamentParticipant[];
   tournamentStatus: string;
@@ -28,6 +30,7 @@ type Props = {
   grandFinalsModifier: string;
   isAdmin: boolean;
   userId: string | null;
+  showShareActions?: boolean;
 };
 
 const MAIN_TABS: { id: MainTab; label: string }[] = [
@@ -80,6 +83,7 @@ function TabBar<T extends string>({
 }
 
 export function TournamentDoubleElimTabs({
+  tournamentId,
   matches,
   participants,
   tournamentStatus,
@@ -90,6 +94,7 @@ export function TournamentDoubleElimTabs({
   grandFinalsModifier,
   isAdmin,
   userId,
+  showShareActions = true,
 }: Props) {
   const inGroupPhase = phase === 'group';
   const hasPlayoffs = matches.some(
@@ -153,12 +158,17 @@ export function TournamentDoubleElimTabs({
         <>
           {hasPlayoffs ? (
             <>
-              <TabBar
-                tabs={BRACKET_VIEWS}
-                active={bracketView}
-                onChange={setBracketView}
-                size="sm"
-              />
+              <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="min-w-0 flex-1">
+                  <TabBar
+                    tabs={BRACKET_VIEWS}
+                    active={bracketView}
+                    onChange={setBracketView}
+                    size="sm"
+                  />
+                </div>
+                {showShareActions && <BracketShareActions tournamentId={tournamentId} />}
+              </div>
               <p className="mb-4 text-xs text-slate-500">{gfLabel}</p>
               <BracketDoubleElim
                 matches={matches}

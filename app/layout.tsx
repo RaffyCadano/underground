@@ -4,13 +4,10 @@ import { Space_Grotesk, Space_Mono } from 'next/font/google';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { AppSessionProvider } from '@/app/components/session-provider';
-import { SmoothScrollProvider } from '@/app/components/smooth-scroll-provider';
-import { SiteBrand } from '@/app/components/site-brand';
-import { SiteFooter } from '@/app/components/site-footer';
-import { SiteNav } from '@/app/components/site-nav';
 import { SignedOutToast } from '@/app/components/signed-out-toast';
 import { SignedInToast } from '@/app/components/signed-in-toast';
-import { AdcashDashboardShell } from '@/app/components/adcash-dashboard-shell';
+import { SmoothScrollProvider } from '@/app/components/smooth-scroll-provider';
+import { SiteChrome } from '@/app/components/site-chrome';
 import { prisma } from '@/lib/prisma';
 import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
 
@@ -50,18 +47,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <SignedOutToast />
           <SignedInToast />
           <SmoothScrollProvider>
-            <div className="flex min-h-screen flex-col text-slate-100">
-              <header className="relative sticky top-0 z-50 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
-                <div className="container flex items-center justify-between gap-6 py-3">
-                  <SiteBrand />
-                  <SiteNav session={session} avatar={avatar} />
-                </div>
-              </header>
-              <main className="min-w-0 flex-1">
-                <AdcashDashboardShell>{children}</AdcashDashboardShell>
-              </main>
-              <SiteFooter session={session} />
-            </div>
+            <SiteChrome session={session} avatar={avatar}>
+              {children}
+            </SiteChrome>
           </SmoothScrollProvider>
         </AppSessionProvider>
       </body>

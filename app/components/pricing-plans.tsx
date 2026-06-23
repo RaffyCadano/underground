@@ -227,12 +227,12 @@ export function PricingPlans({
       </div>
 
       <ScrollReveal delay={showHeader ? 280 : 200}>
-        <div className="mx-auto mt-10 flex justify-center">
+        <div className="mx-auto mt-10 w-full max-w-5xl px-4">
           <Link
             href="/features"
-            className="btn-secondary inline-flex items-center gap-2"
+            className="btn-secondary inline-flex w-full items-center justify-center gap-2.5 px-8 py-3 text-base"
           >
-            <Layers size={16} />
+            <Layers size={20} />
             View features
           </Link>
         </div>

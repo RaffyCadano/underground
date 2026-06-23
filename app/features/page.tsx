@@ -31,23 +31,23 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      <section className="container py-10 sm:py-14 lg:py-16">
+      <section className="container py-8 sm:py-12 md:py-14 lg:py-16">
         <PlanFeaturesComparison />
       </section>
 
       <section className="border-t border-slate-800 bg-slate-950/40">
-        <div className="container py-10 sm:py-12">
+        <div className="container py-8 sm:py-10 md:py-12">
           <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
             <h2 className="text-xl font-semibold text-white sm:text-2xl">Ready to upgrade?</h2>
             <p className="text-sm leading-relaxed text-slate-400 sm:text-base">
               View pricing or manage your subscription from your profile.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Link href="/pricing" className="btn-primary inline-flex items-center gap-2">
+            <div className="flex w-full max-w-sm flex-col gap-3 sm:max-w-none sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center">
+              <Link href="/pricing" className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto">
                 View pricing
                 <ArrowRight size={16} />
               </Link>
-              <Link href="/profile/subscriptions" className="btn-secondary">
+              <Link href="/profile/subscriptions" className="btn-secondary w-full sm:w-auto">
                 Manage subscriptions
               </Link>
             </div>

@@ -8,6 +8,7 @@ import { TournamentActions } from './tournament-actions';
 import { ParticipantManager, TournamentParticipantList } from './participant-manager';
 import { BracketTree } from './bracket-tree';
 import { BracketSwiss } from './bracket-swiss';
+import { BracketShareActions } from './bracket-share-actions';
 import { TournamentDoubleElimTabs } from './tournament-double-elim-tabs';
 import { TournamentFormatGuide } from './tournament-format-guide';
 import { isGroupStageComplete } from '@/lib/group-stage';
@@ -266,9 +267,15 @@ export default async function TournamentDetail({
             </div>
           )}
 
-          <div className="card p-6">
+          <div className="card p-6" id="tournament-bracket-print">
             {sortedRounds.length > 0 ? (
-              tournament.format === 'swiss' || tournament.format === 'round_robin' ? (
+              <>
+                {tournament.format !== 'double_elimination' && (
+                  <div className="mb-5 flex justify-end">
+                    <BracketShareActions tournamentId={tournament.id} />
+                  </div>
+                )}
+                {tournament.format === 'swiss' || tournament.format === 'round_robin' ? (
                 <BracketSwiss
                   rounds={sortedRounds}
                   participants={tournament.participants}
@@ -278,6 +285,7 @@ export default async function TournamentDetail({
                 />
               ) : tournament.format === 'double_elimination' ? (
                 <TournamentDoubleElimTabs
+                  tournamentId={tournament.id}
                   matches={displayMatches}
                   participants={tournament.participants}
                   tournamentStatus={tournament.status}
@@ -297,7 +305,8 @@ export default async function TournamentDetail({
                   userId={session?.user.id ?? null}
                   interactive
                 />
-              )
+              )}
+              </>
             ) : isAdmin && canManagePlayers ? (
               <ParticipantManager
                 tournamentId={tournament.id}

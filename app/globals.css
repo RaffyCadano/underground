@@ -136,6 +136,26 @@ pre {
   }
 }
 
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #tournament-bracket-print,
+  #tournament-bracket-print * {
+    visibility: visible;
+  }
+
+  #tournament-bracket-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .scroll-reveal {
     opacity: 1 !important;
@@ -143,3 +163,4 @@ pre {
     transition: none !important;
   }
 }
+
