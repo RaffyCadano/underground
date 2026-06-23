@@ -30,7 +30,7 @@ export function ListSearch({
     <form
       method="GET"
       action={action}
-      className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:justify-end"
+      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end"
     >
       <div className="relative min-w-0 w-full flex-1 sm:min-w-[12rem]">
         <Search
@@ -42,11 +42,15 @@ export function ListSearch({
           name="q"
           defaultValue={query}
           placeholder={placeholder}
-          className="input w-full pl-9"
+          className="input h-10 w-full pl-9"
         />
       </div>
       {options && (
-        <select name={filterName} defaultValue={value ?? 'all'} className="select w-full sm:w-36 sm:shrink-0">
+        <select
+          name={filterName}
+          defaultValue={value ?? 'all'}
+          className="select h-10 w-full sm:w-36 sm:shrink-0"
+        >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -55,11 +59,17 @@ export function ListSearch({
         </select>
       )}
       <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">
-        <button type="submit" className="btn-primary min-w-0 flex-1 px-4 sm:flex-none sm:px-5">
+        <button
+          type="submit"
+          className="btn-primary inline-flex h-10 min-w-0 flex-1 items-center justify-center px-5 sm:flex-none"
+        >
           Search
         </button>
         {hasFilters && (
-          <Link href={action} className="btn-secondary inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 sm:flex-none">
+          <Link
+            href={action}
+            className="btn-secondary inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 px-4 sm:flex-none"
+          >
             <X size={14} />
             Clear
           </Link>

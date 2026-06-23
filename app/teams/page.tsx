@@ -195,17 +195,15 @@ export default async function TeamsPage({
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Directory</p>
             <h2 className="mt-1 text-xl font-semibold text-white sm:text-2xl">Community clubs</h2>
           </div>
-          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto lg:shrink-0">
+          <div className="flex w-full flex-col gap-3 lg:w-full lg:max-w-xl lg:shrink-0">
+            <ListSearch action="/teams" query={query} placeholder="Search clubs, regions…" />
             <Link
               href="/teams/request"
-              className="btn-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+              className="btn-secondary inline-flex h-10 w-full items-center justify-center gap-2 self-end px-5 sm:w-auto"
             >
               <Sparkles size={15} />
               Request club listing
             </Link>
-            <div className="w-full lg:max-w-md">
-              <ListSearch action="/teams" query={query} placeholder="Search clubs, regions…" />
-            </div>
           </div>
         </div>
 
@@ -225,7 +223,10 @@ export default async function TeamsPage({
         ) : clubs.length === 0 ? (
           <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-5 py-10 text-center sm:px-8 sm:py-14">
             <p className="text-base font-semibold text-white sm:text-lg">No clubs match &ldquo;{query}&rdquo;</p>
-            <Link href="/teams" className="btn-secondary mt-6 inline-flex w-full sm:w-auto">
+            <Link
+              href="/teams"
+              className="btn-secondary mt-6 inline-flex h-10 w-full items-center justify-center px-5 sm:w-auto"
+            >
               Clear search
             </Link>
           </div>
@@ -261,7 +262,7 @@ export default async function TeamsPage({
             </div>
             <Link
               href="/teams/request"
-              className="btn-primary inline-flex w-full shrink-0 items-center justify-center gap-2 sm:w-auto"
+              className="btn-primary inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 px-5 sm:w-auto"
             >
               Request club listing
               <ArrowRight size={15} />
