@@ -4,7 +4,7 @@ import type { PremierBillingPeriod } from '@/lib/subscriptions';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateStripeCustomer } from '@/lib/sync-stripe-subscription';
-import { getPremierPriceId, getSiteUrl, getStripe } from '@/lib/stripe';
+import { assertStripeCheckoutConfig, getPremierPriceId, getSiteUrl, getStripe } from '@/lib/stripe';
 
 type CheckoutBody = {
   billingPeriod?: PremierBillingPeriod;
@@ -50,6 +50,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    assertStripeCheckoutConfig();
     const stripe = getStripe();
     const customerId = await getOrCreateStripeCustomer(user);
     const priceId = getPremierPriceId(billingPeriod);

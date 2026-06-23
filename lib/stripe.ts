@@ -3,8 +3,27 @@ import type { PremierBillingPeriod } from '@/lib/subscriptions';
 
 let stripeClient: Stripe | null = null;
 
+export function getMissingStripeEnvVars(): string[] {
+  const missing: string[] = [];
+  if (!process.env.STRIPE_SECRET_KEY?.trim()) missing.push('STRIPE_SECRET_KEY');
+  if (!process.env.STRIPE_PRICE_PREMIER_MONTHLY?.trim()) {
+    missing.push('STRIPE_PRICE_PREMIER_MONTHLY');
+  }
+  if (!process.env.STRIPE_PRICE_PREMIER_ANNUAL?.trim()) {
+    missing.push('STRIPE_PRICE_PREMIER_ANNUAL');
+  }
+  return missing;
+}
+
+export function assertStripeCheckoutConfig(): void {
+  const missing = getMissingStripeEnvVars();
+  if (missing.length > 0) {
+    throw new Error(`Stripe is not configured on the server (missing: ${missing.join(', ')}).`);
+  }
+}
+
 export function getStripe(): Stripe {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
   if (!secretKey) {
     throw new Error('STRIPE_SECRET_KEY is not configured');
   }

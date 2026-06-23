@@ -3,7 +3,7 @@ import type { Tournament } from '@prisma/client';
 import { rankedPlayerWhere } from '@/lib/rankings';
 
 /** Site/staff accounts hidden from the tournament add-player picker. */
-const EXCLUDED_PICKER_USERNAMES = ['admin', 'thevandaminator'] as const;
+const EXCLUDED_PICKER_USERNAMES = ['admin', 'TheVandaminator'] as const;
 
 export function tournamentPlayerPickerWhere(excludeUserIds: string[]): Prisma.UserWhereInput {
   return {

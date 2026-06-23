@@ -1,16 +1,17 @@
 import { Suspense } from 'react';
 import { Crown } from 'lucide-react';
+import { BillingHistoryList } from '@/app/components/billing-history-list';
 import { ManageBillingButton } from '@/app/components/manage-billing-button';
 import { PremierUpgradeSection } from '@/app/components/premier-upgrade-section';
 import { SubscriptionCheckoutStatus } from '@/app/components/subscription-checkout-status';
 import { isAdminRole } from '@/lib/roles';
 import {
-  BILLING_HISTORY_EMPTY,
   COMMUNITY_SUBSCRIPTIONS_EMPTY,
   FREE_PLAN,
   FREE_PLAN_DETAILS,
   PREMIER_PLAN,
 } from '@/lib/subscriptions';
+import type { BillingInvoice } from '@/lib/stripe-invoices';
 import { userHasActivePremier } from '@/lib/sync-stripe-subscription';
 
 function SectionCard({
@@ -59,6 +60,7 @@ export function ProfileSubscriptionsPanel({
   billingInterval = null,
   currentPeriodEnd = null,
   hasStripeCustomer = false,
+  invoices = [],
 }: {
   role: string;
   subscriptionPlan?: string;
@@ -66,6 +68,7 @@ export function ProfileSubscriptionsPanel({
   billingInterval?: string | null;
   currentPeriodEnd?: Date | null;
   hasStripeCustomer?: boolean;
+  invoices?: BillingInvoice[];
 }) {
   const onPremier = userHasActivePremier(subscriptionPlan, subscriptionStatus);
   const showPremierUpgrade = !isAdminRole(role) && !onPremier;
@@ -115,11 +118,12 @@ export function ProfileSubscriptionsPanel({
       </SectionCard>
 
       <SectionCard title="Billing History">
-        <p className="text-sm leading-relaxed text-slate-400">
-          {onPremier && hasStripeCustomer
-            ? 'View invoices and update your payment method in the billing portal.'
-            : BILLING_HISTORY_EMPTY}
-        </p>
+        <BillingHistoryList invoices={invoices} hasStripeCustomer={hasStripeCustomer} />
+        {hasStripeCustomer && (
+          <p className="mt-4 text-xs text-slate-500">
+            Need to update your card or cancel? Use <strong className="font-medium text-slate-400">Manage billing</strong> above.
+          </p>
+        )}
       </SectionCard>
     </div>
   );

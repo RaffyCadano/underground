@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { ProfileSubscriptionsPanel } from '@/app/components/profile-subscriptions-panel';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { listCustomerInvoices } from '@/lib/stripe-invoices';
 
 export default async function SubscriptionsPage() {
   const session = await getServerSession(authOptions);
@@ -20,6 +21,16 @@ export default async function SubscriptionsPage() {
         })
       : null;
 
+  let invoices: Awaited<ReturnType<typeof listCustomerInvoices>> = [];
+
+  if (billing?.stripeCustomerId) {
+    try {
+      invoices = await listCustomerInvoices(billing.stripeCustomerId);
+    } catch (error) {
+      console.error('Failed to load billing history:', error);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -36,6 +47,7 @@ export default async function SubscriptionsPage() {
         billingInterval={billing?.billingInterval}
         currentPeriodEnd={billing?.currentPeriodEnd}
         hasStripeCustomer={Boolean(billing?.stripeCustomerId)}
+        invoices={invoices}
       />
     </div>
   );

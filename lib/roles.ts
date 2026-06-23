@@ -57,7 +57,7 @@ export function dashboardHrefForRole(role: string): string {
 }
 
 /** Primary site owner account — cannot be deleted or modified by other admins. */
-export const MAIN_ADMIN_USERNAME = 'vandam';
+export const MAIN_ADMIN_USERNAME = 'TheVandaminator';
 
 export function isMainAdminUsername(username: string): boolean {
   return username.toLowerCase() === MAIN_ADMIN_USERNAME.toLowerCase();
