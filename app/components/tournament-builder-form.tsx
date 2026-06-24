@@ -10,7 +10,12 @@ import {
   TOURNAMENT_RANKING_OPTIONS,
   selectionCardClass,
 } from '@/app/components/tournament-form-ui';
-import { GAME_TYPE_OPTIONS, GRAND_FINALS_OPTIONS } from '@/lib/tournament-options';
+import { TournamentFormatStages, TournamentStageTypeSelector } from '@/app/components/tournament-format-stages';
+import { GAME_TYPE_OPTIONS } from '@/lib/tournament-options';
+import type { RoundRobinRankBy } from '@/lib/tournament-options';
+
+import type { SwissScoringFormFields } from '@/lib/swiss-scoring';
+import { DEFAULT_SWISS_SCORING_FORM } from '@/lib/swiss-scoring';
 
 export type TournamentBuilderFields = {
   name: string;
@@ -18,6 +23,8 @@ export type TournamentBuilderFields = {
   gameType: string;
   format: string;
   groupStageEnabled: boolean;
+  deSplitLosersBracket: boolean;
+  deBreakTiesPlacement: boolean;
   groupSize: string;
   advancePerGroup: string;
   grandFinalsModifier: string;
@@ -25,7 +32,8 @@ export type TournamentBuilderFields = {
   prizePool: string;
   playerCap: string;
   isRanked: boolean;
-};
+  roundRobinRankBy: RoundRobinRankBy;
+} & SwissScoringFormFields;
 
 type FieldUpdater = <K extends keyof TournamentBuilderFields>(
   key: K,
@@ -183,9 +191,24 @@ export function TournamentBuilderForm({
             <input type="hidden" name="groupSize" value={fields.groupSize} />
             <input type="hidden" name="advancePerGroup" value={fields.advancePerGroup} />
             <input type="hidden" name="grandFinalsModifier" value={fields.grandFinalsModifier} />
+            <input type="hidden" name="deSplitLosersBracket" value={fields.deSplitLosersBracket ? 'on' : ''} />
+            <input type="hidden" name="deBreakTiesPlacement" value={fields.deBreakTiesPlacement ? 'on' : ''} />
           </>
         )}
-        <div className={`grid min-w-0 gap-2 md:grid-cols-2 ${lockFormat ? 'pointer-events-none opacity-60' : ''}`}>
+
+        <TournamentStageTypeSelector
+          value={fields.groupStageEnabled ? 'two' : 'single'}
+          onChange={(type) => {
+            update('groupStageEnabled', type === 'two');
+          }}
+          lockFormat={lockFormat}
+        />
+
+        <div className="mt-4">
+          <FieldLabel>
+            {fields.groupStageEnabled ? 'Final stage format' : 'Bracket format'}
+          </FieldLabel>
+        <div className={`mt-2 grid min-w-0 gap-2 md:grid-cols-2 ${lockFormat ? 'pointer-events-none opacity-60' : ''}`}>
           {TOURNAMENT_FORMAT_OPTIONS.map(({ value, label, description: desc, icon: Icon }) => {
             const selected = fields.format === value;
             return (
@@ -200,11 +223,7 @@ export function TournamentBuilderForm({
                   checked={selected}
                   onChange={(e) => {
                     if (lockFormat) return;
-                    const next = e.target.value;
-                    update('format', next);
-                    if (next !== 'double_elimination' && fields.groupStageEnabled) {
-                      update('groupStageEnabled', false);
-                    }
+                    update('format', e.target.value);
                   }}
                   disabled={lockFormat}
                   className="sr-only"
@@ -214,105 +233,35 @@ export function TournamentBuilderForm({
             );
           })}
         </div>
+        </div>
 
-        {fields.format === 'double_elimination' && (
-          <div
-            className={`space-y-4 rounded-xl border border-slate-800 bg-slate-950/50 p-4 ${
-              lockFormat ? 'pointer-events-none opacity-60' : ''
-            }`}
-          >
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Double elimination options
-            </p>
-
-            <label
-              className={`flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-900/40 p-3 transition ${
-                lockFormat ? '' : 'cursor-pointer hover:border-slate-700'
-              }`}
-            >
-              <input
-                type="checkbox"
-                name={lockFormat ? undefined : 'groupStageEnabled'}
-                checked={fields.groupStageEnabled}
-                onChange={(e) => update('groupStageEnabled', e.target.checked)}
-                disabled={lockFormat}
-                className="mt-0.5 rounded border-slate-600"
-              />
-              <span>
-                <span className="block text-sm font-medium text-slate-200">
-                  Two-stage: Group stage → playoffs
-                </span>
-                <span className="mt-0.5 block text-xs text-slate-500">
-                  Round robin groups first, then top players advance to double elimination.
-                </span>
-              </span>
-            </label>
-
-            {fields.groupStageEnabled && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <FieldLabel htmlFor="groupSize">Group size</FieldLabel>
-                  <select
-                    id="groupSize"
-                    name={lockFormat ? undefined : 'groupSize'}
-                    value={fields.groupSize}
-                    onChange={(e) => update('groupSize', e.target.value)}
-                    disabled={lockFormat}
-                    className="select mt-2"
-                  >
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                    <option value="6">6</option>
-                  </select>
-                </div>
-                <div>
-                  <FieldLabel htmlFor="advancePerGroup">Advance per group</FieldLabel>
-                  <select
-                    id="advancePerGroup"
-                    name={lockFormat ? undefined : 'advancePerGroup'}
-                    value={fields.advancePerGroup}
-                    onChange={(e) => update('advancePerGroup', e.target.value)}
-                    disabled={lockFormat}
-                    className="select mt-2"
-                  >
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="4">4</option>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <FieldLabel>Grand finals</FieldLabel>
-              {GRAND_FINALS_OPTIONS.map((opt) => (
-                <label
-                  key={opt.value}
-                  className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition ${
-                    fields.grandFinalsModifier === opt.value
-                      ? 'border-brand-500/50 bg-brand-500/10'
-                      : 'border-slate-800 hover:border-slate-700'
-                  } ${lockFormat ? 'pointer-events-none opacity-60' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name={lockFormat ? undefined : 'grandFinalsModifier'}
-                    value={opt.value}
-                    checked={fields.grandFinalsModifier === opt.value}
-                    onChange={(e) => update('grandFinalsModifier', e.target.value)}
-                    disabled={lockFormat}
-                    className="mt-1 shrink-0"
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium text-slate-200">{opt.label}</span>
-                    <span className="mt-0.5 block text-xs text-slate-500">{opt.description}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
+        <TournamentFormatStages
+          format={fields.format}
+          groupStageEnabled={fields.groupStageEnabled}
+          onGroupStageEnabledChange={(enabled) => update('groupStageEnabled', enabled)}
+          groupSize={fields.groupSize}
+          onGroupSizeChange={(value) => update('groupSize', value)}
+          advancePerGroup={fields.advancePerGroup}
+          onAdvancePerGroupChange={(value) => update('advancePerGroup', value)}
+          grandFinalsModifier={fields.grandFinalsModifier}
+          onGrandFinalsModifierChange={(value) => update('grandFinalsModifier', value)}
+          deSplitLosersBracket={fields.deSplitLosersBracket}
+          onDeSplitLosersBracketChange={(enabled) => update('deSplitLosersBracket', enabled)}
+          deBreakTiesPlacement={fields.deBreakTiesPlacement}
+          onDeBreakTiesPlacementChange={(enabled) => update('deBreakTiesPlacement', enabled)}
+          swissScoring={{
+            swissPointsPerMatchWin: fields.swissPointsPerMatchWin,
+            swissPointsPerMatchTie: fields.swissPointsPerMatchTie,
+            swissPointsPerGameWin: fields.swissPointsPerGameWin,
+            swissPointsPerGameTie: fields.swissPointsPerGameTie,
+            swissPointsPerBye: fields.swissPointsPerBye,
+          }}
+          onSwissScoringChange={(key, value) => update(key, value)}
+          roundRobinRankBy={fields.roundRobinRankBy}
+          onRoundRobinRankByChange={(value) => update('roundRobinRankBy', value)}
+          lockFormat={lockFormat}
+          stageTypeControlled
+        />
       </FormSection>
 
       <FormSection
@@ -340,6 +289,8 @@ export function buildFieldsFromTournamentInitial(initial?: {
   format?: string;
   groupStageEnabled?: boolean;
   grandFinalsModifier?: string;
+  deSplitLosersBracket?: boolean;
+  deBreakTiesPlacement?: boolean;
   groupSize?: string;
   advancePerGroup?: string;
   entryFee?: string;
@@ -347,7 +298,8 @@ export function buildFieldsFromTournamentInitial(initial?: {
   playerCap?: string;
   isRanked?: boolean;
   gameType?: string;
-}): TournamentBuilderFields {
+  roundRobinRankBy?: RoundRobinRankBy;
+} & Partial<SwissScoringFormFields>): TournamentBuilderFields {
   return {
     name: initial?.name ?? '',
     description: initial?.description ?? '',
@@ -357,9 +309,17 @@ export function buildFieldsFromTournamentInitial(initial?: {
     groupSize: initial?.groupSize ?? '4',
     advancePerGroup: initial?.advancePerGroup ?? '2',
     grandFinalsModifier: initial?.grandFinalsModifier ?? 'default',
+    deSplitLosersBracket: initial?.deSplitLosersBracket ?? true,
+    deBreakTiesPlacement: initial?.deBreakTiesPlacement ?? true,
     entryFee: initial?.entryFee ?? '',
     prizePool: initial?.prizePool ?? '',
     playerCap: initial?.playerCap ?? '',
     isRanked: initial?.isRanked ?? true,
+    swissPointsPerMatchWin: initial?.swissPointsPerMatchWin ?? DEFAULT_SWISS_SCORING_FORM.swissPointsPerMatchWin,
+    swissPointsPerMatchTie: initial?.swissPointsPerMatchTie ?? DEFAULT_SWISS_SCORING_FORM.swissPointsPerMatchTie,
+    swissPointsPerGameWin: initial?.swissPointsPerGameWin ?? DEFAULT_SWISS_SCORING_FORM.swissPointsPerGameWin,
+    swissPointsPerGameTie: initial?.swissPointsPerGameTie ?? DEFAULT_SWISS_SCORING_FORM.swissPointsPerGameTie,
+    swissPointsPerBye: initial?.swissPointsPerBye ?? DEFAULT_SWISS_SCORING_FORM.swissPointsPerBye,
+    roundRobinRankBy: initial?.roundRobinRankBy ?? 'match_wins',
   };
 }

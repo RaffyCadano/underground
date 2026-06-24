@@ -6,7 +6,8 @@ import { CreateEventForm } from '@/app/components/create-event-form';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { canManageTournaments } from '@/lib/roles';
-import { eventsPermalinkHost, SITE_NAME } from '@/lib/site';
+import { eventsPermalinkHostFromRequest } from '@/lib/site-request';
+import { SITE_NAME } from '@/lib/site';
 import { isSupabaseStorageConfigured } from '@/lib/supabase-admin';
 
 export default async function CreateEventPage() {
@@ -21,6 +22,8 @@ export default async function CreateEventPage() {
 
   const imageUploadEnabled = isSupabaseStorageConfigured();
 
+  const permalinkPrefix = `${await eventsPermalinkHostFromRequest()}/events/`;
+
   return (
     <div className="w-full min-w-0">
       <Link
@@ -34,7 +37,7 @@ export default async function CreateEventPage() {
       <CreateEventForm
         hostUsername={user.username}
         defaultTimezone={user.timezone}
-        permalinkPrefix={`${eventsPermalinkHost()}/events/`}
+        permalinkPrefix={permalinkPrefix}
         imageUploadEnabled={imageUploadEnabled}
       />
     </div>

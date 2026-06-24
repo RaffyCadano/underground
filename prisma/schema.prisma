@@ -42,6 +42,12 @@ model User {
   organizerRequests       OrganizerRequest[]
   contactMessages         ContactMessage[]
   blockedUsers            BlockedUser[]           @relation("UserBlocks")
+  conversationsAsLow      Conversation[]          @relation("ConversationLow")
+  conversationsAsHigh     Conversation[]          @relation("ConversationHigh")
+  sentDirectMessages      DirectMessage[]
+  directMessageLikes      DirectMessageLike[]
+  directMessageHides      DirectMessageHide[]
+  conversationUserStates  ConversationUserState[]
   hostedTournaments       Tournament[]            @relation("TournamentCreator")
   hostedEvents            Event[]                 @relation("EventHost")
   tournamentTemplates     TournamentTemplate[]
@@ -71,6 +77,83 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model Conversation {
+  id                String          @id @default(cuid())
+  participantLow    User            @relation("ConversationLow", fields: [participantLowId], references: [id], onDelete: Cascade)
+  participantLowId  String
+  participantHigh   User            @relation("ConversationHigh", fields: [participantHighId], references: [id], onDelete: Cascade)
+  participantHighId String
+  messages          DirectMessage[]
+  userStates        ConversationUserState[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([participantLowId, participantHighId])
+  @@index([participantLowId, updatedAt(sort: Desc)])
+  @@index([participantHighId, updatedAt(sort: Desc)])
+}
+
+model DirectMessage {
+  id             String              @id @default(cuid())
+  conversation   Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  sender         User                @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId       String
+  body           String              @default("")
+  imageUrl       String?
+  editedAt       DateTime?
+  unsentAt       DateTime?
+  readAt         DateTime?
+  createdAt      DateTime            @default(now())
+  likes          DirectMessageLike[]
+  hiddenFor      DirectMessageHide[]
+
+  @@index([conversationId, createdAt])
+  @@index([conversationId, readAt])
+  @@index([senderId])
+}
+
+model DirectMessageLike {
+  id        String        @id @default(cuid())
+  message   DirectMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime      @default(now())
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+}
+
+model DirectMessageHide {
+  id        String        @id @default(cuid())
+  message   DirectMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime      @default(now())
+
+  @@unique([messageId, userId])
+  @@index([userId])
+}
+
+model ConversationUserState {
+  id             String       @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  archivedAt     DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([conversationId, userId])
+  @@index([userId, archivedAt])
+  @@index([userId, deletedAt])
 }
 
 model CommunityClub {
@@ -165,6 +248,7 @@ model Event {
 
 model Tournament {
   id                  String                  @id @default(cuid())
+  slug                String?                 @unique
   name                String
   description         String?
   date                DateTime
@@ -177,12 +261,20 @@ model Tournament {
   groupSize           Int                     @default(4)
   advancePerGroup     Int                     @default(2)
   grandFinalsModifier String                  @default("default")
+  deSplitLosersBracket Boolean                @default(true)
+  deBreakTiesPlacement Boolean                @default(true)
   phase               String?
   entryFee            String?
   prizePool           String?
   playerCap           Int?
   isRanked            Boolean                 @default(true)
   gameType            String                  @default("beyblade_x")
+  swissPointsPerMatchWin Float                @default(1)
+  swissPointsPerMatchTie Float                @default(0.5)
+  swissPointsPerGameWin  Float                @default(0)
+  swissPointsPerGameTie  Float                @default(0)
+  swissPointsPerBye      Float                @default(1)
+  roundRobinRankBy       String               @default("match_wins")
   createdBy           User?                   @relation("TournamentCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdById         String?
   participants        TournamentParticipant[]
@@ -201,11 +293,19 @@ model TournamentTemplate {
   groupSize           Int      @default(4)
   advancePerGroup     Int      @default(2)
   grandFinalsModifier String   @default("default")
+  deSplitLosersBracket Boolean @default(true)
+  deBreakTiesPlacement Boolean @default(true)
   entryFee            String?
   prizePool           String?
   playerCap           Int?
   isRanked            Boolean  @default(true)
   gameType            String   @default("beyblade_x")
+  swissPointsPerMatchWin Float @default(1)
+  swissPointsPerMatchTie Float @default(0.5)
+  swissPointsPerGameWin  Float @default(0)
+  swissPointsPerGameTie  Float @default(0)
+  swissPointsPerBye      Float @default(1)
+  roundRobinRankBy       String @default("match_wins")
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId              String
   createdAt           DateTime @default(now())

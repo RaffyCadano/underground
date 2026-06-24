@@ -64,3 +64,46 @@ export function parseGameType(value: string | null | undefined): GameType {
   if (value === 'beyblade_x_3on3' || value === 'beyblade_burst' || value === 'custom') return value;
   return 'beyblade_x';
 }
+
+export type RoundRobinRankBy = 'match_wins' | 'game_wins' | 'points_scored' | 'point_differential';
+
+export const ROUND_ROBIN_RANK_BY_OPTIONS: {
+  value: RoundRobinRankBy;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: 'match_wins',
+    label: 'Match wins',
+    description: 'Total matches won across the round robin.',
+  },
+  {
+    value: 'game_wins',
+    label: 'Game/set wins',
+    description: 'Sum of games or sets won in each match score.',
+  },
+  {
+    value: 'points_scored',
+    label: 'Points scored',
+    description: 'Total points scored across all match scores.',
+  },
+  {
+    value: 'point_differential',
+    label: 'Point differential',
+    description: 'Points scored minus points allowed.',
+  },
+];
+
+export function parseRoundRobinRankBy(value: string | null | undefined): RoundRobinRankBy {
+  if (value === 'game_wins' || value === 'points_scored' || value === 'point_differential') {
+    return value;
+  }
+  return 'match_wins';
+}
+
+export function roundRobinRankByLabel(value: string | null | undefined): string {
+  return (
+    ROUND_ROBIN_RANK_BY_OPTIONS.find((o) => o.value === parseRoundRobinRankBy(value))?.label ??
+    'Match wins'
+  );
+}

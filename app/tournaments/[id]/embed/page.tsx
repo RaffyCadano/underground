@@ -9,6 +9,8 @@ import { BracketSwiss } from '@/app/tournaments/[id]/bracket-swiss';
 import { TournamentDoubleElimTabs } from '@/app/tournaments/[id]/tournament-double-elim-tabs';
 import { buildPlayerNameMap } from '@/lib/tournament-participant';
 import { SITE_NAME } from '@/lib/site';
+import { swissScoringFromTournament } from '@/lib/swiss-scoring';
+import { parseRoundRobinRankBy } from '@/lib/tournament-options';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,8 +29,8 @@ export default async function TournamentEmbedPage({
   const { id } = await params;
   const showAds = await getViewerShowAds();
 
-  const tournament = await prisma.tournament.findUnique({
-    where: { id },
+  const tournament = await prisma.tournament.findFirst({
+    where: { OR: [{ id }, { slug: id }] },
     include: {
       participants: {
         orderBy: [{ seed: 'asc' }, { createdAt: 'asc' }],
@@ -107,6 +109,15 @@ export default async function TournamentEmbedPage({
             allMatches={displayMatches}
             isAdmin={false}
             userId={null}
+            scoring={
+              tournament.format === 'swiss' ? swissScoringFromTournament(tournament) : undefined
+            }
+            showSwissPoints={tournament.format === 'swiss'}
+            roundRobinRankBy={
+              tournament.format === 'round_robin'
+                ? parseRoundRobinRankBy(tournament.roundRobinRankBy)
+                : undefined
+            }
           />
         ) : tournament.format === 'double_elimination' ? (
           <TournamentDoubleElimTabs

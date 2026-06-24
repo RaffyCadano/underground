@@ -1,5 +1,11 @@
 import { CircleHelp } from 'lucide-react';
 import { parseGrandFinalsModifier } from '@/lib/tournament-options';
+import {
+  formatSwissScoringRule,
+  swissScoringFromTournament,
+  type SwissScoring,
+} from '@/lib/swiss-scoring';
+import { roundRobinRankByLabel } from '@/lib/tournament-options';
 
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: 'Single Elimination',
@@ -18,6 +24,8 @@ type Props = {
   grandFinalsModifier?: string;
   groupSize?: number;
   advancePerGroup?: number;
+  swissScoring?: SwissScoring;
+  roundRobinRankBy?: string | null;
 };
 
 function grandFinalRule(modifier: string): string {
@@ -38,6 +46,8 @@ function getFormatRules(
     advancePerGroup?: number;
     grandFinalsModifier?: string;
     groupSize?: number;
+    swissScoring?: SwissScoring;
+    roundRobinRankBy?: string | null;
   },
 ): string[] {
   switch (format) {
@@ -52,17 +62,22 @@ function getFormatRules(
       if (opts?.groupStageEnabled) {
         const adv = opts.advancePerGroup ?? 2;
         rules.unshift(
-          `Group stage: round robin in groups of ${opts.groupSize ?? 4}. Top ${adv} per group advance to double elimination playoffs.`,
+          `Group stage: round robin in groups of ${opts.groupSize ?? 4}. Top ${adv} per group advance to the final stage.`,
         );
       }
       return rules;
     }
     case 'swiss':
+      return [
+        'Each round pairs players with similar records.',
+        'You may face different opponents every round.',
+        formatSwissScoringRule(opts?.swissScoring ?? swissScoringFromTournament({})),
+        'Standings rank by total Swiss points, then wins, then rating.',
+      ];
     case 'round_robin':
       return [
-        'Each round pairs players with similar win records.',
-        'You may face different opponents every round.',
-        'Standings are based on total wins across all rounds.',
+        'Participants play each other once.',
+        `Standings rank by ${roundRobinRankByLabel(opts?.roundRobinRankBy ?? 'match_wins').toLowerCase()}.`,
       ];
     default:
       return [
@@ -87,7 +102,7 @@ function getSteps(
   },
 ): Step[] {
   const isDe = format === 'double_elimination';
-  const hasGroupStage = isDe && opts?.groupStageEnabled;
+  const hasGroupStage = Boolean(opts?.groupStageEnabled);
   const phase = opts?.phase;
   const generateLabel = hasGroupStage ? 'Start group stage' : 'Generate bracket';
 
@@ -222,9 +237,21 @@ export function TournamentFormatGuide({
   grandFinalsModifier = 'default',
   groupSize = 4,
   advancePerGroup = 2,
+  swissScoring,
+  roundRobinRankBy,
 }: Props) {
   const formatLabel = FORMAT_LABELS[format] ?? format;
-  const opts = { groupStageEnabled, phase, advancePerGroup, grandFinalsModifier, groupSize };
+  const resolvedSwissScoring =
+    format === 'swiss' ? (swissScoring ?? swissScoringFromTournament({})) : undefined;
+  const opts = {
+    groupStageEnabled,
+    phase,
+    advancePerGroup,
+    grandFinalsModifier,
+    groupSize,
+    swissScoring: resolvedSwissScoring,
+    roundRobinRankBy,
+  };
   const steps = getSteps(format, status, hasBracket, isAdmin, opts);
   const rules = getFormatRules(format, opts);
 

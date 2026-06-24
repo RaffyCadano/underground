@@ -24,9 +24,16 @@ import type { TournamentFormInitial } from '@/lib/tournament-form';
 import { TournamentDescriptionContent } from '@/app/components/tournament-description-content';
 import { TournamentDescriptionEditor } from '@/app/components/tournament-description-editor';
 import { generateTournamentDescription } from '@/lib/tournament-description';
-import { GAME_TYPE_OPTIONS, GRAND_FINALS_OPTIONS } from '@/lib/tournament-options';
+import { GAME_TYPE_OPTIONS, GRAND_FINALS_OPTIONS, parseRoundRobinRankBy, type RoundRobinRankBy } from '@/lib/tournament-options';
+import { TournamentFormatStages, TournamentStageTypeSelector, type TournamentStageType } from '@/app/components/tournament-format-stages';
 import { formatEventTime, formatScheduleLine } from '@/lib/tournament-schedule';
 import { formatUsdDisplay } from '@/lib/money';
+import {
+  DEFAULT_SWISS_SCORING_FORM,
+  type SwissScoringFormFields,
+} from '@/lib/swiss-scoring';
+import { TournamentUrlField } from '@/app/components/tournament-url-field';
+import { generateTournamentSlug } from '@/lib/tournament-slug';
 
 const FORMAT_OPTIONS = [
   {
@@ -388,6 +395,12 @@ function CreateTournamentConfirmModal({
                   <Trophy size={10} className="text-slate-500" />
                   {FORMAT_LABELS[format] ?? format}
                 </span>
+                {groupStageEnabled && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                    <Layers size={10} className="text-slate-500" />
+                    Two stage
+                  </span>
+                )}
                 <span className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-300">
                   <Gamepad2 size={10} className="text-slate-500" />
                   {GAME_TYPE_LABELS[gameType] ?? gameType}
@@ -404,12 +417,12 @@ function CreateTournamentConfirmModal({
                 </span>
               </div>
 
-              {format === 'double_elimination' && (groupStageEnabled || gfLabel) && (
+              {(groupStageEnabled || (format === 'double_elimination' && gfLabel)) && (
                 <ConfirmSummaryRow icon={Layers}>
                   {[
                     groupStageEnabled &&
                       `Groups of ${groupSize}, top ${advancePerGroup} advance`,
-                    gfLabel,
+                    format === 'double_elimination' && gfLabel,
                   ]
                     .filter(Boolean)
                     .join(' · ')}
@@ -489,12 +502,14 @@ export function CreateTournamentForm({
   initial,
   lockFormat = false,
   cancelHref = '/dashboard/tournaments',
+  permalinkPrefix,
 }: {
   imageUploadEnabled?: boolean;
   tournamentId?: string;
   initial?: TournamentFormInitial;
   lockFormat?: boolean;
   cancelHref?: string;
+  permalinkPrefix: string;
 }) {
   const isEdit = Boolean(tournamentId);
   const [state, action, pending] = useActionState(
@@ -505,6 +520,7 @@ export function CreateTournamentForm({
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [name, setName] = useState(initial?.name ?? '');
+  const [slug, setSlug] = useState(initial?.slug ?? generateTournamentSlug());
   const [date, setDate] = useState(initial?.date ?? '');
   const [checkInTime, setCheckInTime] = useState(initial?.checkInTime ?? '');
   const [eventStartTime, setEventStartTime] = useState(initial?.eventStartTime ?? '');
@@ -514,6 +530,12 @@ export function CreateTournamentForm({
   const [grandFinalsModifier, setGrandFinalsModifier] = useState(
     initial?.grandFinalsModifier ?? 'default',
   );
+  const [deSplitLosersBracket, setDeSplitLosersBracket] = useState(
+    initial?.deSplitLosersBracket ?? true,
+  );
+  const [deBreakTiesPlacement, setDeBreakTiesPlacement] = useState(
+    initial?.deBreakTiesPlacement ?? true,
+  );
   const [groupSize, setGroupSize] = useState(initial?.groupSize ?? '4');
   const [advancePerGroup, setAdvancePerGroup] = useState(initial?.advancePerGroup ?? '2');
   const [description, setDescription] = useState(initial?.description ?? '');
@@ -522,6 +544,30 @@ export function CreateTournamentForm({
   const [playerCap, setPlayerCap] = useState(initial?.playerCap ?? '');
   const [isRanked, setIsRanked] = useState(initial?.isRanked ?? true);
   const [gameType, setGameType] = useState(initial?.gameType ?? 'beyblade_x');
+  const [swissScoring, setSwissScoring] = useState<SwissScoringFormFields>({
+    swissPointsPerMatchWin: initial?.swissPointsPerMatchWin ?? DEFAULT_SWISS_SCORING_FORM.swissPointsPerMatchWin,
+    swissPointsPerMatchTie: initial?.swissPointsPerMatchTie ?? DEFAULT_SWISS_SCORING_FORM.swissPointsPerMatchTie,
+    swissPointsPerGameWin: initial?.swissPointsPerGameWin ?? DEFAULT_SWISS_SCORING_FORM.swissPointsPerGameWin,
+    swissPointsPerGameTie: initial?.swissPointsPerGameTie ?? DEFAULT_SWISS_SCORING_FORM.swissPointsPerGameTie,
+    swissPointsPerBye: initial?.swissPointsPerBye ?? DEFAULT_SWISS_SCORING_FORM.swissPointsPerBye,
+  });
+  const [roundRobinRankBy, setRoundRobinRankBy] = useState<RoundRobinRankBy>(
+    initial?.roundRobinRankBy ?? 'match_wins',
+  );
+
+  function handleSwissScoringChange(key: keyof SwissScoringFormFields, value: string) {
+    setSwissScoring((prev) => ({ ...prev, [key]: value }));
+  }
+
+  const stageType: TournamentStageType = groupStageEnabled ? 'two' : 'single';
+
+  function handleStageTypeChange(type: TournamentStageType) {
+    if (type === 'two') {
+      setGroupStageEnabled(true);
+    } else {
+      setGroupStageEnabled(false);
+    }
+  }
 
   useEffect(() => {
     if (isSubmitting && !pending && state?.error) {
@@ -585,6 +631,14 @@ export function CreateTournamentForm({
               className="input mt-2"
           />
         </div>
+
+        <TournamentUrlField
+          value={slug}
+          onChange={setSlug}
+          permalinkPrefix={permalinkPrefix}
+          excludeTournamentId={tournamentId}
+          lockSlug={lockFormat}
+        />
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
@@ -819,9 +873,26 @@ export function CreateTournamentForm({
               <input type="hidden" name="groupSize" value={groupSize} />
               <input type="hidden" name="advancePerGroup" value={advancePerGroup} />
               <input type="hidden" name="grandFinalsModifier" value={grandFinalsModifier} />
+              <input type="hidden" name="swissPointsPerMatchWin" value={swissScoring.swissPointsPerMatchWin} />
+              <input type="hidden" name="swissPointsPerMatchTie" value={swissScoring.swissPointsPerMatchTie} />
+              <input type="hidden" name="swissPointsPerGameWin" value={swissScoring.swissPointsPerGameWin} />
+              <input type="hidden" name="swissPointsPerGameTie" value={swissScoring.swissPointsPerGameTie} />
+              <input type="hidden" name="swissPointsPerBye" value={swissScoring.swissPointsPerBye} />
+              <input type="hidden" name="roundRobinRankBy" value={roundRobinRankBy} />
+              <input type="hidden" name="deSplitLosersBracket" value={deSplitLosersBracket ? 'on' : ''} />
+              <input type="hidden" name="deBreakTiesPlacement" value={deBreakTiesPlacement ? 'on' : ''} />
             </>
           )}
-          <div className={`grid min-w-0 gap-2 md:grid-cols-2 ${lockFormat ? 'pointer-events-none opacity-60' : ''}`}>
+
+          <TournamentStageTypeSelector
+            value={stageType}
+            onChange={handleStageTypeChange}
+            lockFormat={lockFormat}
+          />
+
+          <div className="mt-4">
+            <FieldLabel>{stageType === 'two' ? 'Final stage format' : 'Bracket format'}</FieldLabel>
+          <div className={`mt-2 grid min-w-0 gap-2 md:grid-cols-2 ${lockFormat ? 'pointer-events-none opacity-60' : ''}`}>
             {FORMAT_OPTIONS.map(({ value, label, description: desc, icon: Icon }) => {
               const selected = format === value;
               return (
@@ -840,7 +911,10 @@ export function CreateTournamentForm({
                     name={lockFormat ? undefined : 'format'}
                     value={value}
                     checked={selected}
-                    onChange={(e) => !lockFormat && setFormat(e.target.value)}
+                    onChange={(e) => {
+                      if (lockFormat) return;
+                      setFormat(e.target.value);
+                    }}
                     disabled={lockFormat}
                     className="sr-only"
                   />
@@ -861,104 +935,29 @@ export function CreateTournamentForm({
               );
             })}
         </div>
+          </div>
 
-          {format === 'double_elimination' && (
-            <div
-              className={`space-y-4 rounded-xl border border-slate-800 bg-slate-950/50 p-4 ${
-                lockFormat ? 'pointer-events-none opacity-60' : ''
-              }`}
-            >
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Double elimination options
-              </p>
-
-              <label className={`flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-900/40 p-3 transition ${lockFormat ? '' : 'cursor-pointer hover:border-slate-700'}`}>
-                <input
-                  type="checkbox"
-                  name={lockFormat ? undefined : 'groupStageEnabled'}
-                  checked={groupStageEnabled}
-                  onChange={(e) => setGroupStageEnabled(e.target.checked)}
-                  disabled={lockFormat}
-                  className="mt-0.5 rounded border-slate-600"
-                />
-                <span>
-                  <span className="block text-sm font-medium text-slate-200">
-                    Two-stage: Group stage → playoffs
-                  </span>
-                  <span className="mt-0.5 block text-xs text-slate-500">
-                    Round robin groups first, then top players advance to double elimination.
-                  </span>
-                </span>
-              </label>
-
-              {groupStageEnabled && (
-                <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-                    <FieldLabel htmlFor="groupSize">Group size</FieldLabel>
-          <select
-                      id="groupSize"
-                      name={lockFormat ? undefined : 'groupSize'}
-                      value={groupSize}
-                      onChange={(e) => setGroupSize(e.target.value)}
-                      disabled={lockFormat}
-                      className="select mt-2"
-                    >
-                      <option value="3">3</option>
-                      <option value="4">4</option>
-                      <option value="5">5</option>
-                      <option value="6">6</option>
-          </select>
-        </div>
-        <div>
-                    <FieldLabel htmlFor="advancePerGroup">Advance per group</FieldLabel>
-                    <select
-                      id="advancePerGroup"
-                      name={lockFormat ? undefined : 'advancePerGroup'}
-                      value={advancePerGroup}
-                      onChange={(e) => setAdvancePerGroup(e.target.value)}
-                      disabled={lockFormat}
-                      className="select mt-2"
-                    >
-                      <option value="1">1</option>
-                      <option value="2">2</option>
-                      <option value="4">4</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <FieldLabel>Grand finals</FieldLabel>
-                {GRAND_FINALS_OPTIONS.map((opt) => {
-                  const selected = grandFinalsModifier === opt.value;
-                  return (
-                    <label
-                      key={opt.value}
-                      className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition ${
-                        selected
-                          ? 'border-brand-500/50 bg-brand-500/10'
-                          : 'border-slate-800 hover:border-slate-700'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name={lockFormat ? undefined : 'grandFinalsModifier'}
-                        value={opt.value}
-                        checked={selected}
-                        onChange={(e) => setGrandFinalsModifier(e.target.value)}
-                        disabled={lockFormat}
-                        className="mt-1 shrink-0"
-                      />
-                      <span className="min-w-0">
-                        <span className="block text-sm font-medium text-slate-200">{opt.label}</span>
-                        <span className="mt-0.5 block text-xs text-slate-500">{opt.description}</span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          <TournamentFormatStages
+            format={format}
+            groupStageEnabled={groupStageEnabled}
+            onGroupStageEnabledChange={setGroupStageEnabled}
+            groupSize={groupSize}
+            onGroupSizeChange={setGroupSize}
+            advancePerGroup={advancePerGroup}
+            onAdvancePerGroupChange={setAdvancePerGroup}
+            grandFinalsModifier={grandFinalsModifier}
+            onGrandFinalsModifierChange={setGrandFinalsModifier}
+            deSplitLosersBracket={deSplitLosersBracket}
+            onDeSplitLosersBracketChange={setDeSplitLosersBracket}
+            deBreakTiesPlacement={deBreakTiesPlacement}
+            onDeBreakTiesPlacementChange={setDeBreakTiesPlacement}
+            swissScoring={swissScoring}
+            onSwissScoringChange={handleSwissScoringChange}
+            roundRobinRankBy={roundRobinRankBy}
+            onRoundRobinRankByChange={setRoundRobinRankBy}
+            lockFormat={lockFormat}
+            stageTypeControlled
+          />
         </FormSection>
 
         <FormSection

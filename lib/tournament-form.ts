@@ -1,4 +1,10 @@
+import type { SwissScoringFormFields } from '@/lib/swiss-scoring';
+import { swissScoringToFormFields, swissScoringFromTournament } from '@/lib/swiss-scoring';
+import { parseRoundRobinRankBy, type RoundRobinRankBy } from '@/lib/tournament-options';
+import { generateTournamentSlug } from '@/lib/tournament-slug';
+
 export type TournamentFormInitial = {
+  slug: string;
   name: string;
   description: string;
   date: string;
@@ -8,6 +14,8 @@ export type TournamentFormInitial = {
   format: string;
   groupStageEnabled: boolean;
   grandFinalsModifier: string;
+  deSplitLosersBracket: boolean;
+  deBreakTiesPlacement: boolean;
   groupSize: string;
   advancePerGroup: string;
   entryFee: string;
@@ -15,7 +23,8 @@ export type TournamentFormInitial = {
   playerCap: string;
   isRanked: boolean;
   gameType: string;
-};
+  roundRobinRankBy: RoundRobinRankBy;
+} & SwissScoringFormFields;
 
 export function toDateInputValue(date: Date): string {
   const offset = date.getTimezoneOffset();
@@ -40,8 +49,19 @@ export function tournamentToFormInitial(tournament: {
   playerCap: number | null;
   isRanked: boolean;
   gameType: string;
+  swissPointsPerMatchWin?: number | null;
+  swissPointsPerMatchTie?: number | null;
+  swissPointsPerGameWin?: number | null;
+  swissPointsPerGameTie?: number | null;
+  swissPointsPerBye?: number | null;
+  roundRobinRankBy?: string | null;
+  slug?: string | null;
+  deSplitLosersBracket?: boolean | null;
+  deBreakTiesPlacement?: boolean | null;
 }): TournamentFormInitial {
+  const swissFields = swissScoringToFormFields(swissScoringFromTournament(tournament));
   return {
+    slug: tournament.slug ?? generateTournamentSlug(),
     name: tournament.name,
     description: tournament.description ?? '',
     date: toDateInputValue(tournament.date),
@@ -51,6 +71,8 @@ export function tournamentToFormInitial(tournament: {
     format: tournament.format,
     groupStageEnabled: tournament.groupStageEnabled,
     grandFinalsModifier: tournament.grandFinalsModifier,
+    deSplitLosersBracket: tournament.deSplitLosersBracket ?? true,
+    deBreakTiesPlacement: tournament.deBreakTiesPlacement ?? true,
     groupSize: String(tournament.groupSize),
     advancePerGroup: String(tournament.advancePerGroup),
     entryFee: tournament.entryFee ?? '',
@@ -58,5 +80,7 @@ export function tournamentToFormInitial(tournament: {
     playerCap: tournament.playerCap != null ? String(tournament.playerCap) : '',
     isRanked: tournament.isRanked,
     gameType: tournament.gameType,
+    roundRobinRankBy: parseRoundRobinRankBy(tournament.roundRobinRankBy),
+    ...swissFields,
   };
 }

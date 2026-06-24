@@ -13,6 +13,7 @@ import {
 import { ListSearch } from '@/app/components/list-search';
 import { Pagination } from '@/app/components/pagination';
 import { PlayerAvatar } from '@/app/components/player-avatar';
+import { ScrollReveal } from '@/app/components/scroll-reveal';
 import { prisma } from '@/lib/prisma';
 import { parsePageParam, PLAYERS_PAGE_SIZE, totalPages } from '@/lib/pagination';
 import { rankedPlayerOrderBy, rankedPlayerSelect, rankedPlayerWhere } from '@/lib/rankings';
@@ -248,7 +249,7 @@ export default async function PlayersPage({
       <section className="relative border-b border-slate-800 py-0">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(34,197,94,0.1),transparent)]" />
         <div className="container relative py-8 sm:py-12 lg:py-16">
-          <div className="max-w-2xl space-y-3 sm:space-y-4">
+          <ScrollReveal className="max-w-2xl space-y-3 sm:space-y-4">
             <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
               <User size={12} />
               UGNCBBX roster
@@ -257,10 +258,10 @@ export default async function PlayersPage({
             <p className="text-sm leading-relaxed text-slate-400 sm:text-base md:text-lg">
               Browse blader profiles, tournament history, and circuit stats across the UGNCBBX community.
             </p>
-          </div>
+          </ScrollReveal>
 
           <div className="mt-8 grid grid-cols-2 gap-3 sm:mt-10 sm:gap-4 lg:grid-cols-4">
-            {stats.map(({ label, shortLabel, value, icon: Icon, href }) => {
+            {stats.map(({ label, shortLabel, value, icon: Icon, href }, index) => {
               const inner = (
                 <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2.5 transition hover:border-slate-700 sm:gap-3 sm:px-4 sm:py-3">
                   <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-brand-400 sm:h-9 sm:w-9">
@@ -276,14 +277,16 @@ export default async function PlayersPage({
                   </div>
                 </div>
               );
-              return href ? (
-                <Link key={label} href={href} className="group block min-w-0">
-                  {inner}
-                </Link>
-              ) : (
-                <div key={label} className="min-w-0">
-                  {inner}
-                </div>
+              return (
+                <ScrollReveal key={label} delay={120 + index * 70} direction="scale">
+                  {href ? (
+                    <Link href={href} className="group block min-w-0">
+                      {inner}
+                    </Link>
+                  ) : (
+                    <div className="min-w-0">{inner}</div>
+                  )}
+                </ScrollReveal>
               );
             })}
           </div>
@@ -291,7 +294,7 @@ export default async function PlayersPage({
       </section>
 
       <section className="container py-8 sm:py-12 lg:py-16">
-        <div className="mb-6 flex flex-col gap-4 sm:mb-8 lg:flex-row lg:items-end lg:justify-between">
+        <ScrollReveal className="mb-6 flex flex-col gap-4 sm:mb-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Directory</p>
             <h2 className="mt-1 text-xl font-semibold text-white sm:text-2xl">
@@ -301,10 +304,11 @@ export default async function PlayersPage({
           <div className="w-full lg:max-w-md lg:shrink-0">
             <ListSearch action="/players" query={query} placeholder="Search by username…" />
           </div>
-        </div>
+        </ScrollReveal>
 
         {globalTotal === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 px-5 py-12 text-center sm:px-8 sm:py-16">
+          <ScrollReveal direction="scale">
+            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 px-5 py-12 text-center sm:px-8 sm:py-16">
             <Users size={36} className="mx-auto text-slate-600" />
             <h2 className="mt-4 text-lg font-semibold text-white sm:text-xl">No players registered yet</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
@@ -317,9 +321,11 @@ export default async function PlayersPage({
               Create account
               <ArrowRight size={16} />
             </Link>
-          </div>
+            </div>
+          </ScrollReveal>
         ) : filteredTotal === 0 ? (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-5 py-10 text-center sm:px-8 sm:py-14">
+          <ScrollReveal direction="scale">
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-5 py-10 text-center sm:px-8 sm:py-14">
             <p className="text-base font-semibold text-white sm:text-lg">
               No players match &ldquo;{query}&rdquo;
             </p>
@@ -327,12 +333,13 @@ export default async function PlayersPage({
             <Link href="/players" className="btn-secondary mt-6 inline-flex w-full sm:w-auto">
               Clear search
             </Link>
-          </div>
+            </div>
+          </ScrollReveal>
         ) : (
           <div className="space-y-8 sm:space-y-10">
             {showSpotlight && topThree.length > 0 && (
               <div>
-                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+                <ScrollReveal className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Featured</p>
                     <h3 className="mt-1 text-lg font-semibold text-white sm:text-xl">Top-ranked bladers</h3>
@@ -343,12 +350,14 @@ export default async function PlayersPage({
                   >
                     Full leaderboard
                   </Link>
-                </div>
+                </ScrollReveal>
 
                 {/* Mobile: rank order */}
                 <div className="grid gap-3 sm:hidden">
                   {topThree.map((p, i) => (
-                    <SpotlightCard key={p.id} player={p} rank={i + 1} highlight={i === 0} />
+                    <ScrollReveal key={p.id} delay={i * 90} direction="scale">
+                      <SpotlightCard player={p} rank={i + 1} highlight={i === 0} />
+                    </ScrollReveal>
                   ))}
                 </div>
 
@@ -364,13 +373,21 @@ export default async function PlayersPage({
                 >
                   {topThree.length === 3 ? (
                     <>
-                      <SpotlightCard player={topThree[1]} rank={2} />
-                      <SpotlightCard player={topThree[0]} rank={1} highlight />
-                      <SpotlightCard player={topThree[2]} rank={3} />
+                      <ScrollReveal delay={120} direction="scale">
+                        <SpotlightCard player={topThree[1]} rank={2} />
+                      </ScrollReveal>
+                      <ScrollReveal delay={0} direction="scale">
+                        <SpotlightCard player={topThree[0]} rank={1} highlight />
+                      </ScrollReveal>
+                      <ScrollReveal delay={120} direction="scale">
+                        <SpotlightCard player={topThree[2]} rank={3} />
+                      </ScrollReveal>
                     </>
                   ) : (
                     topThree.map((p, i) => (
-                      <SpotlightCard key={p.id} player={p} rank={i + 1} highlight={i === 0} />
+                      <ScrollReveal key={p.id} delay={i * 90} direction="scale">
+                        <SpotlightCard player={p} rank={i + 1} highlight={i === 0} />
+                      </ScrollReveal>
                     ))
                   )}
                 </div>
@@ -378,65 +395,71 @@ export default async function PlayersPage({
             )}
 
             {isSearching && (
-              <p className="text-sm text-slate-400">
-                {filteredTotal.toLocaleString()} {filteredTotal === 1 ? 'player' : 'players'} found for &ldquo;
-                {query}&rdquo;
-              </p>
+              <ScrollReveal>
+                <p className="text-sm text-slate-400">
+                  {filteredTotal.toLocaleString()} {filteredTotal === 1 ? 'player' : 'players'} found for &ldquo;
+                  {query}&rdquo;
+                </p>
+              </ScrollReveal>
             )}
 
-            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
-              <div className="divide-y divide-slate-800 md:hidden">
-                {players.map((p, i) => (
-                  <PlayerMobileCard key={p.id} player={p} rank={skip + i + 1} />
-                ))}
-              </div>
+            <ScrollReveal delay={80}>
+              <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
+                <div className="divide-y divide-slate-800 md:hidden">
+                  {players.map((p, i) => (
+                    <ScrollReveal key={p.id} delay={i * 60}>
+                      <PlayerMobileCard player={p} rank={skip + i + 1} />
+                    </ScrollReveal>
+                  ))}
+                </div>
 
-              <div className="hidden overflow-x-auto md:block">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-slate-800 bg-slate-900/80 text-slate-500">
-                    <tr>
-                      <th className="px-4 py-4 text-xs font-semibold uppercase tracking-wider sm:px-6">
-                        Rank
-                      </th>
-                      <th className="px-4 py-4 text-xs font-semibold uppercase tracking-wider sm:px-6">
-                        Player
-                      </th>
-                      <th className="px-4 py-4 text-xs font-semibold uppercase tracking-wider sm:px-6">
-                        Points
-                      </th>
-                      <th className="px-4 py-4 text-xs font-semibold uppercase tracking-wider sm:px-6">
-                        Record
-                      </th>
-                      <th className="px-4 py-4 text-xs font-semibold uppercase tracking-wider sm:px-6">
-                        Win rate
-                      </th>
-                      <th className="px-4 py-4 text-right text-xs font-semibold uppercase tracking-wider sm:px-6">
-                        Profile
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {players.map((p, i) => (
-                      <PlayerTableRow key={p.id} player={p} rank={skip + i + 1} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="border-b border-slate-800 bg-slate-900/80 text-slate-500">
+                      <tr>
+                        <th className="px-4 py-4 text-xs font-semibold uppercase tracking-wider sm:px-6">
+                          Rank
+                        </th>
+                        <th className="px-4 py-4 text-xs font-semibold uppercase tracking-wider sm:px-6">
+                          Player
+                        </th>
+                        <th className="px-4 py-4 text-xs font-semibold uppercase tracking-wider sm:px-6">
+                          Points
+                        </th>
+                        <th className="px-4 py-4 text-xs font-semibold uppercase tracking-wider sm:px-6">
+                          Record
+                        </th>
+                        <th className="px-4 py-4 text-xs font-semibold uppercase tracking-wider sm:px-6">
+                          Win rate
+                        </th>
+                        <th className="px-4 py-4 text-right text-xs font-semibold uppercase tracking-wider sm:px-6">
+                          Profile
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {players.map((p, i) => (
+                        <PlayerTableRow key={p.id} player={p} rank={skip + i + 1} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-              <Pagination
-                page={page}
-                totalPages={pages}
-                totalItems={filteredTotal}
-                pageSize={PLAYERS_PAGE_SIZE}
-                pathname="/players"
-                query={query}
-              />
-            </div>
+                <Pagination
+                  page={page}
+                  totalPages={pages}
+                  totalItems={filteredTotal}
+                  pageSize={PLAYERS_PAGE_SIZE}
+                  pathname="/players"
+                  query={query}
+                />
+              </div>
+            </ScrollReveal>
           </div>
         )}
 
         {globalTotal > 0 && (
-          <div className="relative mt-10 overflow-hidden rounded-2xl border border-brand-500/20 bg-slate-900 px-5 py-8 sm:mt-14 sm:px-10 sm:py-10">
+          <ScrollReveal className="relative mt-10 overflow-hidden rounded-2xl border border-brand-500/20 bg-slate-900 px-5 py-8 sm:mt-14 sm:px-10 sm:py-10" direction="scale" delay={120}>
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(34,197,94,0.08),transparent_70%)]" />
             <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -463,7 +486,7 @@ export default async function PlayersPage({
                 </Link>
               </div>
             </div>
-          </div>
+          </ScrollReveal>
         )}
       </section>
     </div>

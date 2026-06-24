@@ -8,6 +8,9 @@ import { canManageTournament } from '@/lib/tournament-host';
 import { CreateTournamentForm } from '@/app/admin/create-tournament-form';
 import { isSupabaseStorageConfigured } from '@/lib/supabase-admin';
 import { tournamentToFormInitial } from '@/lib/tournament-form';
+import { tournamentsPermalinkHostFromRequest } from '@/lib/site-request';
+import { tournamentsPermalinkPrefix } from '@/lib/tournament-slug';
+import { tournamentPublicPath } from '@/lib/tournament-lookup';
 
 export default async function EditTournamentPage({
   params,
@@ -17,8 +20,8 @@ export default async function EditTournamentPage({
   const { id } = await params;
   const session = await getServerSession(authOptions);
 
-  const tournament = await prisma.tournament.findUnique({
-    where: { id },
+  const tournament = await prisma.tournament.findFirst({
+    where: { OR: [{ id }, { slug: id }] },
     include: { _count: { select: { matches: true } } },
   });
 
@@ -33,10 +36,13 @@ export default async function EditTournamentPage({
   const imageUploadEnabled = isSupabaseStorageConfigured();
   const lockFormat = tournament._count.matches > 0;
 
+  const permalinkPrefix = tournamentsPermalinkPrefix(await tournamentsPermalinkHostFromRequest());
+  const publicPath = tournamentPublicPath(tournament);
+
   return (
     <div className="w-full min-w-0">
       <Link
-        href={`/tournaments/${id}`}
+        href={publicPath}
         className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-brand-300"
       >
         <ArrowLeft size={16} />
@@ -53,11 +59,12 @@ export default async function EditTournamentPage({
       </div>
 
       <CreateTournamentForm
-        tournamentId={id}
+        tournamentId={tournament.id}
         initial={tournamentToFormInitial(tournament)}
         lockFormat={lockFormat}
-        cancelHref={`/tournaments/${id}`}
+        cancelHref={publicPath}
         imageUploadEnabled={imageUploadEnabled}
+        permalinkPrefix={permalinkPrefix}
       />
     </div>
   );

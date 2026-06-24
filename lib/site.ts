@@ -13,11 +13,28 @@ export const TEAMS_COVER_SRC = '/teams-cover.png';
 
 export const ORGANIZER_COVER_SRC = '/tournaments-cover.png';
 
-export function eventsPermalinkHost() {
-  const url = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+function hostFromConfiguredUrl(raw: string | undefined): string | null {
+  if (!raw) return null;
   try {
-    return new URL(url).host;
+    return new URL(raw).host;
   } catch {
-    return 'localhost:3000';
+    return null;
   }
+}
+
+/** Host from env vars — use on the client or when request headers are unavailable. */
+export function publicSiteHostFromEnv(): string {
+  return (
+    hostFromConfiguredUrl(process.env.NEXT_PUBLIC_SITE_URL) ??
+    hostFromConfiguredUrl(process.env.NEXTAUTH_URL) ??
+    'localhost:3000'
+  );
+}
+
+export function eventsPermalinkHost() {
+  return publicSiteHostFromEnv();
+}
+
+export function tournamentsPermalinkHost() {
+  return publicSiteHostFromEnv();
 }

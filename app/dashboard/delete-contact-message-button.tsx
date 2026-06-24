@@ -7,9 +7,13 @@ import { deleteContactMessage } from '@/app/actions/contact';
 export function DeleteContactMessageButton({
   messageId,
   subject,
+  variant = 'button',
+  onAction,
 }: {
   messageId: string;
   subject: string;
+  variant?: 'button' | 'menuItem';
+  onAction?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -44,18 +48,35 @@ export function DeleteContactMessageButton({
     });
   }
 
+  function openModal() {
+    onAction?.();
+    setOpen(true);
+  }
+
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        disabled={isPending}
-        title={`Delete “${subject}”`}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:border-red-400/50 hover:bg-red-500/20 disabled:opacity-60"
-      >
-        <Trash2 size={14} />
-        Delete
-      </button>
+      {variant === 'menuItem' ? (
+        <button
+          type="button"
+          onClick={openModal}
+          disabled={isPending}
+          className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-red-400 transition hover:bg-slate-900 disabled:opacity-60"
+        >
+          <Trash2 size={14} />
+          Delete
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={openModal}
+          disabled={isPending}
+          title={`Delete “${subject}”`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:border-red-400/50 hover:bg-red-500/20 disabled:opacity-60"
+        >
+          <Trash2 size={14} />
+          Delete
+        </button>
+      )}
 
       {open && (
         <div

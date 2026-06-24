@@ -21,6 +21,17 @@ export type SwissMatch = {
 };
 
 import { participantDisplayName } from '@/lib/tournament-participant';
+import {
+  computeSwissPlayerStats,
+  formatSwissPoint,
+  type SwissScoring,
+} from '@/lib/swiss-scoring';
+import {
+  computeRoundRobinPlayerStats,
+  compareRoundRobinStandings,
+  roundRobinRankValue,
+} from '@/lib/round-robin-ranking';
+import type { RoundRobinRankBy } from '@/lib/tournament-options';
 
 type Participant = {
   userId: string;
@@ -34,9 +45,21 @@ interface BracketSwissProps {
   allMatches: SwissMatch[];
   isAdmin: boolean;
   userId: string | null;
+  scoring?: SwissScoring;
+  showSwissPoints?: boolean;
+  roundRobinRankBy?: RoundRobinRankBy;
 }
 
-export function BracketSwiss({ rounds, participants, allMatches, isAdmin, userId }: BracketSwissProps) {
+export function BracketSwiss({
+  rounds,
+  participants,
+  allMatches,
+  isAdmin,
+  userId,
+  scoring,
+  showSwissPoints = false,
+  roundRobinRankBy,
+}: BracketSwissProps) {
   const [tab, setTab] = useState<'standings' | 'rounds'>('standings');
   const [modalMatch, setModalMatch] = useState<SwissMatch | null>(null);
   const [modalMode, setModalMode] = useState<'report' | 'edit'>('report');
@@ -96,29 +119,77 @@ export function BracketSwiss({ rounds, participants, allMatches, isAdmin, userId
   }
 
   const stats = new Map(
-    participants.map((p) => [
-      p.userId,
-      {
-        username: participantDisplayName(p),
-        rankPoints: p.user.rankPoints,
-        wins: 0,
-        losses: 0,
-      },
-    ]),
+    participants.map((p) => {
+      if (scoring) {
+        const playerStats = computeSwissPlayerStats(p.userId, allMatches, scoring);
+        return [
+          p.userId,
+          {
+            username: participantDisplayName(p),
+            rankPoints: p.user.rankPoints,
+            wins: playerStats.wins,
+            losses: playerStats.losses,
+            points: playerStats.points,
+            rankValue: playerStats.points,
+            pointDifferential: 0,
+          },
+        ];
+      }
+
+      if (roundRobinRankBy) {
+        const rr = computeRoundRobinPlayerStats(p.userId, allMatches);
+        const rankValue = roundRobinRankValue(rr, roundRobinRankBy);
+        return [
+          p.userId,
+          {
+            username: participantDisplayName(p),
+            rankPoints: p.user.rankPoints,
+            ...rr,
+            points: rankValue,
+            rankValue,
+          },
+        ];
+      }
+
+      return [
+        p.userId,
+        {
+          username: participantDisplayName(p),
+          rankPoints: p.user.rankPoints,
+          wins: 0,
+          losses: 0,
+          points: 0,
+          rankValue: 0,
+          pointDifferential: 0,
+        },
+      ];
+    }),
   );
 
-  for (const m of allMatches) {
-    if (m.status !== 'complete' || !m.winnerId) continue;
-    const loserId = m.player1Id === m.winnerId ? m.player2Id : m.player1Id;
-    const w = stats.get(m.winnerId);
-    const l = loserId ? stats.get(loserId) : null;
-    if (w) w.wins++;
-    if (l) l.losses++;
+  if (!scoring && !roundRobinRankBy) {
+    for (const m of allMatches) {
+      if (m.status !== 'complete' || !m.winnerId) continue;
+      const loserId = m.player1Id === m.winnerId ? m.player2Id : m.player1Id;
+      const w = stats.get(m.winnerId);
+      const l = loserId ? stats.get(loserId) : null;
+      if (w) w.wins++;
+      if (l) l.losses++;
+    }
   }
 
-  const standings = [...stats.values()].sort(
-    (a, b) => b.wins - a.wins || b.rankPoints - a.rankPoints,
-  );
+  const standings = [...stats.values()].sort((a, b) => {
+    if (showSwissPoints && scoring) {
+      return b.points - a.points || b.wins - a.wins || b.rankPoints - a.rankPoints;
+    }
+    if (roundRobinRankBy) {
+      return compareRoundRobinStandings(
+        { ...a, rankValue: a.rankValue },
+        { ...b, rankValue: b.rankValue },
+        roundRobinRankBy,
+      );
+    }
+    return b.wins - a.wins || b.rankPoints - a.rankPoints;
+  });
 
   return (
     <div>
@@ -147,6 +218,11 @@ export function BracketSwiss({ rounds, participants, allMatches, isAdmin, userId
                 <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Player</th>
                 <th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">W</th>
                 <th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">L</th>
+                {showSwissPoints && (
+                  <th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Pts
+                  </th>
+                )}
                 <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">Rating</th>
               </tr>
             </thead>
@@ -157,6 +233,11 @@ export function BracketSwiss({ rounds, participants, allMatches, isAdmin, userId
                   <td className="px-4 py-2.5 font-semibold text-white">{s.username}</td>
                   <td className="px-4 py-2.5 text-center font-bold tabular-nums text-emerald-400">{s.wins}</td>
                   <td className="px-4 py-2.5 text-center tabular-nums text-slate-400">{s.losses}</td>
+                  {showSwissPoints && (
+                    <td className="px-4 py-2.5 text-center font-bold tabular-nums text-brand-300">
+                      {formatSwissPoint(s.points)}
+                    </td>
+                  )}
                   <td className="px-4 py-2.5 text-right tabular-nums text-slate-400">{s.rankPoints}</td>
                 </tr>
               ))}

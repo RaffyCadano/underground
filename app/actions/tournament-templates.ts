@@ -5,7 +5,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { canManageTournaments } from '@/lib/roles';
-import { parseGameType } from '@/lib/tournament-options';
+import { parseGameType, parseRoundRobinRankBy } from '@/lib/tournament-options';
+import { parseSwissScoringFromForm, swissScoringToPrismaData } from '@/lib/swiss-scoring';
 import { redirect } from 'next/navigation';
 
 function parseTemplateFormData(formData: FormData) {
@@ -16,12 +17,16 @@ function parseTemplateFormData(formData: FormData) {
   const groupSize = parseInt(formData.get('groupSize') as string, 10) || 4;
   const advancePerGroup = parseInt(formData.get('advancePerGroup') as string, 10) || 2;
   const grandFinalsModifier = (formData.get('grandFinalsModifier') as string) || 'default';
+  const deSplitLosersBracket = formData.get('deSplitLosersBracket') === 'on';
+  const deBreakTiesPlacement = formData.get('deBreakTiesPlacement') === 'on';
   const entryFee = (formData.get('entryFee') as string)?.trim() || null;
   const prizePool = (formData.get('prizePool') as string)?.trim() || null;
   const playerCapRaw = (formData.get('playerCap') as string)?.trim();
   const playerCap = playerCapRaw ? Math.max(1, parseInt(playerCapRaw, 10) || 0) : null;
   const isRanked = formData.get('isRanked') !== 'false';
   const gameType = parseGameType(formData.get('gameType') as string);
+  const swissScoring = parseSwissScoringFromForm(formData);
+  const roundRobinRankBy = parseRoundRobinRankBy(formData.get('roundRobinRankBy') as string);
 
   if (!name) return { error: 'Template name is required.' as const };
 
@@ -29,15 +34,22 @@ function parseTemplateFormData(formData: FormData) {
     name,
     description,
     format,
-    groupStageEnabled: format === 'double_elimination' && groupStageEnabled,
+    groupStageEnabled,
     groupSize: Math.max(2, groupSize),
     advancePerGroup: Math.max(1, advancePerGroup),
     grandFinalsModifier: format === 'double_elimination' ? grandFinalsModifier : 'default',
+    deSplitLosersBracket: format === 'double_elimination' ? deSplitLosersBracket : true,
+    deBreakTiesPlacement:
+      format === 'single_elimination' || format === 'double_elimination'
+        ? deBreakTiesPlacement
+        : true,
     entryFee,
     prizePool,
     playerCap,
     isRanked,
     gameType,
+    roundRobinRankBy: format === 'round_robin' ? roundRobinRankBy : 'match_wins',
+    ...swissScoringToPrismaData(swissScoring),
   };
 }
 

@@ -10,6 +10,7 @@ import { BracketTree } from './bracket-tree';
 import { BracketSwiss } from './bracket-swiss';
 import { BracketShareActions } from './bracket-share-actions';
 import { TournamentDoubleElimTabs } from './tournament-double-elim-tabs';
+import { TournamentStagedTabs } from './tournament-staged-tabs';
 import { TournamentFormatGuide } from './tournament-format-guide';
 import { isGroupStageComplete } from '@/lib/group-stage';
 import { GAME_TYPE_LABELS } from '@/lib/tournament-options';
@@ -23,6 +24,8 @@ import { TournamentDescriptionContent } from '@/app/components/tournament-descri
 import { TournamentHero } from './tournament-hero';
 import { TournamentCreatedToast } from './tournament-created-toast';
 import { TournamentUpdatedToast } from './tournament-updated-toast';
+import { swissScoringFromTournament } from '@/lib/swiss-scoring';
+import { parseRoundRobinRankBy } from '@/lib/tournament-options';
 import { formatUsdDisplay } from '@/lib/money';
 import { buildPlayerNameMap } from '@/lib/tournament-participant';
 
@@ -43,8 +46,8 @@ export default async function TournamentDetail({
   const { id } = await params;
   const session = await getServerSession(authOptions);
 
-  const tournament = await prisma.tournament.findUnique({
-    where: { id },
+  const tournament = await prisma.tournament.findFirst({
+    where: { OR: [{ id }, { slug: id }] },
     include: {
       createdBy: { select: { username: true } },
       participants: {
@@ -166,7 +169,7 @@ export default async function TournamentDetail({
                   ...(tournament.prizePool
                     ? [{ label: 'Prize pool', value: formatUsdDisplay(tournament.prizePool) }]
                     : []),
-                  ...(tournament.format === 'double_elimination' && tournament.groupStageEnabled
+                  ...(tournament.groupStageEnabled
                     ? [
                         {
                           label: 'Structure',
@@ -221,6 +224,8 @@ export default async function TournamentDetail({
               grandFinalsModifier={tournament.grandFinalsModifier}
               groupSize={tournament.groupSize}
               advancePerGroup={tournament.advancePerGroup}
+              swissScoring={swissScoringFromTournament(tournament)}
+              roundRobinRankBy={tournament.roundRobinRankBy}
             />
 
             {tournament.status !== 'complete' && (
@@ -279,13 +284,37 @@ export default async function TournamentDetail({
                     <BracketShareActions tournamentId={tournament.id} />
                   </div>
                 )}
-                {tournament.format === 'swiss' || tournament.format === 'round_robin' ? (
+                {tournament.groupStageEnabled && tournament.format !== 'double_elimination' ? (
+                  <TournamentStagedTabs
+                    tournamentId={tournament.id}
+                    format={tournament.format}
+                    phase={tournament.phase}
+                    groupSize={tournament.groupSize}
+                    advancePerGroup={tournament.advancePerGroup}
+                    matches={displayMatches}
+                    participants={tournament.participants}
+                    tournament={tournament}
+                    isAdmin={isAdmin}
+                    userId={session?.user.id ?? null}
+                  />
+                ) : tournament.format === 'swiss' || tournament.format === 'round_robin' ? (
                 <BracketSwiss
                   rounds={sortedRounds}
                   participants={tournament.participants}
                   allMatches={displayMatches}
                   isAdmin={isAdmin}
                   userId={session?.user.id ?? null}
+                  scoring={
+                    tournament.format === 'swiss'
+                      ? swissScoringFromTournament(tournament)
+                      : undefined
+                  }
+                  showSwissPoints={tournament.format === 'swiss'}
+                  roundRobinRankBy={
+                    tournament.format === 'round_robin'
+                      ? parseRoundRobinRankBy(tournament.roundRobinRankBy)
+                      : undefined
+                  }
                 />
               ) : tournament.format === 'double_elimination' ? (
                 <TournamentDoubleElimTabs

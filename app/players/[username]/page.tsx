@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BarChart3,
   Calendar,
+  MessageSquare,
   Swords,
   Trophy,
   User,
@@ -160,15 +161,26 @@ export default async function PlayerProfile({
               </div>
             </div>
 
-            {circuitRank !== null && (
-              <Link
-                href="/rankings"
-                className="inline-flex shrink-0 items-center gap-2 self-start rounded-lg border border-brand-500/35 bg-brand-500/10 px-4 py-2.5 text-sm font-semibold text-brand-200 transition hover:border-brand-400/50 hover:bg-brand-500/20"
-              >
-                View leaderboard
-                <ArrowRight size={14} />
-              </Link>
-            )}
+            <div className="flex flex-col gap-2 self-start">
+              {circuitRank !== null && (
+                <Link
+                  href="/rankings"
+                  className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-brand-500/35 bg-brand-500/10 px-4 py-2.5 text-sm font-semibold text-brand-200 transition hover:border-brand-400/50 hover:bg-brand-500/20"
+                >
+                  View leaderboard
+                  <ArrowRight size={14} />
+                </Link>
+              )}
+              {!isOwnProfile && session && (
+                <Link
+                  href={`/messages?to=${encodeURIComponent(player.username)}`}
+                  className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 hover:text-white"
+                >
+                  <MessageSquare size={14} />
+                  Message
+                </Link>
+              )}
+            </div>
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

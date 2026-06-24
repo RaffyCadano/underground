@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
 /** Bump when schema changes so dev hot-reload discards a stale cached client. */
-const PRISMA_SCHEMA_VERSION = 8;
+const PRISMA_SCHEMA_VERSION = 14;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -18,6 +18,11 @@ const DELEGATE_KEYS = [
   'tournament',
   'tournamentParticipant',
   'match',
+  'conversation',
+  'directMessage',
+  'directMessageLike',
+  'directMessageHide',
+  'conversationUserState',
 ] as const;
 
 function clientIsCurrent(client: PrismaClient): boolean {

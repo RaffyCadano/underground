@@ -17,6 +17,8 @@ env:
     secret: NEXTAUTH_SECRET
   - variable: NEXTAUTH_URL
     secret: NEXTAUTH_URL
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: https://ugncbbx--ugncbbx.us-central1.hosted.app
   - variable: NEXT_PUBLIC_SUPABASE_URL
     secret: NEXT_PUBLIC_SUPABASE_URL
   - variable: SUPABASE_SECRET_KEY

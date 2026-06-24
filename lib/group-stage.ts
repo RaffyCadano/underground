@@ -1,5 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import { generateDoubleEliminationBracket } from '@/lib/double-elim';
+import {
+  generateRoundRobinBracket,
+  generateSingleEliminationBracket,
+  generateSwissRound,
+} from '@/lib/bracket';
 import { isPowerOfTwo } from '@/lib/tournament-options';
 import { participantDisplayName } from '@/lib/tournament-participant';
 
@@ -133,9 +138,12 @@ export async function generateGroupStage(tournamentId: string) {
   if (totalAdvancers < 2) {
     throw new Error('Not enough playoff spots — add more groups or advancers per group.');
   }
-  if (totalAdvancers > 2 && !isPowerOfTwo(totalAdvancers)) {
+
+  const needsPowerOfTwoPlayoffField =
+    tournament.format === 'single_elimination' || tournament.format === 'double_elimination';
+  if (needsPowerOfTwoPlayoffField && totalAdvancers > 2 && !isPowerOfTwo(totalAdvancers)) {
     throw new Error(
-      `Total advancers (${totalAdvancers}) must be a power of 2 for double elimination playoffs.`,
+      `Total advancers (${totalAdvancers}) must be a power of 2 for ${tournament.format.replace(/_/g, ' ')} playoffs.`,
     );
   }
 
@@ -228,9 +236,9 @@ export async function generatePlayoffsFromGroups(tournamentId: string) {
     throw new Error('Need at least 2 advancers to start playoffs.');
   }
 
-  await generateDoubleEliminationBracket(tournamentId, seededAdvancers, {
-    keepGroupMatches: true,
-    grandFinalsModifier: tournament.grandFinalsModifier,
+  await prisma.tournamentParticipant.updateMany({
+    where: { tournamentId, userId: { notIn: seededAdvancers } },
+    data: { seed: null },
   });
 
   for (let i = 0; i < seededAdvancers.length; i++) {
@@ -238,6 +246,32 @@ export async function generatePlayoffsFromGroups(tournamentId: string) {
       where: { tournamentId, userId: seededAdvancers[i] },
       data: { seed: i + 1 },
     });
+  }
+
+  switch (tournament.format) {
+    case 'single_elimination':
+      await generateSingleEliminationBracket(tournamentId, seededAdvancers, {
+        keepGroupMatches: true,
+      });
+      break;
+    case 'swiss':
+      await prisma.match.deleteMany({ where: { tournamentId, bracketSide: { not: 'group' } } });
+      await prisma.tournament.update({
+        where: { id: tournamentId },
+        data: { phase: 'playoffs', status: 'active' },
+      });
+      await generateSwissRound(tournamentId, { playoffsOnly: true });
+      return;
+    case 'round_robin':
+      await generateRoundRobinBracket(tournamentId, seededAdvancers, { keepGroupMatches: true });
+      break;
+    case 'double_elimination':
+    default:
+      await generateDoubleEliminationBracket(tournamentId, seededAdvancers, {
+        keepGroupMatches: true,
+        grandFinalsModifier: tournament.grandFinalsModifier,
+      });
+      break;
   }
 
   await prisma.tournament.update({

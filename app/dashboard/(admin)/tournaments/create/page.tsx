@@ -7,7 +7,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { canManageTournaments } from '@/lib/roles';
 import { redirect } from 'next/navigation';
-import { templateToTournamentInitial } from '@/lib/tournament-template';
+import { templateToFormInitial, templateToTournamentInitial } from '@/lib/tournament-template';
+import { tournamentsPermalinkHostFromRequest } from '@/lib/site-request';
+import { tournamentsPermalinkPrefix } from '@/lib/tournament-slug';
 
 export default async function CreateTournamentPage({
   searchParams,
@@ -26,22 +28,11 @@ export default async function CreateTournamentPage({
       where: { id: templateId, userId: session.user.id },
     });
     if (template) {
-      templateInitial = templateToTournamentInitial({
-        name: template.name,
-        description: template.description ?? '',
-        format: template.format,
-        groupStageEnabled: template.groupStageEnabled,
-        grandFinalsModifier: template.grandFinalsModifier,
-        groupSize: String(template.groupSize),
-        advancePerGroup: String(template.advancePerGroup),
-        entryFee: template.entryFee ?? '',
-        prizePool: template.prizePool ?? '',
-        playerCap: template.playerCap != null ? String(template.playerCap) : '',
-        isRanked: template.isRanked,
-        gameType: template.gameType,
-      });
+      templateInitial = templateToTournamentInitial(templateToFormInitial(template));
     }
   }
+
+  const permalinkPrefix = tournamentsPermalinkPrefix(await tournamentsPermalinkHostFromRequest());
 
   return (
     <div className="w-full min-w-0">
@@ -63,7 +54,7 @@ export default async function CreateTournamentPage({
         </p>
       </div>
 
-      <CreateTournamentForm imageUploadEnabled={imageUploadEnabled} initial={templateInitial} />
+      <CreateTournamentForm imageUploadEnabled={imageUploadEnabled} initial={templateInitial} permalinkPrefix={permalinkPrefix} />
     </div>
   );
 }

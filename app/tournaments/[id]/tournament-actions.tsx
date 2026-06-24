@@ -42,7 +42,7 @@ function getGenerateLabel(
   tournamentFormat: string,
   groupStageEnabled: boolean,
 ): string {
-  if (groupStageEnabled && tournamentFormat === 'double_elimination') return 'Start group stage';
+  if (groupStageEnabled) return 'Start group stage';
   if (tournamentFormat === 'swiss' || tournamentFormat === 'round_robin') return 'Generate Round 1';
   return 'Generate bracket';
 }
@@ -140,16 +140,16 @@ function GenerateBracketConfirmModal({
 }) {
   const [mounted, setMounted] = useState(false);
   const isSwiss = tournamentFormat === 'swiss' || tournamentFormat === 'round_robin';
-  const isGroupDe = tournamentFormat === 'double_elimination' && groupStageEnabled;
-  const title = isSwiss
-    ? 'Generate round 1?'
-    : isGroupDe
-      ? 'Start group stage?'
+  const isGroupStage = groupStageEnabled;
+  const title = isGroupStage
+    ? 'Start group stage?'
+    : isSwiss
+      ? 'Generate round 1?'
       : 'Generate bracket?';
-  const confirmLabel = isSwiss
-    ? 'Generate round 1'
-    : isGroupDe
-      ? 'Start group stage'
+  const confirmLabel = isGroupStage
+    ? 'Start group stage'
+    : isSwiss
+      ? 'Generate round 1'
       : 'Generate bracket';
 
   useEffect(() => setMounted(true), []);
@@ -224,14 +224,14 @@ function GenerateBracketConfirmModal({
 
           <p className="mt-4 text-sm text-slate-400">This will:</p>
           <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
-            {(isSwiss
-              ? ['Pair round 1 matchups', 'Close registration for new players', 'Start the tournament']
-              : isGroupDe
-                ? [
-                    'Assign players to round robin groups',
-                    'Close registration for new players',
-                    'Start the group stage — playoffs after groups finish',
-                  ]
+            {(isGroupStage
+              ? [
+                  'Assign players to round robin groups',
+                  'Close registration for new players',
+                  'Start the group stage — playoffs after groups finish',
+                ]
+              : isSwiss
+                ? ['Pair round 1 matchups', 'Close registration for new players', 'Start the tournament']
                 : [
                     'Seed all participants into the bracket',
                     'Close registration for new players',
@@ -820,13 +820,13 @@ export function TournamentActions({
     isAdmin &&
     groupStageEnabled &&
     phase === 'group' &&
-    groupStageComplete &&
-    tournamentFormat === 'double_elimination';
+    groupStageComplete;
   const showSwissNext =
     isAdmin &&
     tournamentStatus === 'active' &&
     (tournamentFormat === 'swiss' || tournamentFormat === 'round_robin') &&
-    allCurrentRoundComplete;
+    allCurrentRoundComplete &&
+    !(groupStageEnabled && phase === 'group');
   const showReport = myPendingMatches.length > 0 && !inlineBracketFormat;
   const showEdit = isAdmin && completedMatches.length > 0 && !inlineBracketFormat;
   const showResetRoster = isAdmin && canResetRoster && tournamentStatus === 'active';
@@ -958,7 +958,7 @@ export function TournamentActions({
           icon={Swords}
           eyebrow="Admin"
           title={
-            groupStageEnabled && tournamentFormat === 'double_elimination'
+            groupStageEnabled
               ? 'Ready to start groups?'
               : tournamentFormat === 'swiss' || tournamentFormat === 'round_robin'
                 ? 'Ready for Round 1?'

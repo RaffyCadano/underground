@@ -8,7 +8,7 @@ import { assertCanManageTournament } from '@/lib/tournament-host';
 import { generateSingleElimination, generateSwissRound } from '@/lib/bracket';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { parseGameType } from '@/lib/tournament-options';
+import { parseGameType, parseRoundRobinRankBy } from '@/lib/tournament-options';
 import { assertCanRegister, isTournamentPickablePlayer } from '@/lib/tournament-registration';
 import {
   guestEmail,
@@ -17,6 +17,13 @@ import {
   validateGuestDisplayName,
 } from '@/lib/guest-player';
 import { canResetBracketForRoster } from '@/lib/tournament-roster';
+import { parseSwissScoringFromForm, swissScoringToPrismaData, type SwissScoring } from '@/lib/swiss-scoring';
+import {
+  normalizeTournamentSlug,
+  validateTournamentSlug,
+} from '@/lib/tournament-slug';
+import { checkTournamentSlugAvailability } from '@/app/actions/tournament-slug';
+import { tournamentPublicPath } from '@/lib/tournament-lookup';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 
@@ -28,6 +35,7 @@ async function requireTournamentHost(tournamentId: string) {
 }
 
 type ParsedTournamentForm = {
+  slug: string;
   name: string;
   description: string | null;
   dateStr: string;
@@ -37,6 +45,8 @@ type ParsedTournamentForm = {
   groupSize: number;
   advancePerGroup: number;
   grandFinalsModifier: string;
+  deSplitLosersBracket: boolean;
+  deBreakTiesPlacement: boolean;
   entryFee: string | null;
   prizePool: string | null;
   playerCap: number | null;
@@ -44,6 +54,8 @@ type ParsedTournamentForm = {
   gameType: string;
   checkInTime: string | null;
   eventStartTime: string | null;
+  swissScoring: SwissScoring;
+  roundRobinRankBy: ReturnType<typeof parseRoundRobinRankBy>;
 };
 
 function parseTournamentFormData(formData: FormData): ParsedTournamentForm | { error: string } {
@@ -56,6 +68,9 @@ function parseTournamentFormData(formData: FormData): ParsedTournamentForm | { e
   const groupSize = parseInt(formData.get('groupSize') as string, 10) || 4;
   const advancePerGroup = parseInt(formData.get('advancePerGroup') as string, 10) || 2;
   const grandFinalsModifier = (formData.get('grandFinalsModifier') as string) || 'default';
+  const deSplitLosersBracket = formData.get('deSplitLosersBracket') === 'on';
+  const deBreakTiesPlacement = formData.get('deBreakTiesPlacement') === 'on';
+  const slug = normalizeTournamentSlug((formData.get('slug') as string) ?? '');
   const entryFee = (formData.get('entryFee') as string)?.trim() || null;
   const prizePool = (formData.get('prizePool') as string)?.trim() || null;
   const playerCapRaw = (formData.get('playerCap') as string)?.trim();
@@ -64,10 +79,16 @@ function parseTournamentFormData(formData: FormData): ParsedTournamentForm | { e
   const gameType = parseGameType(formData.get('gameType') as string);
   const checkInTime = (formData.get('checkInTime') as string)?.trim() || null;
   const eventStartTime = (formData.get('eventStartTime') as string)?.trim() || null;
+  const swissScoring = parseSwissScoringFromForm(formData);
+  const roundRobinRankBy = parseRoundRobinRankBy(formData.get('roundRobinRankBy') as string);
 
   if (!name || !dateStr) return { error: 'Name and date are required.' };
 
+  const slugError = validateTournamentSlug(slug);
+  if (slugError) return { error: slugError };
+
   return {
+    slug,
     name,
     description,
     dateStr,
@@ -77,6 +98,8 @@ function parseTournamentFormData(formData: FormData): ParsedTournamentForm | { e
     groupSize,
     advancePerGroup,
     grandFinalsModifier,
+    deSplitLosersBracket,
+    deBreakTiesPlacement,
     entryFee,
     prizePool,
     playerCap,
@@ -84,17 +107,28 @@ function parseTournamentFormData(formData: FormData): ParsedTournamentForm | { e
     gameType,
     checkInTime,
     eventStartTime,
+    swissScoring,
+    roundRobinRankBy,
   };
 }
 
 function formatFieldsToData(fields: ParsedTournamentForm) {
   return {
     format: fields.format,
-    groupStageEnabled: fields.format === 'double_elimination' && fields.groupStageEnabled,
+    groupStageEnabled: fields.groupStageEnabled,
     groupSize: Math.max(2, fields.groupSize),
     advancePerGroup: Math.max(1, fields.advancePerGroup),
     grandFinalsModifier:
       fields.format === 'double_elimination' ? fields.grandFinalsModifier : 'default',
+    deSplitLosersBracket:
+      fields.format === 'double_elimination' ? fields.deSplitLosersBracket : true,
+    deBreakTiesPlacement:
+      fields.format === 'single_elimination' || fields.format === 'double_elimination'
+        ? fields.deBreakTiesPlacement
+        : true,
+    roundRobinRankBy:
+      fields.format === 'round_robin' ? fields.roundRobinRankBy : 'match_wins',
+    ...swissScoringToPrismaData(fields.swissScoring),
   };
 }
 
@@ -105,8 +139,12 @@ export async function createTournament(_prev: { error?: string } | null, formDat
   const parsed = parseTournamentFormData(formData);
   if ('error' in parsed) return parsed;
 
+  const slugCheck = await checkTournamentSlugAvailability(parsed.slug);
+  if (!slugCheck.available) return { error: slugCheck.error ?? 'This URL is already taken.' };
+
   const t = await prisma.tournament.create({
     data: {
+      slug: parsed.slug,
       name: parsed.name,
       description: parsed.description,
       date: new Date(parsed.dateStr),
@@ -125,7 +163,7 @@ export async function createTournament(_prev: { error?: string } | null, formDat
 
   revalidatePath('/tournaments');
   revalidatePath('/admin');
-  redirect(`/tournaments/${t.id}?created=1`);
+  redirect(`${tournamentPublicPath(t)}?created=1`);
 }
 
 export async function updateTournament(_prev: { error?: string } | null, formData: FormData) {
@@ -147,11 +185,15 @@ export async function updateTournament(_prev: { error?: string } | null, formDat
   const parsed = parseTournamentFormData(formData);
   if ('error' in parsed) return parsed;
 
+  const slugCheck = await checkTournamentSlugAvailability(parsed.slug, tournamentId);
+  if (!slugCheck.available) return { error: slugCheck.error ?? 'This URL is already taken.' };
+
   const hasBracket = existing._count.matches > 0;
 
-  await prisma.tournament.update({
+  const updated = await prisma.tournament.update({
     where: { id: tournamentId },
     data: {
+      slug: parsed.slug,
       name: parsed.name,
       description: parsed.description,
       date: new Date(parsed.dateStr),
@@ -170,7 +212,8 @@ export async function updateTournament(_prev: { error?: string } | null, formDat
   revalidatePath('/tournaments');
   revalidatePath('/dashboard/tournaments');
   revalidatePath(`/tournaments/${tournamentId}`);
-  redirect(`/tournaments/${tournamentId}?updated=1`);
+  if (updated.slug) revalidatePath(`/tournaments/${updated.slug}`);
+  redirect(`${tournamentPublicPath(updated)}?updated=1`);
 }
 
 export async function joinTournament(tournamentId: string) {
@@ -212,7 +255,10 @@ export async function generateBracket(tournamentId: string) {
   const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
   if (!tournament) throw new Error('Tournament not found.');
 
-  if (tournament.format === 'swiss' || tournament.format === 'round_robin') {
+  if (tournament.groupStageEnabled) {
+    const { generateGroupStage } = await import('@/lib/group-stage');
+    await generateGroupStage(tournamentId);
+  } else if (tournament.format === 'swiss' || tournament.format === 'round_robin') {
     await generateSwissRound(tournamentId);
   } else if (tournament.format === 'double_elimination') {
     const { generateDoubleElimination } = await import('@/lib/double-elim');
@@ -235,7 +281,12 @@ export async function generatePlayoffs(tournamentId: string) {
 export async function generateNextSwissRound(tournamentId: string) {
   await requireTournamentHost(tournamentId);
 
-  await generateSwissRound(tournamentId);
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { phase: true },
+  });
+
+  await generateSwissRound(tournamentId, { playoffsOnly: tournament?.phase === 'playoffs' });
   revalidatePath(`/tournaments/${tournamentId}`);
 }
 

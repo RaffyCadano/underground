@@ -25,7 +25,7 @@ type MenuLink = {
   count?: number;
 };
 
-function buildMenuLinks(session: Session): MenuLink[] {
+function buildMenuLinks(session: Session, unreadMessages = 0): MenuLink[] {
   const username = session.user.name ?? 'player';
   const role = session.user.role;
   const dashboardHref =
@@ -39,7 +39,7 @@ function buildMenuLinks(session: Session): MenuLink[] {
     { href: dashboardHref, label: 'Dashboard' },
     { href: playerProfilePath(username), label: 'Public Profile' },
     { href: '/profile', label: 'Settings' },
-    { href: '/messages', label: 'Messages', count: 0 },
+    { href: '/messages', label: 'Messages', count: unreadMessages },
     { href: '/news', label: 'News', count: 2 },
   ];
 }
@@ -87,13 +87,15 @@ function AccountMenuPanel({
   pathname,
   onNavigate,
   onLogOut,
+  unreadMessages,
 }: {
   session: Session;
   pathname: string;
   onNavigate?: () => void;
   onLogOut: () => void;
+  unreadMessages: number;
 }) {
-  const links = buildMenuLinks(session);
+  const links = buildMenuLinks(session, unreadMessages);
   const showPremierUpgrade =
     !isAdminRole(session.user.role) &&
     !userHasActivePremier(
@@ -122,8 +124,8 @@ function AccountMenuPanel({
               }`}
             >
               <span>{label}</span>
-              {count !== undefined && (
-                <span className="tabular-nums text-slate-500">({count})</span>
+              {count !== undefined && count > 0 && (
+                <span className="tabular-nums text-brand-300">({count})</span>
               )}
             </Link>
           );
@@ -167,11 +169,48 @@ export function ProfileMenu({
   const session = clientSession ?? initialSession;
   const [open, setOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
 
   const username = session.user.name ?? session.user.email?.split('@')[0] ?? 'Account';
-  const links = buildMenuLinks(session);
+  const links = buildMenuLinks(session, unreadMessages);
   const dashboardActive = isActive(pathname, links[0].href);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadUnreadCount() {
+      try {
+        const res = await fetch('/api/messages/unread-count', { cache: 'no-store' });
+        const data = (await res.json()) as { count?: number };
+        if (!cancelled && typeof data.count === 'number') {
+          setUnreadMessages(data.count);
+        }
+      } catch {
+        // Ignore transient network errors during polling.
+      }
+    }
+
+    void loadUnreadCount();
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      void loadUnreadCount();
+    }, 4_000);
+
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        void loadUnreadCount();
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     if (variant !== 'dropdown' || !open) return;
@@ -214,6 +253,7 @@ export function ProfileMenu({
             pathname={pathname}
             onNavigate={closeAll}
             onLogOut={openLogOut}
+            unreadMessages={unreadMessages}
           />
         </div>
 
@@ -260,6 +300,7 @@ export function ProfileMenu({
               pathname={pathname}
               onNavigate={() => setOpen(false)}
               onLogOut={openLogOut}
+              unreadMessages={unreadMessages}
             />
           </div>
         )}

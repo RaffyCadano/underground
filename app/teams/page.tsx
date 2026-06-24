@@ -11,6 +11,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { ListSearch } from '@/app/components/list-search';
+import { ScrollReveal } from '@/app/components/scroll-reveal';
 import { prisma } from '@/lib/prisma';
 import { parseSearchQuery } from '@/lib/search';
 
@@ -155,7 +156,7 @@ export default async function TeamsPage({
       <section className="relative border-b border-slate-800 py-0">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(34,197,94,0.1),transparent)]" />
         <div className="container relative py-8 sm:py-12 lg:py-16">
-          <div className="max-w-2xl space-y-3 sm:space-y-4">
+          <ScrollReveal className="max-w-2xl space-y-3 sm:space-y-4">
             <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
               <UsersRound size={12} />
               UGNCBBX clubs
@@ -164,33 +165,32 @@ export default async function TeamsPage({
             <p className="text-sm leading-relaxed text-slate-400 sm:text-base md:text-lg">
               Join a club, coordinate local events, and compete together on the UGNCBBX circuit.
             </p>
-          </div>
+          </ScrollReveal>
 
           <div className="mt-8 grid grid-cols-2 gap-3 sm:mt-10 sm:gap-4 lg:grid-cols-4">
-            {stats.map(({ label, shortLabel, value, icon: Icon }) => (
-              <div
-                key={label}
-                className="flex min-w-0 items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3"
-              >
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-brand-400 sm:h-9 sm:w-9">
-                  <Icon size={15} className="sm:hidden" />
-                  <Icon size={16} className="hidden sm:block" />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-base font-semibold tabular-nums text-white sm:text-lg">{value}</p>
-                  <p className="truncate text-[10px] text-slate-500 sm:text-xs">
-                    <span className="sm:hidden">{shortLabel}</span>
-                    <span className="hidden sm:inline">{label}</span>
-                  </p>
+            {stats.map(({ label, shortLabel, value, icon: Icon }, index) => (
+              <ScrollReveal key={label} delay={120 + index * 70} direction="scale">
+                <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-brand-400 sm:h-9 sm:w-9">
+                    <Icon size={15} className="sm:hidden" />
+                    <Icon size={16} className="hidden sm:block" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-base font-semibold tabular-nums text-white sm:text-lg">{value}</p>
+                    <p className="truncate text-[10px] text-slate-500 sm:text-xs">
+                      <span className="sm:hidden">{shortLabel}</span>
+                      <span className="hidden sm:inline">{label}</span>
+                    </p>
+                  </div>
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
       <section className="container py-8 sm:py-12 lg:py-16">
-        <div className="mb-6 flex flex-col gap-4 sm:mb-8 lg:flex-row lg:items-end lg:justify-between">
+        <ScrollReveal className="mb-6 flex flex-col gap-4 sm:mb-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Directory</p>
             <h2 className="mt-1 text-xl font-semibold text-white sm:text-2xl">Community clubs</h2>
@@ -205,10 +205,11 @@ export default async function TeamsPage({
               Request club listing
             </Link>
           </div>
-        </div>
+        </ScrollReveal>
 
         {totalClubs === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 px-5 py-12 text-center sm:px-8 sm:py-16">
+          <ScrollReveal direction="scale">
+            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 px-5 py-12 text-center sm:px-8 sm:py-16">
             <UsersRound size={36} className="mx-auto text-slate-600" />
             <h2 className="mt-4 text-lg font-semibold text-white sm:text-xl">No community clubs listed</h2>
             <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-slate-400">
@@ -219,9 +220,11 @@ export default async function TeamsPage({
               </Link>{' '}
               to get started.
             </p>
-          </div>
+            </div>
+          </ScrollReveal>
         ) : clubs.length === 0 ? (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-5 py-10 text-center sm:px-8 sm:py-14">
+          <ScrollReveal direction="scale">
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-5 py-10 text-center sm:px-8 sm:py-14">
             <p className="text-base font-semibold text-white sm:text-lg">No clubs match &ldquo;{query}&rdquo;</p>
             <Link
               href="/teams"
@@ -229,23 +232,32 @@ export default async function TeamsPage({
             >
               Clear search
             </Link>
-          </div>
+            </div>
+          </ScrollReveal>
         ) : (
           <>
             {query && (
-              <p className="mb-5 text-sm text-slate-400 sm:mb-6">
-                {clubs.length} {clubs.length === 1 ? 'club' : 'clubs'} found for &ldquo;{query}&rdquo;
-              </p>
+              <ScrollReveal>
+                <p className="mb-5 text-sm text-slate-400 sm:mb-6">
+                  {clubs.length} {clubs.length === 1 ? 'club' : 'clubs'} found for &ldquo;{query}&rdquo;
+                </p>
+              </ScrollReveal>
             )}
             <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
               {clubs.map((club, i) => (
-                <ClubCard key={club.id} club={club} featured={i === 0 && !query} />
+                <ScrollReveal key={club.id} className="h-full" delay={i * 90}>
+                  <ClubCard club={club} featured={i === 0 && !query} />
+                </ScrollReveal>
               ))}
             </div>
           </>
         )}
 
-        <div className="relative mt-10 overflow-hidden rounded-2xl border border-brand-500/20 bg-slate-900 sm:mt-14">
+        <ScrollReveal
+          className="relative mt-10 overflow-hidden rounded-2xl border border-brand-500/20 bg-slate-900 sm:mt-14"
+          direction="scale"
+          delay={120}
+        >
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(34,197,94,0.08),transparent_70%)]" />
           <div className="relative flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-8">
             <div className="max-w-xl">
@@ -268,7 +280,7 @@ export default async function TeamsPage({
               <ArrowRight size={15} />
             </Link>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
     </div>
   );
