@@ -92,11 +92,11 @@ export default function PrivacyPolicyPage() {
             </p>
             <p>
               <strong className="text-slate-200">Go ad-free:</strong> Premier subscribers do not see
-              site advertisements. You can also opt out of personalized advertising in your{' '}
-              <Link href="/profile" className="text-brand-300 hover:text-brand-200">
-                profile settings
-              </Link>{' '}
-              where available.
+              site advertisements.{' '}
+              <Link href="/profile/subscriptions" className="text-brand-300 hover:text-brand-200">
+                View Premier plans
+              </Link>
+              .
             </p>
           </section>
 

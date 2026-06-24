@@ -9,16 +9,36 @@ import { deleteTournament } from '@/app/actions/tournaments';
 export function DeleteTournamentButton({
   tournamentId,
   tournamentName,
+  variant = 'button',
+  onAction,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }: {
   tournamentId: string;
   tournamentName: string;
+  variant?: 'button' | 'menuItem' | 'toolbar';
+  onAction?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+
+  function setOpen(next: boolean) {
+    if (isControlled) {
+      onOpenChange?.(next);
+    } else {
+      setInternalOpen(next);
+    }
+  }
 
   useEffect(() => setMounted(true), []);
 
@@ -39,9 +59,10 @@ export function DeleteTournamentButton({
     };
   }, [open, isPending]);
 
-  function openModal(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+  function openModal(e?: React.MouseEvent) {
+    e?.preventDefault();
+    e?.stopPropagation();
+    onAction?.();
     setError('');
     setOpen(true);
   }
@@ -77,7 +98,7 @@ export function DeleteTournamentButton({
     mounted &&
     createPortal(
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-[130] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-tournament-title"
@@ -174,16 +195,33 @@ export function DeleteTournamentButton({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openModal}
-        disabled={isPending}
-        title={`Delete ${tournamentName}`}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:border-red-400/50 hover:bg-red-500/20 disabled:opacity-60"
-      >
-        <Trash2 size={14} />
-        Delete
-      </button>
+      {!hideTrigger &&
+        (variant === 'menuItem' ? (
+          <button
+            type="button"
+            onClick={openModal}
+            disabled={isPending}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-red-400 transition hover:bg-slate-900 disabled:opacity-60"
+          >
+            <Trash2 size={14} />
+            Delete
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={openModal}
+            disabled={isPending}
+            title={`Delete ${tournamentName}`}
+            className={
+              variant === 'toolbar'
+                ? 'inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:border-red-500/40 hover:bg-slate-900 hover:text-red-200 disabled:opacity-60'
+                : 'inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:border-red-400/50 hover:bg-red-500/20 disabled:opacity-60'
+            }
+          >
+            <Trash2 size={variant === 'toolbar' ? 15 : 14} className="shrink-0" />
+            Delete
+          </button>
+        ))}
       {modal}
     </>
   );

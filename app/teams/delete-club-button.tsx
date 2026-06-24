@@ -7,13 +7,33 @@ import { deleteClub } from '@/app/actions/clubs';
 export function DeleteClubButton({
   clubId,
   clubName,
+  variant = 'button',
+  onAction,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }: {
   clubId: string;
   clubName: string;
+  variant?: 'button' | 'menuItem';
+  onAction?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+
+  function setOpen(next: boolean) {
+    if (isControlled) {
+      onOpenChange?.(next);
+    } else {
+      setInternalOpen(next);
+    }
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -44,22 +64,40 @@ export function DeleteClubButton({
     });
   }
 
+  function openModal() {
+    onAction?.();
+    setOpen(true);
+  }
+
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        disabled={isPending}
-        title={`Delete ${clubName}`}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:border-red-400/50 hover:bg-red-500/20 disabled:opacity-60"
-      >
-        <Trash2 size={14} />
-        Delete
-      </button>
+      {!hideTrigger &&
+        (variant === 'menuItem' ? (
+          <button
+            type="button"
+            onClick={openModal}
+            disabled={isPending}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-red-400 transition hover:bg-slate-900 disabled:opacity-60"
+          >
+            <Trash2 size={14} />
+            Delete
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={openModal}
+            disabled={isPending}
+            title={`Delete ${clubName}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:border-red-400/50 hover:bg-red-500/20 disabled:opacity-60"
+          >
+            <Trash2 size={14} />
+            Delete
+          </button>
+        ))}
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[130] flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-club-title"

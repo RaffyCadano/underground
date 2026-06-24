@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { createPortal } from 'react-dom';
-import { Info, Loader2, X } from 'lucide-react';
+import { Info, Loader2, X, CheckCircle2 } from 'lucide-react';
 import {
   addBlockedUser,
   removeBlockedUser,
+  sendEmailVerification,
   updateAccountSettings,
   uploadProfileAvatar,
 } from '@/app/actions/profile';
@@ -30,21 +31,18 @@ type BlockedRow = {
 type User = {
   username: string;
   email: string;
+  emailVerified: boolean;
   fullName: string | null;
   language: string;
   timezone: string;
   country: string;
   avatar: string | null;
-  emailPrivateMessages: boolean;
-  emailMatchNotifications: boolean;
-  markReadOnEmail: boolean;
-  productUpdates: boolean;
-  optOutPersonalizedAds: boolean;
   blockedUsers: BlockedRow[];
 };
 
 type Props = {
   user: User;
+  hasPremier: boolean;
   uploadEnabled: boolean;
   canEditUsername: boolean;
 };
@@ -139,39 +137,94 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-function CheckboxField({
-  name,
-  label,
-  defaultChecked,
-  hint,
-}: {
-  name: string;
-  label: string;
-  defaultChecked: boolean;
-  hint?: string;
-}) {
-  return (
-    <label className="flex cursor-pointer gap-3 rounded-lg py-2">
-      <input
-        type="checkbox"
-        name={name}
-        defaultChecked={defaultChecked}
-        className="mt-1 h-4 w-4 shrink-0 rounded border-slate-600 bg-slate-950 text-brand-500 focus:ring-brand-500/40"
-      />
-      <span className="min-w-0">
-        <span className="text-sm text-slate-200">{label}</span>
-        {hint && <span className="mt-0.5 block text-xs text-slate-500">{hint}</span>}
+function VerifyEmailButton({ verified }: { verified: boolean }) {
+  const [pending, startTransition] = useTransition();
+  const [toast, setToast] = useState<{
+    open: boolean;
+    tone: 'success' | 'error';
+    title: string;
+    body?: string;
+  }>({ open: false, tone: 'success', title: '' });
+
+  function handleVerify() {
+    setToast((current) => ({ ...current, open: false }));
+    startTransition(async () => {
+      const result = await sendEmailVerification();
+      if (!result) return;
+      if (result.error) {
+        setToast({
+          open: true,
+          tone: 'error',
+          title: 'Could not send verification email',
+          body: result.error,
+        });
+        return;
+      }
+      if (result.success) {
+        setToast({
+          open: true,
+          tone: 'success',
+          title: result.success.includes('dev server logs')
+            ? 'Verification link ready'
+            : 'Verification email sent',
+          body: result.success,
+        });
+      }
+    });
+  }
+
+  if (verified) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-emerald-300">
+        <CheckCircle2 size={15} aria-hidden />
+        Verified
       </span>
-    </label>
+    );
+  }
+
+  return (
+    <>
+      <SuccessToast
+        open={toast.open}
+        tone={toast.tone}
+        title={toast.title}
+        body={toast.body}
+        onDismiss={() => setToast((current) => ({ ...current, open: false }))}
+        autoDismissMs={toast.tone === 'error' ? 8000 : 6000}
+      />
+      <button
+        type="button"
+        onClick={handleVerify}
+        disabled={pending}
+        className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-brand-300 transition hover:text-brand-200 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {pending ? (
+          <>
+            <Loader2 size={15} className="animate-spin" aria-hidden />
+            Sending…
+          </>
+        ) : (
+          'Verify email'
+        )}
+      </button>
+    </>
   );
 }
 
-export function ProfileAccountSettingsForm({ user, uploadEnabled, canEditUsername }: Props) {
+export function ProfileAccountSettingsForm({
+  user,
+  hasPremier,
+  uploadEnabled,
+  canEditUsername,
+}: Props) {
   const router = useRouter();
   const { update } = useSession();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [state, saveAction, savePending] = useActionState(updateAccountSettings, null);
   const [successToastOpen, setSuccessToastOpen] = useState(false);
+  const [blockToastOpen, setBlockToastOpen] = useState(false);
+  const [blockToastTitle, setBlockToastTitle] = useState('');
+  const [blockToastBody, setBlockToastBody] = useState('');
   const [uploadError, setUploadError] = useState('');
   const [selectedFileName, setSelectedFileName] = useState('');
   const [blockInput, setBlockInput] = useState('');
@@ -227,23 +280,35 @@ export function ProfileAccountSettingsForm({ user, uploadEnabled, canEditUsernam
   function handleAddBlock(e: React.FormEvent) {
     e.preventDefault();
     setBlockError('');
+    const identifier = blockInput.trim();
     startBlockTransition(async () => {
-      const result = await addBlockedUser(blockInput);
+      const result = await addBlockedUser(identifier);
       if (result.error) {
         setBlockError(result.error);
         return;
       }
       setBlockInput('');
+      setBlockToastTitle('User blocked');
+      setBlockToastBody(
+        `${identifier} can no longer message you or register for your tournaments.`,
+      );
+      setBlockToastOpen(true);
       router.refresh();
     });
   }
 
-  function handleRemoveBlock(id: string) {
+  function handleRemoveBlock(id: string, identifier: string) {
     setBlockError('');
     startBlockTransition(async () => {
       const result = await removeBlockedUser(id);
-      if (result.error) setBlockError(result.error);
-      else router.refresh();
+      if (result.error) {
+        setBlockError(result.error);
+        return;
+      }
+      setBlockToastTitle('User unblocked');
+      setBlockToastBody(`${identifier} can message you and register for your tournaments again.`);
+      setBlockToastOpen(true);
+      router.refresh();
     });
   }
 
@@ -255,6 +320,12 @@ export function ProfileAccountSettingsForm({ user, uploadEnabled, canEditUsernam
         body="Your profile changes have been updated."
         onDismiss={() => setSuccessToastOpen(false)}
       />
+      <SuccessToast
+        open={blockToastOpen}
+        title={blockToastTitle}
+        body={blockToastBody}
+        onDismiss={() => setBlockToastOpen(false)}
+      />
       <form action={saveAction}>
         <div className="px-5 sm:px-6">
           <FieldRow
@@ -265,13 +336,16 @@ export function ProfileAccountSettingsForm({ user, uploadEnabled, canEditUsernam
               </>
             }
           >
-            <input
-              type="email"
-              name="email"
-              defaultValue={user.email}
-              readOnly
-              className="input w-full max-w-md cursor-default bg-slate-900/50"
-            />
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="email"
+                name="email"
+                defaultValue={user.email}
+                readOnly
+                className="input max-w-md w-full flex-1 cursor-default bg-slate-900/50"
+              />
+              <VerifyEmailButton verified={user.emailVerified} />
+            </div>
           </FieldRow>
 
           <FieldRow
@@ -404,39 +478,23 @@ export function ProfileAccountSettingsForm({ user, uploadEnabled, canEditUsernam
           </FieldRow>
         </div>
 
-        <SectionTitle>Messaging Options</SectionTitle>
-        <div className="space-y-1 px-5 py-4 sm:px-6">
-          <CheckboxField
-            name="emailPrivateMessages"
-            label="Email new private messages"
-            defaultChecked={user.emailPrivateMessages}
-          />
-          <CheckboxField
-            name="emailMatchNotifications"
-            label="Email new match notifications"
-            hint="recommended"
-            defaultChecked={user.emailMatchNotifications}
-          />
-          <CheckboxField
-            name="markReadOnEmail"
-            label={`Mark messages and notifications as read on ${SITE_NAME} if they're emailed`}
-            defaultChecked={user.markReadOnEmail}
-          />
-          <CheckboxField
-            name="productUpdates"
-            label="Send me occasional product updates and info about major tournaments."
-            defaultChecked={user.productUpdates}
-          />
-        </div>
-
         <SectionTitle>Misc</SectionTitle>
         <div className="px-5 py-4 sm:px-6">
-          <CheckboxField
-            name="optOutPersonalizedAds"
-            label="Opt out of personalized ads"
-            hint="Site ads will not be shown on your account while this is enabled."
-            defaultChecked={user.optOutPersonalizedAds}
-          />
+          <div className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3">
+            <p className="text-sm font-medium text-white">Ad-free browsing</p>
+            {hasPremier ? (
+              <p className="mt-1 text-sm text-slate-400">
+                Site ads are hidden on your account with Premier.
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-slate-400">
+                Upgrade to Premier to remove on-page ads across {SITE_NAME}.{' '}
+                <Link href="/profile/subscriptions" className="font-medium text-brand-300 hover:text-brand-200">
+                  View plans
+                </Link>
+              </p>
+            )}
+          </div>
         </div>
 
         <SectionTitle>Blocked Users</SectionTitle>
@@ -482,7 +540,7 @@ export function ProfileAccountSettingsForm({ user, uploadEnabled, canEditUsernam
                   <span>{row.identifier}</span>
                   <button
                     type="button"
-                    onClick={() => handleRemoveBlock(row.id)}
+                    onClick={() => handleRemoveBlock(row.id, row.identifier)}
                     disabled={blockPending}
                     className="inline-flex items-center gap-1 text-slate-500 transition hover:text-red-300"
                     aria-label={`Unblock ${row.identifier}`}

@@ -1,9 +1,8 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
-  CheckCircle2,
   KeyRound,
   Loader2,
   Lock,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react';
 import { changePassword } from '@/app/actions/auth';
 import { PasswordInput } from '@/app/components/password-input';
+import { SuccessToast } from '@/app/components/success-toast';
 
 const SECURITY_TIPS = [
   'Use at least 8 characters with a mix of letters and numbers.',
@@ -20,9 +20,27 @@ const SECURITY_TIPS = [
 
 export function ProfileChangePasswordForm() {
   const [state, action, pending] = useActionState(changePassword, null);
+  const [successToastOpen, setSuccessToastOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const prevStateRef = useRef(state);
+
+  useEffect(() => {
+    if (state === prevStateRef.current) return;
+    prevStateRef.current = state;
+    if (!state?.success || !state.message) return;
+
+    setSuccessToastOpen(true);
+    formRef.current?.reset();
+  }, [state]);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-lg shadow-black/20">
+      <SuccessToast
+        open={successToastOpen}
+        title="Password updated"
+        body={state?.message ?? 'Your password has been changed.'}
+        onDismiss={() => setSuccessToastOpen(false)}
+      />
       <div className="relative border-b border-slate-800/80 bg-gradient-to-br from-sky-500/15 via-slate-900 to-slate-950 px-5 py-6 sm:px-8 sm:py-8">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_70%_at_0%_0%,rgba(56,189,248,0.12),transparent_60%)]" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -66,17 +84,10 @@ export function ProfileChangePasswordForm() {
           </Link>
         </aside>
 
-        <form action={action} className="space-y-5 p-5 sm:p-8">
+        <form ref={formRef} action={action} className="space-y-5 p-5 sm:p-8">
           {state?.error && (
             <p className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
               {state.error}
-            </p>
-          )}
-
-          {state?.success && state.message && (
-            <p className="flex items-start gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-              <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-400" />
-              {state.message}
             </p>
           )}
 

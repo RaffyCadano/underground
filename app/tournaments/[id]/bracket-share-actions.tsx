@@ -6,7 +6,16 @@ import Link from 'next/link';
 import { Check, Code2, Copy, Crown, Printer, X } from 'lucide-react';
 import { SITE_NAME } from '@/lib/site';
 
-export function BracketShareActions({ tournamentId }: { tournamentId: string }) {
+const bracketToolbarIconButtonClass =
+  'inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:text-slate-200';
+
+export function BracketShareActions({
+  tournamentId,
+  inline = false,
+}: {
+  tournamentId: string;
+  inline?: boolean;
+}) {
   const dialogTitleId = useId();
   const [mounted, setMounted] = useState(false);
   const [embedOpen, setEmbedOpen] = useState(false);
@@ -52,26 +61,38 @@ export function BracketShareActions({ tournamentId }: { tournamentId: string }) 
     window.print();
   }
 
+  const buttons = (
+    <div className="flex gap-1">
+      <button
+        type="button"
+        onClick={() => setEmbedOpen(true)}
+        className={bracketToolbarIconButtonClass}
+        aria-label="Embed Brackets"
+        title="Embed Brackets"
+      >
+        <Code2 size={16} className="shrink-0" />
+      </button>
+      <button
+        type="button"
+        onClick={handlePrint}
+        className={bracketToolbarIconButtonClass}
+        aria-label="Printed Brackets"
+        title="Printed Brackets"
+      >
+        <Printer size={16} className="shrink-0" />
+      </button>
+    </div>
+  );
+
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 print:hidden">
-        <button
-          type="button"
-          onClick={() => setEmbedOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-600 hover:bg-slate-800"
-        >
-          <Code2 size={14} />
-          Embed Brackets
-        </button>
-        <button
-          type="button"
-          onClick={handlePrint}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-600 hover:bg-slate-800"
-        >
-          <Printer size={14} />
-          Printed Brackets
-        </button>
-      </div>
+      {inline ? (
+        buttons
+      ) : (
+        <div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-1 print:hidden">
+          {buttons}
+        </div>
+      )}
 
       {embedOpen &&
         mounted &&

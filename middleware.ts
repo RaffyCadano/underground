@@ -57,12 +57,18 @@ export async function middleware(req: NextRequest) {
 
   if (matchesPrefix(pathname, ADMIN_ONLY_PREFIXES) && role !== 'admin') {
     return NextResponse.redirect(
-      new URL(canAccessTournamentDashboard(role) ? '/dashboard/tournaments' : '/dashboard', req.url),
+      new URL(canAccessTournamentDashboard(role) ? '/dashboard/tournaments' : '/dashboard/your-events', req.url),
     );
   }
 
   if (matchesPrefix(pathname, TOURNAMENT_STAFF_PREFIXES) && !canAccessTournamentDashboard(role)) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+    return NextResponse.redirect(new URL('/dashboard/your-events', req.url));
+  }
+
+  if (pathname === '/dashboard' && role !== 'admin') {
+    return NextResponse.redirect(
+      new URL(canAccessTournamentDashboard(role) ? '/dashboard/tournaments' : '/dashboard/your-events', req.url),
+    );
   }
 
   return nextWithPathname(req);

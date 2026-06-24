@@ -18,7 +18,7 @@ function StatCardSkeleton() {
 
 function TournamentRowSkeleton() {
   return (
-    <div className="flex items-center justify-between gap-4 px-6 py-4">
+    <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6">
       <div className="min-w-0 flex-1 space-y-1.5">
         <Skeleton className="h-4 w-48 max-w-full" />
         <Skeleton className="h-3 w-24" />
@@ -54,16 +54,16 @@ export default function PlayerProfileLoading() {
     <div className="w-full" aria-busy="true" aria-label="Loading player profile">
       <section className="relative overflow-hidden border-b border-slate-800">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(34,197,94,0.1),transparent)]" />
-        <div className="container relative py-10 lg:py-14">
-          <Skeleton className="mb-6 h-4 w-24" />
+        <div className="container relative py-8 sm:py-10 lg:py-14">
+          <Skeleton className="mb-5 h-4 w-24 sm:mb-6" />
 
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-start gap-5">
-              <Skeleton className="h-16 w-16 shrink-0 rounded-2xl" />
-              <div className="space-y-2">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-5">
+              <Skeleton className="h-24 w-24 shrink-0 rounded-2xl sm:h-28 sm:w-28" />
+              <div className="flex w-full flex-col items-center space-y-2 sm:items-start">
                 <Skeleton className="h-3 w-28" />
-                <Skeleton className="h-9 w-40 sm:h-10 sm:w-48" />
-                <div className="flex flex-wrap items-center gap-2 pt-1">
+                <Skeleton className="h-8 w-40 sm:h-9 sm:w-48" />
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1 sm:justify-start">
                   <Skeleton className="h-6 w-16 rounded-full" />
                   <Skeleton className="h-6 w-28 rounded-full" />
                   <Skeleton className="h-4 w-36" />
@@ -71,17 +71,17 @@ export default function PlayerProfileLoading() {
               </div>
             </div>
 
-            <Skeleton className="h-10 w-full shrink-0 rounded-lg sm:w-40" />
+            <Skeleton className="h-10 w-full shrink-0 rounded-lg sm:w-40 lg:ml-auto" />
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-4 lg:grid-cols-4">
             <StatCardSkeleton />
             <StatCardSkeleton />
             <StatCardSkeleton />
             <StatCardSkeleton />
           </div>
 
-          <div className="mt-6 max-w-xl">
+          <div className="mx-auto mt-5 max-w-xl sm:mx-0 sm:mt-6">
             <div className="flex items-center justify-between">
               <Skeleton className="h-3 w-14" />
               <Skeleton className="h-3 w-8" />
@@ -91,11 +91,11 @@ export default function PlayerProfileLoading() {
         </div>
       </section>
 
-      <section className="container py-12 lg:py-14">
-        <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-          <div className="space-y-6">
+      <section className="container py-8 sm:py-12 lg:py-14">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0 space-y-6">
             <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
-              <div className="flex items-center justify-between border-b border-slate-800 px-6 py-5">
+              <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
                 <div className="space-y-1.5">
                   <Skeleton className="h-5 w-40" />
                   <Skeleton className="h-3 w-52" />
@@ -110,11 +110,11 @@ export default function PlayerProfileLoading() {
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
-              <div className="border-b border-slate-800 px-6 py-5">
+              <div className="border-b border-slate-800 px-4 py-4 sm:px-6 sm:py-5">
                 <Skeleton className="h-5 w-28" />
                 <Skeleton className="mt-1.5 h-3 w-48" />
               </div>
-              <div className="grid gap-3 p-6 sm:grid-cols-2">
+              <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-6">
                 {Array.from({ length: 4 }, (_, i) => (
                   <div
                     key={i}
@@ -128,7 +128,7 @@ export default function PlayerProfileLoading() {
             </div>
           </div>
 
-          <aside className="space-y-4">
+          <aside className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
             <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
               <Skeleton className="h-3 w-16" />
               <div className="mt-4 space-y-4">

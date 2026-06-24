@@ -52,8 +52,8 @@ export function canManageTournaments(role: string): boolean {
 
 export function dashboardHrefForRole(role: string): string {
   if (role === 'admin') return '/dashboard/overview';
-  if (role === 'organizer') return '/dashboard/tournaments';
-  return '/dashboard';
+  if (canManageTournaments(role)) return '/dashboard/tournaments';
+  return '/dashboard/your-events';
 }
 
 /** Primary site owner account — cannot be deleted or modified by other admins. */

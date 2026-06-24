@@ -45,6 +45,7 @@ export default async function DashboardAccountsPage({
         id: true,
         username: true,
         email: true,
+        emailVerifiedAt: true,
         role: true,
         rankPoints: true,
         wins: true,
@@ -63,9 +64,10 @@ export default async function DashboardAccountsPage({
     }),
   ]);
 
-  const accountRows = users.map((user) => ({
+  const accountRows = users.map(({ emailVerifiedAt, createdAt, ...user }) => ({
     ...user,
-    joinedLabel: formatJoined(user.createdAt),
+    emailVerified: emailVerifiedAt != null,
+    joinedLabel: formatJoined(createdAt),
   }));
 
   return (

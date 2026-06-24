@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { FileStack, Loader2, Pencil, Plus, Trash2, Trophy } from 'lucide-react';
+import { FileStack, Plus } from 'lucide-react';
 import { deleteTournamentTemplate } from '@/app/actions/tournament-templates';
 import { SuccessToast } from '@/app/components/success-toast';
 import { FORMAT_LABELS } from '@/lib/tournament-labels';
 import { GAME_TYPE_LABELS } from '@/lib/tournament-options';
+import { TournamentTemplateActionsMenu } from './tournament-template-actions-menu';
 
 type TemplateRow = {
   id: string;
@@ -18,6 +19,26 @@ type TemplateRow = {
   isRanked: boolean;
   updatedAt: string;
 };
+
+const thClass = 'px-3 py-2.5 text-xs font-semibold uppercase tracking-wider';
+const tdClass = 'px-3 py-2.5 align-middle';
+
+function formatUpdated(date: string) {
+  return new Date(date).toLocaleDateString('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function templateDetails(template: TemplateRow) {
+  const parts = [
+    GAME_TYPE_LABELS[template.gameType] ?? template.gameType,
+    template.groupStageEnabled ? 'Two-stage' : null,
+    template.isRanked ? 'Ranked' : 'Unranked',
+  ].filter(Boolean);
+  return parts.join(' · ');
+}
 
 export function TournamentTemplatesList({
   templates,
@@ -64,7 +85,7 @@ export function TournamentTemplatesList({
         onDismiss={() => setToast(null)}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <Link href="/profile/tournament-templates/new" className="btn-primary inline-flex items-center gap-2">
           <Plus size={16} />
           New Template
@@ -80,55 +101,70 @@ export function TournamentTemplatesList({
           </p>
         </div>
       ) : (
-        <div className="mt-6 space-y-3">
-          {templates.map((template) => (
-            <div
-              key={template.id}
-              className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <p className="font-semibold text-white">{template.name}</p>
-                <p className="mt-1 text-sm text-slate-400">
-                  {FORMAT_LABELS[template.format] ?? template.format} ·{' '}
-                  {GAME_TYPE_LABELS[template.gameType] ?? template.gameType}
-                  {template.groupStageEnabled ? ' · Two-stage' : ''} ·{' '}
-                  {template.isRanked ? 'Ranked' : 'Unranked'}
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  Updated {new Date(template.updatedAt).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href={`/dashboard/tournaments/create?template=${template.id}`}
-                  className="btn-secondary inline-flex items-center gap-1.5 text-sm"
-                >
-                  <Trophy size={14} />
-                  Create event
-                </Link>
-                <Link
-                  href={`/profile/tournament-templates/${template.id}/edit`}
-                  className="btn-secondary inline-flex items-center gap-1.5 text-sm"
-                >
-                  <Pencil size={14} />
-                  Edit
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(template.id, template.name)}
-                  disabled={isPending && deletingId === template.id}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/15 disabled:opacity-60"
-                >
-                  {isPending && deletingId === template.id ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Trash2 size={14} />
-                  )}
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="mt-6 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
+          <div className="overflow-x-auto">
+            <table className="min-w-[40rem] w-full text-left text-sm">
+              <thead className="border-b border-slate-800 bg-slate-900/80 text-slate-400">
+                <tr>
+                  <th className={`${thClass} min-w-[10rem]`}>Template</th>
+                  <th className={`${thClass} min-w-[8rem]`}>Format</th>
+                  <th className={`${thClass} hidden min-w-[10rem] md:table-cell`}>Details</th>
+                  <th className={`${thClass} min-w-[6rem]`}>Ranked</th>
+                  <th className={`${thClass} hidden min-w-[6rem] sm:table-cell`}>Updated</th>
+                  <th className={`${thClass} w-12 text-right`}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {templates.map((template) => {
+                  const formatLabel = FORMAT_LABELS[template.format] ?? template.format;
+                  const details = templateDetails(template);
+
+                  return (
+                    <tr
+                      key={template.id}
+                      className="border-t border-slate-800/80 transition hover:bg-slate-900/50"
+                    >
+                      <td className={tdClass}>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-white">{template.name}</p>
+                          <p className="mt-0.5 truncate text-xs text-slate-500 md:hidden">
+                            {formatLabel} · {details}
+                          </p>
+                          <p className="mt-0.5 text-xs text-slate-600 sm:hidden">
+                            Updated {formatUpdated(template.updatedAt)}
+                          </p>
+                        </div>
+                      </td>
+                      <td className={`${tdClass} text-slate-300`}>{formatLabel}</td>
+                      <td className={`${tdClass} hidden text-slate-400 md:table-cell`}>{details}</td>
+                      <td className={tdClass}>
+                        <span
+                          className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                            template.isRanked
+                              ? 'border-brand-500/35 bg-brand-500/10 text-brand-300'
+                              : 'border-slate-700 bg-slate-800 text-slate-500'
+                          }`}
+                        >
+                          {template.isRanked ? 'Ranked' : 'Unranked'}
+                        </span>
+                      </td>
+                      <td className={`${tdClass} hidden whitespace-nowrap text-slate-400 sm:table-cell`}>
+                        {formatUpdated(template.updatedAt)}
+                      </td>
+                      <td className={`${tdClass} text-right`}>
+                        <TournamentTemplateActionsMenu
+                          templateId={template.id}
+                          templateName={template.name}
+                          deleting={isPending && deletingId === template.id}
+                          onDelete={() => handleDelete(template.id, template.name)}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </>

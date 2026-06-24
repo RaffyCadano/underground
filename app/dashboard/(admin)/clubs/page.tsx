@@ -1,8 +1,20 @@
 import Link from 'next/link';
-import { MapPin, Mail } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
-import { DeleteClubButton } from '@/app/teams/delete-club-button';
-import { DismissClubRequestButton } from '@/app/teams/dismiss-club-request-button';
+import { ClubActionsMenu } from '@/app/dashboard/club-actions-menu';
+import { ClubRequestActionsMenu } from '@/app/dashboard/club-request-actions-menu';
+
+export const dynamic = 'force-dynamic';
+
+const thClass = 'px-3 py-2.5 text-xs font-semibold uppercase tracking-wider';
+const tdClass = 'px-3 py-2.5 align-top';
+
+function formatWhen(date: Date) {
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
 
 export default async function DashboardClubsPage() {
   const [clubs, pendingRequests] = await Promise.all([
@@ -36,7 +48,7 @@ export default async function DashboardClubsPage() {
         </div>
       </div>
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+      <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-3">
           <p className="text-xs uppercase tracking-wider text-slate-500">Clubs listed</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{clubs.length}</p>
@@ -45,70 +57,83 @@ export default async function DashboardClubsPage() {
           <p className="text-xs uppercase tracking-wider text-slate-500">Total members</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{totalMembers}</p>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-3">
-          <p className="text-xs uppercase tracking-wider text-slate-500">Pending requests</p>
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+          <p className="text-xs uppercase tracking-wider text-amber-200/80">Pending requests</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{pendingRequests.length}</p>
         </div>
       </div>
 
       {pendingRequests.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-sm font-semibold text-white">Club listing requests</h3>
-          <p className="mt-1 text-sm text-slate-400">
+        <div className="mb-10">
+          <h3 className="mb-1 text-sm font-semibold text-white">Club listing requests</h3>
+          <p className="mb-4 text-sm text-slate-400">
             Submitted from the public teams page. Create the club when approved, then mark reviewed.
           </p>
-          <div className="mt-4 space-y-3">
-            {pendingRequests.map((request) => (
-              <div
-                key={request.id}
-                className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-5 py-4"
-              >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-white">{request.clubName}</p>
-                    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin size={12} />
-                        {request.region}
-                      </span>
-                      {request.captain && <span>Captain: {request.captain}</span>}
-                      {request.memberCount != null && <span>{request.memberCount} members</span>}
-                      <span className="inline-flex items-center gap-1">
-                        <Mail size={12} />
-                        {request.contactEmail}
-                      </span>
-                    </p>
-                    {request.contactName && (
-                      <p className="mt-1 text-xs text-slate-500">From: {request.contactName}</p>
-                    )}
-                    {request.message && (
-                      <p className="mt-2 text-sm leading-relaxed text-slate-400">{request.message}</p>
-                    )}
-                    <p className="mt-2 text-[11px] text-slate-600">
-                      {request.createdAt.toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap gap-2">
-                    <Link
-                      href="/dashboard/clubs/create"
-                      className="btn-primary inline-flex items-center justify-center px-3 py-1.5 text-xs"
+          <div className="overflow-hidden rounded-xl border border-amber-500/20 bg-slate-950">
+            <div className="overflow-x-auto">
+              <table className="min-w-[52rem] w-full text-left text-sm">
+                <thead className="border-b border-slate-800 bg-slate-900/80 text-slate-400">
+                  <tr>
+                    <th className={`${thClass} min-w-[10rem]`}>Club</th>
+                    <th className={`${thClass} min-w-[7rem]`}>Region</th>
+                    <th className={`${thClass} hidden min-w-[6rem] sm:table-cell`}>Captain</th>
+                    <th className={`${thClass} min-w-[5rem]`}>Members</th>
+                    <th className={`${thClass} hidden min-w-[9rem] md:table-cell`}>Contact</th>
+                    <th className={`${thClass} hidden min-w-[6rem] lg:table-cell`}>From</th>
+                    <th className={`${thClass} min-w-[10rem]`}>Message</th>
+                    <th className={`${thClass} min-w-[7rem]`}>Submitted</th>
+                    <th className={`${thClass} w-12 text-right`}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingRequests.map((request) => (
+                    <tr
+                      key={request.id}
+                      className="border-t border-slate-800/80 bg-amber-500/[0.03] transition hover:bg-amber-500/[0.06]"
                     >
-                      Add club
-                    </Link>
-                    <DismissClubRequestButton requestId={request.id} />
-                  </div>
-                </div>
-              </div>
-            ))}
+                      <td className={tdClass}>
+                        <p className="font-medium text-white">{request.clubName}</p>
+                      </td>
+                      <td className={`${tdClass} text-slate-300`}>{request.region}</td>
+                      <td className={`${tdClass} hidden text-slate-400 sm:table-cell`}>
+                        {request.captain ?? '—'}
+                      </td>
+                      <td className={`${tdClass} tabular-nums text-slate-300`}>
+                        {request.memberCount ?? '—'}
+                      </td>
+                      <td className={`${tdClass} hidden md:table-cell`}>
+                        <a
+                          href={`mailto:${request.contactEmail}`}
+                          className="text-brand-300 hover:text-brand-200"
+                        >
+                          {request.contactEmail}
+                        </a>
+                      </td>
+                      <td className={`${tdClass} hidden text-slate-400 lg:table-cell`}>
+                        {request.contactName ?? '—'}
+                      </td>
+                      <td className={tdClass}>
+                        <p className="line-clamp-2 whitespace-pre-wrap text-slate-400">
+                          {request.message ?? '—'}
+                        </p>
+                      </td>
+                      <td className={`${tdClass} text-xs text-slate-500`}>
+                        {formatWhen(request.createdAt)}
+                      </td>
+                      <td className={tdClass}>
+                        <ClubRequestActionsMenu requestId={request.id} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="space-y-3">
+      <div>
+        <h3 className="mb-4 text-sm font-semibold text-white">Listed clubs</h3>
         {clubs.length === 0 ? (
           <div className="card-muted p-8 text-center text-slate-400">
             No community clubs yet.{' '}
@@ -118,39 +143,61 @@ export default async function DashboardClubsPage() {
             to get started.
           </div>
         ) : (
-          clubs.map((club) => (
-            <div
-              key={club.id}
-              className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-white">{club.name}</p>
-                  {club.verified && (
-                    <span className="rounded-full border border-brand-500/30 bg-brand-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand-300">
-                      Verified
-                    </span>
-                  )}
-                </div>
-                {club.tagline && <p className="mt-1 text-sm text-slate-400">{club.tagline}</p>}
-                <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                  <span className="inline-flex items-center gap-1">
-                    <MapPin size={12} />
-                    {club.region}
-                  </span>
-                  <span>{club.memberCount} members</span>
-                  <span>{club.eventsCount} events</span>
-                  {club.captain && <span>Captain: {club.captain}</span>}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <Link href="/teams" className="btn-secondary">
-                  Public listing
-                </Link>
-                <DeleteClubButton clubId={club.id} clubName={club.name} />
-              </div>
+          <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+            <div className="overflow-x-auto">
+              <table className="min-w-[48rem] w-full text-left text-sm">
+                <thead className="border-b border-slate-800 bg-slate-900/80 text-slate-400">
+                  <tr>
+                    <th className={`${thClass} min-w-[10rem]`}>Club</th>
+                    <th className={`${thClass} hidden min-w-[10rem] md:table-cell`}>Tagline</th>
+                    <th className={`${thClass} min-w-[7rem]`}>Region</th>
+                    <th className={`${thClass} min-w-[5rem]`}>Members</th>
+                    <th className={`${thClass} hidden min-w-[5rem] sm:table-cell`}>Events</th>
+                    <th className={`${thClass} hidden min-w-[6rem] lg:table-cell`}>Captain</th>
+                    <th className={`${thClass} min-w-[5rem]`}>Status</th>
+                    <th className={`${thClass} w-12 text-right`}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clubs.map((club) => (
+                    <tr
+                      key={club.id}
+                      className="border-t border-slate-800/80 transition hover:bg-slate-900/50"
+                    >
+                      <td className={tdClass}>
+                        <p className="font-medium text-white">{club.name}</p>
+                      </td>
+                      <td className={`${tdClass} hidden text-slate-400 md:table-cell`}>
+                        {club.tagline ?? '—'}
+                      </td>
+                      <td className={`${tdClass} text-slate-300`}>{club.region}</td>
+                      <td className={`${tdClass} tabular-nums text-slate-300`}>{club.memberCount}</td>
+                      <td className={`${tdClass} hidden tabular-nums text-slate-300 sm:table-cell`}>
+                        {club.eventsCount}
+                      </td>
+                      <td className={`${tdClass} hidden text-slate-400 lg:table-cell`}>
+                        {club.captain ?? '—'}
+                      </td>
+                      <td className={tdClass}>
+                        {club.verified ? (
+                          <span className="rounded-full border border-brand-500/30 bg-brand-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand-300">
+                            Verified
+                          </span>
+                        ) : (
+                          <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                            Unverified
+                          </span>
+                        )}
+                      </td>
+                      <td className={tdClass}>
+                        <ClubActionsMenu clubId={club.id} clubName={club.name} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))
+          </div>
         )}
       </div>
     </div>

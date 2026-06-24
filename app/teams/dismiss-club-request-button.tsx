@@ -4,14 +4,41 @@ import { useTransition } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import { dismissClubRequest } from '@/app/actions/clubs';
 
-export function DismissClubRequestButton({ requestId }: { requestId: string }) {
+export function DismissClubRequestButton({
+  requestId,
+  variant = 'button',
+  onAction,
+}: {
+  requestId: string;
+  variant?: 'button' | 'menuItem';
+  onAction?: () => void;
+}) {
   const [isPending, startTransition] = useTransition();
+
+  function handleClick() {
+    onAction?.();
+    startTransition(() => dismissClubRequest(requestId));
+  }
+
+  if (variant === 'menuItem') {
+    return (
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={handleClick}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-slate-300 transition hover:bg-slate-900 disabled:opacity-50"
+      >
+        {isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+        Mark reviewed
+      </button>
+    );
+  }
 
   return (
     <button
       type="button"
       disabled={isPending}
-      onClick={() => startTransition(() => dismissClubRequest(requestId))}
+      onClick={handleClick}
       className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white disabled:opacity-50"
     >
       {isPending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}

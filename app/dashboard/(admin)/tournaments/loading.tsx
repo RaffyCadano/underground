@@ -4,17 +4,34 @@ function Skeleton({ className }: { className?: string }) {
 
 function TournamentRowSkeleton() {
   return (
-    <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-      <div className="min-w-0 flex-1 space-y-2">
-        <Skeleton className="h-5 w-full max-w-xs" />
-        <Skeleton className="h-3 w-full max-w-sm" />
-      </div>
-      <div className="flex shrink-0 items-center gap-3">
-        <Skeleton className="h-7 w-24 rounded-full" />
-        <Skeleton className="h-10 w-20 rounded-lg" />
-        <Skeleton className="h-10 w-10 rounded-lg" />
-      </div>
-    </div>
+    <tr className="border-t border-slate-800/80">
+      <td className="px-3 py-3.5">
+        <Skeleton className="h-5 w-48 max-w-full" />
+      </td>
+      <td className="px-3 py-3.5">
+        <Skeleton className="h-4 w-24" />
+      </td>
+      <td className="hidden px-3 py-3.5 md:table-cell">
+        <Skeleton className="h-4 w-28" />
+      </td>
+      <td className="hidden px-3 py-3.5 lg:table-cell">
+        <Skeleton className="h-4 w-24" />
+      </td>
+      <td className="px-3 py-3.5">
+        <Skeleton className="h-4 w-8" />
+      </td>
+      <td className="hidden px-3 py-3.5 sm:table-cell">
+        <Skeleton className="h-4 w-8" />
+      </td>
+      <td className="px-3 py-3.5">
+        <Skeleton className="h-7 w-20 rounded-full" />
+      </td>
+      <td className="px-3 py-3.5">
+        <div className="flex justify-end">
+          <Skeleton className="h-8 w-8 rounded-lg" />
+        </div>
+      </td>
+    </tr>
   );
 }
 
@@ -42,11 +59,24 @@ export default function DashboardTournamentsLoading() {
         <div className="border-b border-slate-800 p-4 sm:p-5">
           <Skeleton className="h-10 w-full max-w-lg rounded-lg" />
         </div>
-        <div className="divide-y divide-slate-800">
-          <TournamentRowSkeleton />
-          <TournamentRowSkeleton />
-          <TournamentRowSkeleton />
-          <TournamentRowSkeleton />
+        <div className="overflow-x-auto">
+          <table className="min-w-[56rem] w-full">
+            <thead className="border-b border-slate-800 bg-slate-900/80">
+              <tr>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <th key={i} className="px-3 py-3">
+                    <Skeleton className="h-3 w-16" />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <TournamentRowSkeleton />
+              <TournamentRowSkeleton />
+              <TournamentRowSkeleton />
+              <TournamentRowSkeleton />
+            </tbody>
+          </table>
         </div>
         <div className="flex justify-between border-t border-slate-800 px-5 py-4">
           <Skeleton className="h-4 w-32" />

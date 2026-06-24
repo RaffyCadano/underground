@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { YourTournamentsHero } from '@/app/components/your-tournaments-hero';
 import { ListSearch } from '@/app/components/list-search';
 import { Pagination } from '@/app/components/pagination';
-import { DeleteTournamentButton } from '@/app/tournaments/delete-tournament-button';
+import { TournamentActionsMenu } from '@/app/dashboard/tournament-actions-menu';
 import { TournamentDeletedToast } from '@/app/tournaments/tournament-deleted-toast';
 import { authOptions } from '@/lib/auth';
 import { mergeTournamentHostScope } from '@/lib/tournament-host';
@@ -34,6 +34,17 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'active', label: 'In progress' },
   { value: 'complete', label: 'Complete' },
 ];
+
+const thClass = 'px-3 py-2.5 text-xs font-semibold uppercase tracking-wider';
+const tdClass = 'px-3 py-2.5 align-middle';
+
+function formatTournamentDate(date: Date) {
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
 
 function statusClass(status: string) {
   if (status === 'open') return 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300';
@@ -132,39 +143,56 @@ export default async function DashboardTournamentsPage({
             </div>
           ) : (
             <>
-              <div className="divide-y divide-slate-800">
-                {tournaments.map((t) => (
-                  <div
-                    key={t.id}
-                    className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-semibold text-white">{t.name}</p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {t.date.toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                        {' · '}
-                        {FORMAT_LABELS[t.format] ?? t.format}
-                        {' · '}
-                        {t._count.participants} players · {t._count.matches} matches
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <span
-                        className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider ${statusClass(t.status)}`}
+              <div className="overflow-x-auto">
+                <table className="min-w-[56rem] w-full text-left text-sm">
+                  <thead className="border-b border-slate-800 bg-slate-900/80 text-slate-400">
+                    <tr>
+                      <th className={`${thClass} min-w-[12rem]`}>Name</th>
+                      <th className={`${thClass} min-w-[7rem]`}>Date</th>
+                      <th className={`${thClass} hidden min-w-[9rem] md:table-cell`}>Format</th>
+                      <th className={`${thClass} hidden min-w-[8rem] lg:table-cell`}>Location</th>
+                      <th className={`${thClass} min-w-[5rem]`}>Players</th>
+                      <th className={`${thClass} hidden min-w-[5rem] sm:table-cell`}>Matches</th>
+                      <th className={`${thClass} min-w-[6rem]`}>Status</th>
+                      <th className={`${thClass} w-12 text-right`}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tournaments.map((t) => (
+                      <tr
+                        key={t.id}
+                        className="border-t border-slate-800/80 transition hover:bg-slate-900/50"
                       >
-                        {STATUS_LABELS[t.status] ?? t.status}
-                      </span>
-                      <Link href={`/tournaments/${t.id}`} className="btn-secondary">
-                        Manage
-                      </Link>
-                      <DeleteTournamentButton tournamentId={t.id} tournamentName={t.name} />
-                    </div>
-                  </div>
-                ))}
+                        <td className={tdClass}>
+                          <p className="font-semibold text-white">{t.name}</p>
+                        </td>
+                        <td className={`${tdClass} text-slate-400`}>{formatTournamentDate(t.date)}</td>
+                        <td className={`${tdClass} hidden text-slate-400 md:table-cell`}>
+                          {FORMAT_LABELS[t.format] ?? t.format}
+                        </td>
+                        <td className={`${tdClass} hidden text-slate-400 lg:table-cell`}>
+                          {t.location ?? '—'}
+                        </td>
+                        <td className={`${tdClass} tabular-nums text-slate-300`}>
+                          {t._count.participants}
+                        </td>
+                        <td className={`${tdClass} hidden tabular-nums text-slate-300 sm:table-cell`}>
+                          {t._count.matches}
+                        </td>
+                        <td className={tdClass}>
+                          <span
+                            className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${statusClass(t.status)}`}
+                          >
+                            {STATUS_LABELS[t.status] ?? t.status}
+                          </span>
+                        </td>
+                        <td className={tdClass}>
+                          <TournamentActionsMenu tournamentId={t.id} tournamentName={t.name} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
               <Pagination

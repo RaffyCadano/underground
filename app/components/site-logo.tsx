@@ -10,10 +10,12 @@ export function SiteLogo({
   size = 'header',
   className = '',
   priority = false,
+  decorative = false,
 }: {
   size?: keyof typeof sizes;
   className?: string;
   priority?: boolean;
+  decorative?: boolean;
 }) {
   const px = size === 'header' ? 36 : 44;
 
@@ -23,7 +25,7 @@ export function SiteLogo({
     >
       <Image
         src={SITE_LOGO_SRC}
-        alt={SITE_NAME}
+        alt={decorative ? '' : SITE_NAME}
         width={px}
         height={px}
         className="h-full w-full object-cover"

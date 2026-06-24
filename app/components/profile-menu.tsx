@@ -25,8 +25,12 @@ type MenuLink = {
   count?: number;
 };
 
+function getSessionUsername(session: Session) {
+  return session.user.name ?? session.user.email?.split('@')[0] ?? 'Account';
+}
+
 function buildMenuLinks(session: Session, unreadMessages = 0): MenuLink[] {
-  const username = session.user.name ?? 'player';
+  const username = getSessionUsername(session);
   const role = session.user.role;
   const dashboardHref =
     role === 'admin'
@@ -84,29 +88,42 @@ function premierBadge() {
 
 function AccountMenuPanel({
   session,
+  avatar = null,
   pathname,
   onNavigate,
   onLogOut,
   unreadMessages,
 }: {
   session: Session;
+  avatar?: string | null;
   pathname: string;
   onNavigate?: () => void;
   onLogOut: () => void;
   unreadMessages: number;
 }) {
   const links = buildMenuLinks(session, unreadMessages);
-  const showPremierUpgrade =
-    !isAdminRole(session.user.role) &&
-    !userHasActivePremier(
-      session.user.subscriptionPlan ?? 'free',
-      session.user.subscriptionStatus,
-    );
+  const username = getSessionUsername(session);
+  const hasPremier = userHasActivePremier(
+    session.user.subscriptionPlan ?? 'free',
+    session.user.subscriptionStatus,
+  );
+  const showPremierUpgrade = !isAdminRole(session.user.role) && !hasPremier;
 
   return (
     <div>
       <div className="border-b border-slate-800 px-4 py-3">
-        <p className="text-sm font-semibold text-white">Your Account</p>
+        <div className="flex items-center gap-3">
+          <PlayerAvatar username={username} avatar={avatar} size="sm" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="truncate text-sm font-semibold text-white">@{username}</p>
+              {hasPremier && premierBadge()}
+            </div>
+            {session.user.email && (
+              <p className="truncate text-xs text-slate-500">{session.user.email}</p>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="py-1">
@@ -172,7 +189,7 @@ export function ProfileMenu({
   const [unreadMessages, setUnreadMessages] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const username = session.user.name ?? session.user.email?.split('@')[0] ?? 'Account';
+  const username = getSessionUsername(session);
   const links = buildMenuLinks(session, unreadMessages);
   const dashboardActive = isActive(pathname, links[0].href);
 
@@ -247,9 +264,10 @@ export function ProfileMenu({
   if (variant === 'drawer') {
     return (
       <>
-        <div className="mt-auto border-t border-slate-800 pt-4">
+        <div className="mt-auto border-t border-slate-800">
           <AccountMenuPanel
             session={session}
+            avatar={avatar}
             pathname={pathname}
             onNavigate={closeAll}
             onLogOut={openLogOut}
@@ -297,6 +315,7 @@ export function ProfileMenu({
           >
             <AccountMenuPanel
               session={session}
+              avatar={avatar}
               pathname={pathname}
               onNavigate={() => setOpen(false)}
               onLogOut={openLogOut}

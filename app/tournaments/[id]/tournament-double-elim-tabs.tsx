@@ -158,16 +158,26 @@ export function TournamentDoubleElimTabs({
         <>
           {hasPlayoffs ? (
             <>
-              <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                <div className="min-w-0 flex-1">
-                  <TabBar
-                    tabs={BRACKET_VIEWS}
-                    active={bracketView}
-                    onChange={setBracketView}
-                    size="sm"
-                  />
-                </div>
-                {showShareActions && <BracketShareActions tournamentId={tournamentId} />}
+              <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-1 print:hidden">
+                {BRACKET_VIEWS.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setBracketView(id)}
+                    className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                      bracketView === id
+                        ? 'bg-slate-800 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+                {showShareActions && (
+                  <div className="ml-auto flex shrink-0 items-center gap-2 border-l border-slate-800 pl-2">
+                    <BracketShareActions tournamentId={tournamentId} inline />
+                  </div>
+                )}
               </div>
               <p className="mb-4 text-xs text-slate-500">{gfLabel}</p>
               <BracketDoubleElim

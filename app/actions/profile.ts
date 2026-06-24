@@ -9,6 +9,13 @@ import { isAdminRole } from '@/lib/roles';
 import { playerProfilePath } from '@/lib/player-profile';
 import { getSupabaseAdmin, TOURNAMENT_IMAGES_BUCKET } from '@/lib/supabase-admin';
 import { validateUsername } from '@/lib/username';
+import { sendVerificationEmail, emailDeliveryErrorMessage } from '@/lib/email';
+import {
+  appBaseUrl,
+  createVerificationToken,
+  verificationTokenExpiresAt,
+} from '@/lib/email-verification';
+import { hashResetToken } from '@/lib/password-reset';
 
 const MAX_BYTES = 500 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -209,8 +216,50 @@ export async function removeProfileAvatar(): Promise<{ error?: string }> {
 
 export type AccountSettingsState = { error?: string; success?: string } | null;
 
-function checkboxValue(formData: FormData, name: string) {
-  return formData.get(name) === 'on';
+export type EmailVerificationState = { error?: string; success?: string } | null;
+
+export async function sendEmailVerification(): Promise<EmailVerificationState> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return { error: 'Sign in to verify your email.' };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, email: true, emailVerifiedAt: true },
+  });
+  if (!user) {
+    return { error: 'Account not found.' };
+  }
+  if (user.emailVerifiedAt) {
+    return { success: 'Your email is already verified.' };
+  }
+
+  const token = createVerificationToken();
+  const tokenHash = hashResetToken(token);
+  const expiresAt = verificationTokenExpiresAt();
+
+  await prisma.emailVerificationToken.deleteMany({ where: { userId: user.id } });
+  await prisma.emailVerificationToken.create({
+    data: { userId: user.id, tokenHash, expiresAt },
+  });
+
+  const verifyUrl = `${appBaseUrl()}/verify-email/${token}`;
+
+  try {
+    const result = await sendVerificationEmail(user.email, verifyUrl);
+    if (!result.delivered) {
+      return {
+        success:
+          'Verification link generated. Check your dev server logs for the link (Resend sandbox only allows your account email until a domain is verified).',
+      };
+    }
+    return { success: 'Verification link sent. Check your inbox and spam folder.' };
+  } catch (err) {
+    console.error('[email-verification] Failed to send email:', err);
+    await prisma.emailVerificationToken.deleteMany({ where: { tokenHash } });
+    return { error: emailDeliveryErrorMessage(err) };
+  }
 }
 
 export async function updateAccountSettings(
@@ -230,7 +279,7 @@ export async function updateAccountSettings(
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, username: true, email: true, role: true, optOutPersonalizedAds: true },
+    select: { id: true, username: true, email: true, role: true },
   });
   if (!user) {
     return { error: 'Account not found.' };
@@ -261,8 +310,6 @@ export async function updateAccountSettings(
     return { error: 'That username is already taken.' };
   }
 
-  const optOutPersonalizedAds = checkboxValue(formData, 'optOutPersonalizedAds');
-
   await prisma.user.update({
     where: { id: user.id },
     data: {
@@ -271,20 +318,12 @@ export async function updateAccountSettings(
       language,
       timezone,
       country,
-      emailPrivateMessages: checkboxValue(formData, 'emailPrivateMessages'),
-      emailMatchNotifications: checkboxValue(formData, 'emailMatchNotifications'),
-      markReadOnEmail: checkboxValue(formData, 'markReadOnEmail'),
-      productUpdates: checkboxValue(formData, 'productUpdates'),
-      optOutPersonalizedAds,
     },
   });
 
   revalidateProfilePaths(username);
   if (username !== user.username) {
     revalidateProfilePaths(user.username);
-  }
-  if (optOutPersonalizedAds !== user.optOutPersonalizedAds) {
-    revalidatePath('/', 'layout');
   }
 
   return { success: 'Account settings saved.' };

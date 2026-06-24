@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, X } from 'lucide-react';
+import { CheckCircle2, X, AlertCircle } from 'lucide-react';
 
 type Props = {
   open: boolean;
@@ -10,6 +10,7 @@ type Props = {
   body?: string;
   onDismiss: () => void;
   autoDismissMs?: number;
+  tone?: 'success' | 'error';
 };
 
 export function SuccessToast({
@@ -18,6 +19,7 @@ export function SuccessToast({
   body,
   onDismiss,
   autoDismissMs = 6000,
+  tone = 'success',
 }: Props) {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -44,19 +46,35 @@ export function SuccessToast({
 
   if (!mounted || !open) return null;
 
+  const isError = tone === 'error';
+
   return createPortal(
     <div
       className={`fixed bottom-4 left-4 z-[60] w-[min(100vw-2rem,22rem)] transition-all duration-300 sm:bottom-6 sm:left-6 ${
         visible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
       }`}
-      role="status"
-      aria-live="polite"
+      role={isError ? 'alert' : 'status'}
+      aria-live={isError ? 'assertive' : 'polite'}
     >
-      <div className="overflow-hidden rounded-xl border border-emerald-500/30 bg-slate-950 shadow-2xl shadow-black/40">
-        <div className="h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent" />
+      <div
+        className={`overflow-hidden rounded-xl border bg-slate-950 shadow-2xl shadow-black/40 ${
+          isError ? 'border-red-500/30' : 'border-emerald-500/30'
+        }`}
+      >
+        <div
+          className={`h-0.5 bg-gradient-to-r from-transparent to-transparent ${
+            isError ? 'via-red-400' : 'via-emerald-400'
+          }`}
+        />
         <div className="flex items-start gap-3 p-4">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-emerald-300">
-            <CheckCircle2 size={20} />
+          <span
+            className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
+              isError
+                ? 'border-red-500/35 bg-red-500/10 text-red-300'
+                : 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300'
+            }`}
+          >
+            {isError ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-white">{title}</p>

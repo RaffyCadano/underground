@@ -12,15 +12,16 @@ model User {
   id                      String                  @id @default(cuid())
   username                String                  @unique
   email                   String                  @unique
+  emailVerifiedAt         DateTime?
   password                String
   avatar                  String?
   fullName                String?
   language                String                  @default("en")
   timezone                String                  @default("America/New_York")
   country                 String                  @default("US")
-  emailPrivateMessages    Boolean                 @default(true)
-  emailMatchNotifications Boolean                 @default(true)
-  markReadOnEmail         Boolean                 @default(true)
+  emailPrivateMessages    Boolean                 @default(false)
+  emailMatchNotifications Boolean                 @default(false)
+  markReadOnEmail         Boolean                 @default(false)
   productUpdates          Boolean                 @default(false)
   optOutPersonalizedAds   Boolean                 @default(false)
   subscriptionPlan        String                  @default("free")
@@ -38,6 +39,7 @@ model User {
   matches2                Match[]                 @relation("player2Matches")
   winsAsWinner            Match[]                 @relation("winnerMatches")
   passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
   clubRequests            ClubRequest[]
   organizerRequests       OrganizerRequest[]
   contactMessages         ContactMessage[]
@@ -68,6 +70,18 @@ model BlockedUser {
 }
 
 model PasswordResetToken {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EmailVerificationToken {
   id        String   @id @default(cuid())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String

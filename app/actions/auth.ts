@@ -6,7 +6,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { redirect } from 'next/navigation';
-import { sendPasswordResetEmail } from '@/lib/email';
+import { sendPasswordResetEmail, emailDeliveryErrorMessage } from '@/lib/email';
 import {
   appBaseUrl,
   createResetToken,
@@ -104,7 +104,7 @@ export async function requestPasswordReset(
     } catch (err) {
       console.error('[password-reset] Failed to send email:', err);
       await prisma.passwordResetToken.deleteMany({ where: { tokenHash } });
-      return { error: 'Could not send reset email. Try again later or contact an admin.' };
+      return { error: emailDeliveryErrorMessage(err) };
     }
   }
 

@@ -19,6 +19,7 @@ export type AccountRow = {
   id: string;
   username: string;
   email: string;
+  emailVerified: boolean;
   role: string;
   rankPoints: number;
   wins: number;
@@ -37,6 +38,35 @@ function RoleBadge({ role }: { role: string }) {
     >
       {roleLabel(role)}
     </span>
+  );
+}
+
+function UnverifiedEmailBadge() {
+  return (
+    <span className="inline-flex shrink-0 rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+      Unverified
+    </span>
+  );
+}
+
+function VerifiedEmailBadge() {
+  return (
+    <span className="inline-flex shrink-0 rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+      Verified
+    </span>
+  );
+}
+
+function EmailVerificationBadge({ emailVerified }: { emailVerified: boolean }) {
+  return emailVerified ? <VerifiedEmailBadge /> : <UnverifiedEmailBadge />;
+}
+
+function EmailCell({ email, emailVerified }: { email: string; emailVerified: boolean }) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <span className="min-w-0 truncate text-slate-300">{email}</span>
+      <EmailVerificationBadge emailVerified={emailVerified} />
+    </div>
   );
 }
 
@@ -345,7 +375,10 @@ export function AccountsTable({
                   >
                     <div className="min-w-0">
                       <p className="truncate font-medium text-white">{user.username}</p>
-                      <p className="mt-0.5 truncate text-xs text-slate-400 md:hidden">{user.email}</p>
+                      <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2 md:hidden">
+                        <p className="min-w-0 truncate text-xs text-slate-400">{user.email}</p>
+                        <EmailVerificationBadge emailVerified={user.emailVerified} />
+                      </div>
                       <p className="mt-1 text-[11px] leading-relaxed text-slate-500 sm:hidden">
                         {user.wins}-{user.losses} · {user.rankPoints} pts · {user.joinedLabel}
                       </p>
@@ -357,8 +390,8 @@ export function AccountsTable({
                       </p>
                     </div>
                   </td>
-                  <td className={`${tdClass} hidden max-w-[14rem] truncate text-slate-300 md:table-cell`}>
-                    {user.email}
+                  <td className={`${tdClass} hidden max-w-[16rem] md:table-cell`}>
+                    <EmailCell email={user.email} emailVerified={user.emailVerified} />
                   </td>
                   <td className={tdClass}>
                     <RoleBadge role={user.role} />

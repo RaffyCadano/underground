@@ -11,6 +11,7 @@ import {
   UserRound,
   Users,
 } from 'lucide-react';
+import { DeleteTournamentButton } from '@/app/tournaments/delete-tournament-button';
 import { GAME_TYPE_LABELS } from '@/lib/tournament-options';
 import { formatPlayerCapLabel } from '@/lib/tournament-registration';
 import { formatEventTime } from '@/lib/tournament-schedule';
@@ -137,13 +138,20 @@ export function TournamentHero({
             Back to tournaments
           </Link>
           {isAdmin && (
-            <Link
-              href={`/dashboard/tournaments/${tournamentId}/edit`}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-brand-500/40 hover:bg-slate-900 hover:text-white sm:w-auto sm:justify-start"
-            >
-              <Pencil size={15} className="shrink-0" />
-              Edit tournament
-            </Link>
+            <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:min-w-[22rem]">
+              <Link
+                href={`/dashboard/tournaments/${tournamentId}/edit`}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-brand-500/40 hover:bg-slate-900 hover:text-white"
+              >
+                <Pencil size={15} className="shrink-0" />
+                Edit tournament
+              </Link>
+              <DeleteTournamentButton
+                tournamentId={tournamentId}
+                tournamentName={name}
+                variant="toolbar"
+              />
+            </div>
           )}
         </div>
 

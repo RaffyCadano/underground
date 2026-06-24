@@ -6,6 +6,7 @@ import {
   UsersRound,
   type LucideIcon,
 } from 'lucide-react';
+import { canManageTournaments } from '@/lib/roles';
 
 export type PlayerDashboardNavItem = {
   href: string;
@@ -13,22 +14,29 @@ export type PlayerDashboardNavItem = {
   icon: LucideIcon;
 };
 
-export function getPlayerDashboardNav(_role: string | undefined): PlayerDashboardNavItem[] {
-  return [
-    { href: '/dashboard', label: 'Your tournaments', icon: Trophy },
+export function getPlayerDashboardNav(role: string | undefined): PlayerDashboardNavItem[] {
+  const items: PlayerDashboardNavItem[] = [];
+
+  if (canManageTournaments(role ?? '')) {
+    items.push({ href: '/dashboard/tournaments', label: 'Your tournaments', icon: Trophy });
+  }
+
+  items.push(
     { href: '/dashboard/your-events', label: 'Your events', icon: Calendar },
     { href: '/dashboard/your-communities', label: 'Your communities', icon: UsersRound },
     { href: '/teams', label: 'Discover Communities', icon: Compass },
     { href: '/news', label: 'News', icon: Newspaper },
-  ];
+  );
+
+  return items;
 }
 
 export function isPlayerDashboardNavActive(pathname: string, href: string): boolean {
-  if (href === '/dashboard') {
-    return pathname === '/dashboard';
-  }
   if (href === '/dashboard/tournaments') {
     return pathname === '/dashboard/tournaments' || pathname.startsWith('/dashboard/tournaments/');
+  }
+  if (href === '/dashboard') {
+    return pathname === '/dashboard';
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
