@@ -4,10 +4,23 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getStripe } from '@/lib/stripe';
 import { listCustomerInvoices } from '@/lib/stripe-invoices';
-import { userHasActivePremier } from '@/lib/sync-stripe-subscription';
+import { userHasActivePremier, syncCheckoutSessionForUser } from '@/lib/sync-stripe-subscription';
 
-export default async function SubscriptionsPage() {
+export default async function SubscriptionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ checkout?: string; session_id?: string }>;
+}) {
   const session = await getServerSession(authOptions);
+  const { checkout, session_id: checkoutSessionId } = await searchParams;
+
+  if (session?.user?.id && checkout === 'success' && checkoutSessionId) {
+    try {
+      await syncCheckoutSessionForUser(checkoutSessionId, session.user.id);
+    } catch (error) {
+      console.error('Failed to sync checkout session:', error);
+    }
+  }
 
   const billing =
     session?.user?.id != null

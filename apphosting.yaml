@@ -2,7 +2,7 @@
 # Set secrets: firebase apphosting:secrets:set SECRET_NAME
 
 runConfig:
-  minInstances: 0
+  minInstances: 1
   maxInstances: 10
   concurrency: 80
   cpu: 1
@@ -16,9 +16,11 @@ env:
   - variable: NEXTAUTH_SECRET
     secret: NEXTAUTH_SECRET
   - variable: NEXTAUTH_URL
-    secret: NEXTAUTH_URL
+    value: https://ugncbbx.web.app
+  - variable: AUTH_TRUST_HOST
+    value: "true"
   - variable: NEXT_PUBLIC_SITE_URL
-    value: https://ugncbbx--ugncbbx.us-central1.hosted.app
+    value: https://ugncbbx.web.app
   - variable: NEXT_PUBLIC_SUPABASE_URL
     secret: NEXT_PUBLIC_SUPABASE_URL
   - variable: SUPABASE_SECRET_KEY
@@ -42,6 +44,8 @@ env:
   - variable: SMTP_USER
     secret: SMTP_USER
   - variable: SMTP_PASS
+    secret: SMTP_PASS
+  - variable: RESEND_API_KEY
     secret: SMTP_PASS
   - variable: EMAIL_FROM
     secret: EMAIL_FROM

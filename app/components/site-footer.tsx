@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   ArrowRight,
   BarChart3,
+  BookOpen,
   CreditCard,
   Info,
   Layers,
@@ -29,6 +30,7 @@ const circuitLinks = [
 
 const platformLinks = [
   { href: '/about', label: 'About', icon: Info },
+  { href: '/learn-more', label: 'Learn more', icon: BookOpen },
   { href: '/features', label: 'Features', icon: Layers },
   { href: '/pricing', label: 'Pricing', icon: CreditCard },
   { href: '/contact', label: 'Contact', icon: Mail },

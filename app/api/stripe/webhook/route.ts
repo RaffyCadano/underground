@@ -3,28 +3,12 @@ import type Stripe from 'stripe';
 import {
   clearUserSubscription,
   resolveUserIdFromSubscription,
+  syncFromCheckoutSession,
   syncUserSubscriptionFromStripe,
 } from '@/lib/sync-stripe-subscription';
 import { getStripe } from '@/lib/stripe';
 
 export const runtime = 'nodejs';
-
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const userId = session.metadata?.userId ?? session.client_reference_id;
-  if (!userId || session.mode !== 'subscription') return;
-
-  const subscriptionId =
-    typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
-
-  if (!subscriptionId) return;
-
-  const stripe = getStripe();
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  const customerId =
-    typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null;
-
-  await syncUserSubscriptionFromStripe(userId, subscription, customerId);
-}
 
 async function handleSubscriptionChange(subscription: Stripe.Subscription) {
   const userId = await resolveUserIdFromSubscription(subscription);
@@ -66,7 +50,7 @@ export async function POST(request: Request) {
   try {
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        await syncFromCheckoutSession(event.data.object as Stripe.Checkout.Session);
         break;
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted':

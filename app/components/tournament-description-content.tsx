@@ -11,6 +11,8 @@ type Props = {
   className?: string;
   compact?: boolean;
   featured?: boolean;
+  /** Smaller images for the in-form description editor preview. */
+  editorPreview?: boolean;
 };
 
 export function TournamentDescriptionContent({
@@ -18,6 +20,7 @@ export function TournamentDescriptionContent({
   className = '',
   compact = false,
   featured = false,
+  editorPreview = false,
 }: Props) {
   const blocks = parseDescriptionMarkdown(content);
 
@@ -60,18 +63,26 @@ export function TournamentDescriptionContent({
         return (
           <figure
             key={`image-${index}`}
-            className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60 shadow-lg shadow-black/20"
+            className={`overflow-hidden border border-slate-800 bg-slate-950/60 ${
+              editorPreview
+                ? 'max-w-[220px] rounded-lg shadow-md shadow-black/10'
+                : 'rounded-2xl shadow-lg shadow-black/20'
+            }`}
           >
             <Image
               src={block.url}
               alt={block.alt}
-              width={1200}
-              height={675}
-              className="h-auto w-full object-cover"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 960px"
+              width={editorPreview ? 440 : 1200}
+              height={editorPreview ? 248 : 675}
+              className={`h-auto w-full ${editorPreview ? 'max-h-36 object-contain' : 'object-cover'}`}
+              sizes={editorPreview ? '220px' : '(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 960px'}
             />
             {block.alt && block.alt !== 'Tournament image' && (
-              <figcaption className="border-t border-slate-800 px-3 py-2 text-xs text-slate-500">
+              <figcaption
+                className={`border-t border-slate-800 text-slate-500 ${
+                  editorPreview ? 'px-2 py-1 text-[10px]' : 'px-3 py-2 text-xs'
+                }`}
+              >
                 {block.alt}
               </figcaption>
             )}

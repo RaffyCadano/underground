@@ -13,7 +13,8 @@ export function SubscriptionCheckoutStatus() {
     if (!checkout) return;
 
     if (checkout === 'success') {
-      setMessage('Payment received. Your Premier plan will activate shortly.');
+      setMessage('Payment received. Your Premier plan is now active.');
+      router.refresh();
     } else if (checkout === 'canceled') {
       setMessage('Checkout was canceled. You can try again whenever you are ready.');
     }

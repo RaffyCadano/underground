@@ -24,6 +24,14 @@ import {
 } from '@/lib/tournament-slug';
 import { checkTournamentSlugAvailability } from '@/app/actions/tournament-slug';
 import { tournamentPublicPath } from '@/lib/tournament-lookup';
+import {
+  countHostedTournaments,
+  getTournamentPlanLimitsForUser,
+  normalizeIsRankedForPlan,
+  normalizePlayerCapForPlan,
+  playerCapLimitError,
+  tournamentCreateLimitError,
+} from '@/lib/tournament-plan-limits';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 
@@ -132,6 +140,30 @@ function formatFieldsToData(fields: ParsedTournamentForm) {
   };
 }
 
+async function applyPlanLimitsToParsed(
+  userId: string,
+  role: string,
+  parsed: ParsedTournamentForm,
+  mode: 'create' | 'update',
+): Promise<ParsedTournamentForm | { error: string }> {
+  const limits = await getTournamentPlanLimitsForUser(userId, role);
+
+  if (mode === 'create') {
+    const hostedCount = await countHostedTournaments(userId);
+    const createError = tournamentCreateLimitError(hostedCount, limits);
+    if (createError) return { error: createError };
+  }
+
+  const capError = playerCapLimitError(parsed.playerCap, limits);
+  if (capError) return { error: capError };
+
+  return {
+    ...parsed,
+    isRanked: normalizeIsRankedForPlan(parsed.isRanked, limits),
+    playerCap: normalizePlayerCapForPlan(parsed.playerCap, limits),
+  };
+}
+
 export async function createTournament(_prev: { error?: string } | null, formData: FormData) {
   const session = await getServerSession(authOptions);
   if (!session || !canManageTournaments(session.user.role)) return { error: 'Unauthorized.' };
@@ -139,24 +171,27 @@ export async function createTournament(_prev: { error?: string } | null, formDat
   const parsed = parseTournamentFormData(formData);
   if ('error' in parsed) return parsed;
 
-  const slugCheck = await checkTournamentSlugAvailability(parsed.slug);
+  const planApplied = await applyPlanLimitsToParsed(session.user.id, session.user.role, parsed, 'create');
+  if ('error' in planApplied) return planApplied;
+
+  const slugCheck = await checkTournamentSlugAvailability(planApplied.slug);
   if (!slugCheck.available) return { error: slugCheck.error ?? 'This URL is already taken.' };
 
   const t = await prisma.tournament.create({
     data: {
-      slug: parsed.slug,
-      name: parsed.name,
-      description: parsed.description,
-      date: new Date(parsed.dateStr),
-      checkInTime: parsed.checkInTime,
-      eventStartTime: parsed.eventStartTime,
-      location: parsed.location,
-      ...formatFieldsToData(parsed),
-      entryFee: parsed.entryFee,
-      prizePool: parsed.prizePool,
-      playerCap: parsed.playerCap,
-      isRanked: parsed.isRanked,
-      gameType: parsed.gameType,
+      slug: planApplied.slug,
+      name: planApplied.name,
+      description: planApplied.description,
+      date: new Date(planApplied.dateStr),
+      checkInTime: planApplied.checkInTime,
+      eventStartTime: planApplied.eventStartTime,
+      location: planApplied.location,
+      ...formatFieldsToData(planApplied),
+      entryFee: planApplied.entryFee,
+      prizePool: planApplied.prizePool,
+      playerCap: planApplied.playerCap,
+      isRanked: planApplied.isRanked,
+      gameType: planApplied.gameType,
       createdById: session.user.id,
     },
   });
@@ -170,8 +205,9 @@ export async function updateTournament(_prev: { error?: string } | null, formDat
   const tournamentId = (formData.get('tournamentId') as string)?.trim();
   if (!tournamentId) return { error: 'Missing tournament id.' };
 
+  let hostSession;
   try {
-    await requireTournamentHost(tournamentId);
+    hostSession = await requireTournamentHost(tournamentId);
   } catch {
     return { error: 'You do not have permission to edit this tournament.' };
   }
@@ -185,7 +221,15 @@ export async function updateTournament(_prev: { error?: string } | null, formDat
   const parsed = parseTournamentFormData(formData);
   if ('error' in parsed) return parsed;
 
-  const slugCheck = await checkTournamentSlugAvailability(parsed.slug, tournamentId);
+  const planApplied = await applyPlanLimitsToParsed(
+    hostSession.user.id,
+    hostSession.user.role,
+    parsed,
+    'update',
+  );
+  if ('error' in planApplied) return planApplied;
+
+  const slugCheck = await checkTournamentSlugAvailability(planApplied.slug, tournamentId);
   if (!slugCheck.available) return { error: slugCheck.error ?? 'This URL is already taken.' };
 
   const hasBracket = existing._count.matches > 0;
@@ -193,19 +237,19 @@ export async function updateTournament(_prev: { error?: string } | null, formDat
   const updated = await prisma.tournament.update({
     where: { id: tournamentId },
     data: {
-      slug: parsed.slug,
-      name: parsed.name,
-      description: parsed.description,
-      date: new Date(parsed.dateStr),
-      checkInTime: parsed.checkInTime,
-      eventStartTime: parsed.eventStartTime,
-      location: parsed.location,
-      entryFee: parsed.entryFee,
-      prizePool: parsed.prizePool,
-      playerCap: parsed.playerCap,
-      isRanked: parsed.isRanked,
-      gameType: parsed.gameType,
-      ...(hasBracket ? {} : formatFieldsToData(parsed)),
+      slug: planApplied.slug,
+      name: planApplied.name,
+      description: planApplied.description,
+      date: new Date(planApplied.dateStr),
+      checkInTime: planApplied.checkInTime,
+      eventStartTime: planApplied.eventStartTime,
+      location: planApplied.location,
+      entryFee: planApplied.entryFee,
+      prizePool: planApplied.prizePool,
+      playerCap: planApplied.playerCap,
+      isRanked: planApplied.isRanked,
+      gameType: planApplied.gameType,
+      ...(hasBracket ? {} : formatFieldsToData(planApplied)),
     },
   });
 

@@ -8,6 +8,12 @@ import { canManageTournaments } from '@/lib/roles';
 import { parseGameType, parseRoundRobinRankBy } from '@/lib/tournament-options';
 import { parseSwissScoringFromForm, swissScoringToPrismaData } from '@/lib/swiss-scoring';
 import { redirect } from 'next/navigation';
+import {
+  getTournamentPlanLimitsForUser,
+  normalizeIsRankedForPlan,
+  normalizePlayerCapForPlan,
+  playerCapLimitError,
+} from '@/lib/tournament-plan-limits';
 
 function parseTemplateFormData(formData: FormData) {
   const name = (formData.get('name') as string)?.trim();
@@ -69,8 +75,18 @@ export async function createTournamentTemplate(
   const parsed = parseTemplateFormData(formData);
   if ('error' in parsed) return { error: parsed.error };
 
+  const limits = await getTournamentPlanLimitsForUser(session.user.id, session.user.role);
+  const capError = playerCapLimitError(parsed.playerCap, limits);
+  if (capError) return { error: capError };
+
+  const data = {
+    ...parsed,
+    isRanked: normalizeIsRankedForPlan(parsed.isRanked, limits),
+    playerCap: normalizePlayerCapForPlan(parsed.playerCap, limits),
+  };
+
   await prisma.tournamentTemplate.create({
-    data: { ...parsed, userId: session.user.id },
+    data: { ...data, userId: session.user.id },
   });
 
   revalidatePath('/profile/tournament-templates');
@@ -94,9 +110,19 @@ export async function updateTournamentTemplate(
   const parsed = parseTemplateFormData(formData);
   if ('error' in parsed) return { error: parsed.error };
 
+  const limits = await getTournamentPlanLimitsForUser(session.user.id, session.user.role);
+  const capError = playerCapLimitError(parsed.playerCap, limits);
+  if (capError) return { error: capError };
+
+  const data = {
+    ...parsed,
+    isRanked: normalizeIsRankedForPlan(parsed.isRanked, limits),
+    playerCap: normalizePlayerCapForPlan(parsed.playerCap, limits),
+  };
+
   await prisma.tournamentTemplate.update({
     where: { id: templateId },
-    data: parsed,
+    data,
   });
 
   revalidatePath('/profile/tournament-templates');

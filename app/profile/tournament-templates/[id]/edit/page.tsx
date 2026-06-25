@@ -8,6 +8,7 @@ import { isSupabaseStorageConfigured } from '@/lib/supabase-admin';
 import { canManageTournaments } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { templateToFormInitial } from '@/lib/tournament-template';
+import { tournamentPlanLimitsFromSubscription } from '@/lib/tournament-plan-limits';
 
 export default async function EditTournamentTemplatePage({
   params,
@@ -25,6 +26,17 @@ export default async function EditTournamentTemplatePage({
   });
 
   if (!template) notFound();
+
+  const billing = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { subscriptionPlan: true, subscriptionStatus: true },
+  });
+
+  const planLimits = tournamentPlanLimitsFromSubscription(
+    billing?.subscriptionPlan ?? 'free',
+    billing?.subscriptionStatus,
+    session.user.role,
+  );
 
   return (
     <div className="w-full min-w-0">
@@ -48,6 +60,7 @@ export default async function EditTournamentTemplatePage({
         templateId={template.id}
         initial={templateToFormInitial(template)}
         imageUploadEnabled={isSupabaseStorageConfigured()}
+        planLimits={planLimits}
       />
     </div>
   );

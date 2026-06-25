@@ -1,5 +1,5 @@
 /** 468×60 leaderboard — override with NEXT_PUBLIC_ADCASH_LEADERBOARD_ZONE_ID. */
-export const ADCASH_LEADERBOARD_ZONE_ID_DEFAULT = '11502574';
+export const ADCASH_LEADERBOARD_ZONE_ID_DEFAULT = '';//11511546
 
 export function getLeaderboardZoneId(): string {
   return (
@@ -12,10 +12,10 @@ export function getLeaderboardZoneId(): string {
 export const ADCASH_LEADERBOARD_ZONE_ID = ADCASH_LEADERBOARD_ZONE_ID_DEFAULT;
 
 /** 160×600 skyscraper (left). Override with NEXT_PUBLIC_ADCASH_SKYSCRAPER_LEFT_ZONE_ID. */
-export const ADCASH_SKYSCRAPER_LEFT_ZONE_ID_DEFAULT = '11502586';
+export const ADCASH_SKYSCRAPER_LEFT_ZONE_ID_DEFAULT = '';//11511554
 
 /** 160×600 skyscraper (right). Override with NEXT_PUBLIC_ADCASH_SKYSCRAPER_RIGHT_ZONE_ID. */
-export const ADCASH_SKYSCRAPER_RIGHT_ZONE_ID_DEFAULT = '11502602';
+export const ADCASH_SKYSCRAPER_RIGHT_ZONE_ID_DEFAULT = '';//11511626
 
 export function getSkyscraperZoneIds(): { left: string; right: string | null } {
   const left =

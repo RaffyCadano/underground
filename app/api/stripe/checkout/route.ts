@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${siteUrl}/profile/subscriptions?checkout=success`,
+      success_url: `${siteUrl}/profile/subscriptions?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/profile/subscriptions?checkout=canceled`,
       client_reference_id: user.id,
       metadata: { userId: user.id, billingPeriod },

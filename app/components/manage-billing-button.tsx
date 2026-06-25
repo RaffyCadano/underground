@@ -12,7 +12,7 @@ export function ManageBillingButton() {
     setError(null);
 
     try {
-      const response = await fetch('/api/stripe/portal', { method: 'POST' });
+      const response = await fetch('/api/stripe/portal', { method: 'POST', credentials: 'same-origin' });
       const data = (await response.json()) as { url?: string; error?: string };
 
       if (!response.ok || !data.url) {

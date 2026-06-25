@@ -30,5 +30,5 @@ export async function findValidResetToken(token: string) {
 }
 
 export function appBaseUrl() {
-  return process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? 'http://localhost:3000';
+  return process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? 'http://localhost:3000';
 }

@@ -32,32 +32,30 @@ export const PREMIER_PLAN = {
 
 export const FREE_PLAN_FEATURES = [
   'On-page ads help keep the platform free',
-  'Run unlimited tournaments, events, and communities',
-  '256-player cap per bracket',
-  'Link-only match attachments (URLs, not file uploads)',
-  `Paid registration via Stripe — ${SITE_NAME} takes $0.75 per order`,
+  'Host up to 3 tournaments',
+  'Unranked brackets with up to 256 players each',
+  'Single/double elim, Swiss, round robin, and two-stage formats',
+  'Bulk registration, walk-ins, standings, and score reporting',
+  'Embeddable brackets with display ads',
 ] as const;
 
 export const PREMIER_PLAN_FEATURES = [
   'Ad-free browsing for you and your players',
-  'Includes one Pro Community License',
-  'Embeddable brackets with custom themes',
+  'Unlimited hosted tournaments',
+  'Ranked events and unlimited player caps',
+  'Embeddable brackets without display ads',
   'Priority support when you need a hand',
-  'Unlimited tournaments, events, and communities',
-  '512-player cap per bracket',
-  'Upload match files up to 25MB (photos, PDFs, and more)',
-  `Stripe payouts with no ${SITE_NAME} fee on paid registrations`,
+  'All bracket formats, two-stage play, and walk-in support',
 ] as const;
 
 export const FREE_PLAN_DETAILS =
-  'The free tier includes on-page ads, brackets capped at 256 players, link-only match attachments, and a $0.75 per-order fee when you run paid events through Stripe.';
+  'The free tier includes on-page ads, up to 3 hosted tournaments, unranked events capped at 256 players, and all core bracket tools.';
 
 /** Shorter list for the manage-subscriptions upgrade panel. */
 export const PREMIER_BENEFITS = [
   'Browse and run events without on-page ads',
-  'Double the bracket size — up to 512 players',
-  'Attach files up to 25MB directly to matches',
-  `Keep your full Stripe take — no per-order ${SITE_NAME} fee`,
+  'Unlimited tournaments with ranked events and no player cap',
+  'Embed brackets without display ads',
 ] as const;
 
 export const COMMUNITY_SUBSCRIPTIONS_EMPTY =

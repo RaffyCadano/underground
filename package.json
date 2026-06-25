@@ -8,6 +8,9 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
+    "deploy": "firebase deploy --only apphosting,hosting",
+    "deploy:app": "firebase deploy --only apphosting",
+    "deploy:hosting": "firebase deploy --only hosting",
     "prisma:generate": "prisma generate",
     "seed:players": "npx tsx prisma/seed-players.ts",
     "setup:storage": "node scripts/ensure-tournament-images-bucket.mjs"

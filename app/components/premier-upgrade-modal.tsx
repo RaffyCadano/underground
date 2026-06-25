@@ -65,6 +65,7 @@ export function PremierUpgradeModal({ open, onClose }: PremierUpgradeModalProps)
     try {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           billingPeriod,

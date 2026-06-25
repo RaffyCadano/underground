@@ -14,17 +14,20 @@ import {
 } from '@/app/components/tournament-builder-form';
 import type { TournamentTemplateFormInitial } from '@/lib/tournament-template';
 import { generateTournamentDescription } from '@/lib/tournament-description';
+import type { TournamentPlanLimits } from '@/lib/tournament-plan-limits';
 
 export function TournamentTemplateForm({
   templateId,
   initial,
   imageUploadEnabled = false,
   cancelHref = '/profile/tournament-templates',
+  planLimits,
 }: {
   templateId?: string;
   initial?: TournamentTemplateFormInitial;
   imageUploadEnabled?: boolean;
   cancelHref?: string;
+  planLimits: TournamentPlanLimits;
 }) {
   const isEdit = Boolean(templateId);
   const [state, action, pending] = useActionState(
@@ -73,6 +76,7 @@ export function TournamentTemplateForm({
       <TournamentBuilderForm
         fields={fields}
         update={update}
+        planLimits={planLimits}
         imageUploadEnabled={imageUploadEnabled}
         onGenerateDescription={handleGenerateDescription}
         canGenerateDescription={fields.name.trim().length > 0}

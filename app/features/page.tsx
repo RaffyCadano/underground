@@ -6,7 +6,7 @@ import { SITE_NAME } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: `Features | ${SITE_NAME}`,
-  description: `Compare ${SITE_NAME} Standard and Premier features for tournaments, events, communities, and integrations.`,
+  description: `Compare ${SITE_NAME} Standard and Premier features for tournaments, events, and communities.`,
 };
 
 export default function FeaturesPage() {
@@ -25,7 +25,7 @@ export default function FeaturesPage() {
             </h1>
             <p className="text-sm leading-relaxed text-slate-400 sm:text-base md:text-lg">
               See what&apos;s included with {SITE_NAME} Standard and Premier across tournaments,
-              events, communities, and integrations.
+              events, and communities.
             </p>
           </div>
         </div>

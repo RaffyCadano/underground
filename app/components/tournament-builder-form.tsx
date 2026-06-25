@@ -13,6 +13,9 @@ import {
 import { TournamentFormatStages, TournamentStageTypeSelector } from '@/app/components/tournament-format-stages';
 import { GAME_TYPE_OPTIONS } from '@/lib/tournament-options';
 import type { RoundRobinRankBy } from '@/lib/tournament-options';
+import type { TournamentPlanLimits } from '@/lib/tournament-plan-limits';
+import { playerCapHelperText } from '@/lib/tournament-plan-limits';
+import { TournamentPlanLimitNotice } from '@/app/components/tournament-plan-limit-notice';
 
 import type { SwissScoringFormFields } from '@/lib/swiss-scoring';
 import { DEFAULT_SWISS_SCORING_FORM } from '@/lib/swiss-scoring';
@@ -43,6 +46,7 @@ type FieldUpdater = <K extends keyof TournamentBuilderFields>(
 export function TournamentBuilderForm({
   fields,
   update,
+  planLimits,
   lockFormat = false,
   imageUploadEnabled = false,
   onGenerateDescription,
@@ -50,6 +54,7 @@ export function TournamentBuilderForm({
 }: {
   fields: TournamentBuilderFields;
   update: FieldUpdater;
+  planLimits: TournamentPlanLimits;
   lockFormat?: boolean;
   imageUploadEnabled?: boolean;
   onGenerateDescription?: () => void;
@@ -129,35 +134,70 @@ export function TournamentBuilderForm({
               name="playerCap"
               type="number"
               min={2}
+              max={planLimits.maxPlayerCap ?? undefined}
               value={fields.playerCap}
               onChange={(e) => update('playerCap', e.target.value)}
-              placeholder="Unlimited"
+              placeholder={planLimits.maxPlayerCap != null ? String(planLimits.maxPlayerCap) : 'Unlimited'}
               className="input pl-9"
             />
           </div>
-          <p className="mt-1.5 text-xs text-slate-500">Leave blank for no limit.</p>
+          <p className="mt-1.5 text-xs text-slate-500">{playerCapHelperText(planLimits)}</p>
         </div>
 
         <div>
           <FieldLabel>Ranked or unranked</FieldLabel>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {TOURNAMENT_RANKING_OPTIONS.map(({ value, label, description: desc, icon: Icon }) => {
-              const selected = (fields.isRanked ? 'true' : 'false') === value;
-              return (
-                <label key={value} className={selectionCardClass(selected)}>
-                  <input
-                    type="radio"
-                    name="isRanked"
-                    value={value}
-                    checked={selected}
-                    onChange={() => update('isRanked', value === 'true')}
-                    className="sr-only"
-                  />
-                  <SelectionCard selected={selected} icon={Icon} label={label} description={desc} />
-                </label>
-              );
-            })}
-          </div>
+          {!planLimits.canCreateRanked && (
+            <>
+              <input type="hidden" name="isRanked" value="false" />
+              <div className="mt-2 space-y-3">
+                <TournamentPlanLimitNotice
+                  title="Ranked events are a Premier feature"
+                  body="Standard tournaments are unranked. Upgrade to"
+                />
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {TOURNAMENT_RANKING_OPTIONS.map(({ value, label, description: desc, icon: Icon }) => {
+                    const selected = value === 'false';
+                    const disabled = value === 'true';
+                    return (
+                      <div
+                        key={value}
+                        className={selectionCardClass(selected, disabled)}
+                        aria-disabled={disabled}
+                      >
+                        <SelectionCard
+                          selected={selected}
+                          icon={Icon}
+                          label={label}
+                          description={desc}
+                          disabled={disabled}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+          {planLimits.canCreateRanked && (
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {TOURNAMENT_RANKING_OPTIONS.map(({ value, label, description: desc, icon: Icon }) => {
+                const selected = (fields.isRanked ? 'true' : 'false') === value;
+                return (
+                  <label key={value} className={selectionCardClass(selected)}>
+                    <input
+                      type="radio"
+                      name="isRanked"
+                      value={value}
+                      checked={selected}
+                      onChange={() => update('isRanked', value === 'true')}
+                      className="sr-only"
+                    />
+                    <SelectionCard selected={selected} icon={Icon} label={label} description={desc} />
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div>

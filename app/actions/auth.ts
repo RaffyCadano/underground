@@ -15,6 +15,13 @@ import {
   resetTokenExpiresAt,
 } from '@/lib/password-reset';
 import { validateUsername } from '@/lib/username';
+import { cookies } from 'next/headers';
+import { encode } from 'next-auth/jwt';
+import {
+  SESSION_COOKIE_NAME,
+  sessionCookieMaxAge,
+  sessionCookieOptions,
+} from '@/lib/session-cookie';
 
 const RESET_SUCCESS_MESSAGE =
   'If an account exists for that email, we sent password reset instructions. Check your inbox and spam folder.';
@@ -67,6 +74,61 @@ export async function registerUser(_prev: { error?: string } | null, formData: F
   redirect('/login?registered=1');
 }
 
+export async function loginWithCredentials(
+  _prev: { error?: string } | null,
+  formData: FormData,
+) {
+  const email = (formData.get('email') as string)?.trim().toLowerCase();
+  const password = formData.get('password') as string;
+  const callbackUrl = (formData.get('callbackUrl') as string) || '/dashboard';
+  const safeCallback =
+    callbackUrl.startsWith('/') && !callbackUrl.startsWith('//') ? callbackUrl : '/dashboard';
+
+  if (!email || !password) {
+    return { error: 'Email and password are required.' };
+  }
+
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    console.error('[login] NEXTAUTH_SECRET is not configured');
+    return { error: 'Sign in is temporarily unavailable. Please try again later.' };
+  }
+
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } },
+    select: { id: true, email: true, username: true, role: true, password: true, subscriptionPlan: true, subscriptionStatus: true },
+  });
+
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    return { error: 'Invalid email or password.' };
+  }
+
+  const token = await encode({
+    token: {
+      sub: user.id,
+      id: user.id,
+      email: user.email,
+      name: user.username,
+      role: user.role,
+      subscriptionPlan: user.subscriptionPlan,
+      subscriptionStatus: user.subscriptionStatus,
+      userRefreshedAt: Date.now(),
+    },
+    secret,
+    maxAge: sessionCookieMaxAge(),
+  });
+
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE_NAME, token, sessionCookieOptions());
+
+  redirect(safeCallback);
+}
+
+export async function clearSessionCookie() {
+  const cookieStore = await cookies();
+  cookieStore.delete(SESSION_COOKIE_NAME);
+}
+
 export async function requestPasswordReset(
   _prev: { error?: string; success?: boolean; message?: string } | null,
   formData: FormData,
@@ -82,8 +144,8 @@ export async function requestPasswordReset(
     return { error: 'Enter a valid email address.' };
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email },
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } },
     select: { id: true, email: true },
   });
 

@@ -2,12 +2,20 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { SESSION_COOKIE_NAME, sessionCookieOptions } from '@/lib/session-cookie';
 
 /** How often to re-fetch user fields from the database inside the JWT callback. */
 const JWT_USER_REFRESH_MS = 5 * 60 * 1000;
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt' },
+  useSecureCookies: false,
+  cookies: {
+    sessionToken: {
+      name: SESSION_COOKIE_NAME,
+      options: sessionCookieOptions(),
+    },
+  },
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -17,8 +25,9 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+        const email = credentials.email.trim().toLowerCase();
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: 'insensitive' } },
           select: { id: true, email: true, username: true, role: true, password: true },
         });
         if (!user) return null;
@@ -35,6 +44,8 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as { id: string; role: string }).role;
         token.name = user.name;
         token.email = user.email;
+        token.userRefreshedAt = Date.now();
+        return token;
       }
 
       if (token.id) {

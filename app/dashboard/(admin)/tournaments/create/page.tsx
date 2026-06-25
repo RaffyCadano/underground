@@ -10,6 +10,10 @@ import { redirect } from 'next/navigation';
 import { templateToFormInitial, templateToTournamentInitial } from '@/lib/tournament-template';
 import { tournamentsPermalinkHostFromRequest } from '@/lib/site-request';
 import { tournamentsPermalinkPrefix } from '@/lib/tournament-slug';
+import {
+  countHostedTournaments,
+  tournamentPlanLimitsFromSubscription,
+} from '@/lib/tournament-plan-limits';
 
 export default async function CreateTournamentPage({
   searchParams,
@@ -34,6 +38,20 @@ export default async function CreateTournamentPage({
 
   const permalinkPrefix = tournamentsPermalinkPrefix(await tournamentsPermalinkHostFromRequest());
 
+  const [billing, hostedCount] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { subscriptionPlan: true, subscriptionStatus: true },
+    }),
+    countHostedTournaments(session.user.id),
+  ]);
+
+  const planLimits = tournamentPlanLimitsFromSubscription(
+    billing?.subscriptionPlan ?? 'free',
+    billing?.subscriptionStatus,
+    session.user.role,
+  );
+
   return (
     <div className="w-full min-w-0">
       <Link
@@ -54,7 +72,13 @@ export default async function CreateTournamentPage({
         </p>
       </div>
 
-      <CreateTournamentForm imageUploadEnabled={imageUploadEnabled} initial={templateInitial} permalinkPrefix={permalinkPrefix} />
+      <CreateTournamentForm
+        imageUploadEnabled={imageUploadEnabled}
+        initial={templateInitial}
+        permalinkPrefix={permalinkPrefix}
+        planLimits={planLimits}
+        hostedCount={hostedCount}
+      />
     </div>
   );
 }

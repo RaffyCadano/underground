@@ -98,3 +98,37 @@ export function userHasActivePremier(plan: string, status: string | null | undef
   if (!status) return true;
   return status === 'active' || status === 'trialing';
 }
+
+export async function syncFromCheckoutSession(session: Stripe.Checkout.Session) {
+  const userId = session.metadata?.userId ?? session.client_reference_id;
+  if (!userId || session.mode !== 'subscription') return false;
+
+  const subscriptionId =
+    typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+
+  if (!subscriptionId) return false;
+
+  const stripe = getStripe();
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const customerId =
+    typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null;
+
+  await syncUserSubscriptionFromStripe(userId, subscription, customerId);
+  return true;
+}
+
+export async function syncCheckoutSessionForUser(sessionId: string, userId: string) {
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+  const ownerId = session.metadata?.userId ?? session.client_reference_id;
+  if (ownerId !== userId) {
+    throw new Error('Checkout session does not belong to this account.');
+  }
+
+  if (session.status !== 'complete') {
+    return false;
+  }
+
+  return syncFromCheckoutSession(session);
+}

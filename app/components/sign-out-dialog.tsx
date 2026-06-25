@@ -3,7 +3,8 @@
 import { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowRight, LogOut, ShieldCheck, X } from 'lucide-react';
-import { signOut, useSession } from 'next-auth/react';
+import { clearSessionCookie } from '@/app/actions/auth';
+import { useSession } from 'next-auth/react';
 
 export function SignOutDialog({  open,
   onClose,
@@ -48,7 +49,7 @@ export function SignOutDialog({  open,
   function confirmSignOut() {
     onBeforeSignOut?.();
     startTransition(async () => {
-      await signOut({ redirect: false });
+      await clearSessionCookie();
       window.location.assign('/?signedOut=1');
     });
   }

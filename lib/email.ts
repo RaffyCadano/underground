@@ -4,7 +4,23 @@ import { SITE_NAME } from '@/lib/site';
 type SendResult = { delivered: true } | { delivered: false; loggedToConsole: true };
 
 function smtpConfigured() {
-  return Boolean(process.env.SMTP_HOST);
+  return Boolean(process.env.SMTP_HOST?.trim());
+}
+
+function resendApiKey(): string | undefined {
+  const explicit = process.env.RESEND_API_KEY?.trim();
+  if (explicit) return explicit;
+
+  const host = process.env.SMTP_HOST?.toLowerCase() ?? '';
+  if (host.includes('resend')) {
+    return process.env.SMTP_PASS?.trim();
+  }
+
+  return undefined;
+}
+
+function emailDeliveryConfigured() {
+  return smtpConfigured() || Boolean(resendApiKey());
 }
 
 function createTransporter() {
@@ -16,34 +32,50 @@ function createTransporter() {
     port,
     secure,
     auth:
-      process.env.SMTP_USER && process.env.SMTP_PASS
-        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+      process.env.SMTP_PASS
+        ? {
+            user: process.env.SMTP_USER?.trim() || 'resend',
+            pass: process.env.SMTP_PASS,
+          }
         : undefined,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
+    requireTLS: !secure && port === 587,
   });
 }
 
 function emailFrom() {
-  return process.env.EMAIL_FROM ?? `${SITE_NAME} <noreply@underground.local>`;
+  const configured = process.env.EMAIL_FROM?.trim();
+  if (configured) return configured;
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('EMAIL_FROM is not configured');
+  }
+
+  return `${SITE_NAME} <noreply@underground.local>`;
 }
 
 function isDevelopmentEmailFallbackEnabled() {
   return process.env.NODE_ENV !== 'production';
 }
 
-function isResendRecipientRestricted(err: unknown) {
-  const parts: string[] = [];
-  if (err instanceof Error) {
-    parts.push(err.message);
-  }
+function errorText(err: unknown): string {
+  if (err instanceof Error) return err.message;
   if (err && typeof err === 'object') {
-    const record = err as { response?: string; responseCode?: number };
-    if (record.response) parts.push(record.response);
-    if (record.responseCode === 550) parts.push('550');
+    const record = err as { message?: string; response?: string };
+    if (record.message) return record.message;
+    if (record.response) return record.response;
   }
-  const combined = parts.join(' ');
+  return String(err);
+}
+
+function isResendRecipientRestricted(err: unknown) {
+  const combined = errorText(err).toLowerCase();
   return (
     combined.includes('only send testing emails') ||
-    combined.includes('verify a domain at resend.com')
+    combined.includes('verify a domain at resend.com') ||
+    combined.includes('you can only send testing emails')
   );
 }
 
@@ -51,6 +83,62 @@ function logEmailLink(label: string, to: string, actionUrl: string) {
   console.info(`[${label}] Email link for development:`);
   console.info(`  To: ${to}`);
   console.info(`  URL: ${actionUrl}`);
+}
+
+async function sendViaResendApi({
+  to,
+  subject,
+  text,
+  html,
+}: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}): Promise<SendResult> {
+  const apiKey = resendApiKey();
+  if (!apiKey) {
+    throw new Error('Resend API key is not configured');
+  }
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: emailFrom(),
+      to: [to],
+      subject,
+      html,
+      text,
+    }),
+  });
+
+  const body = (await response.json().catch(() => ({}))) as { message?: string };
+
+  if (!response.ok) {
+    throw new Error(body.message ?? `Resend API error (${response.status})`);
+  }
+
+  return { delivered: true };
+}
+
+async function sendViaSmtp({
+  to,
+  subject,
+  text,
+  html,
+}: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}): Promise<SendResult> {
+  const transporter = createTransporter();
+  await transporter.sendMail({ from: emailFrom(), to, subject, text, html });
+  return { delivered: true };
 }
 
 async function sendTransactionalEmail({
@@ -68,26 +156,40 @@ async function sendTransactionalEmail({
   html: string;
   actionUrl: string;
 }): Promise<SendResult> {
-  if (!smtpConfigured()) {
+  if (!emailDeliveryConfigured()) {
     logEmailLink(label, to, actionUrl);
     return { delivered: false, loggedToConsole: true };
   }
 
-  const transporter = createTransporter();
+  const attempts: Array<{ name: string; run: () => Promise<SendResult> }> = [];
 
-  try {
-    await transporter.sendMail({ from: emailFrom(), to, subject, text, html });
-    return { delivered: true };
-  } catch (err) {
-    if (isDevelopmentEmailFallbackEnabled() && isResendRecipientRestricted(err)) {
-      console.warn(
-        `[${label}] Resend sandbox blocked delivery to ${to}. Logging the link for local development.`,
-      );
-      logEmailLink(label, to, actionUrl);
-      return { delivered: false, loggedToConsole: true };
-    }
-    throw err;
+  if (resendApiKey()) {
+    attempts.push({ name: 'resend-api', run: () => sendViaResendApi({ to, subject, text, html }) });
   }
+  if (smtpConfigured()) {
+    attempts.push({ name: 'smtp', run: () => sendViaSmtp({ to, subject, text, html }) });
+  }
+
+  let lastError: unknown;
+
+  for (const attempt of attempts) {
+    try {
+      return await attempt.run();
+    } catch (err) {
+      lastError = err;
+      console.error(`[${label}] ${attempt.name} delivery failed:`, err);
+    }
+  }
+
+  if (lastError && isDevelopmentEmailFallbackEnabled() && isResendRecipientRestricted(lastError)) {
+    console.warn(
+      `[${label}] Resend blocked delivery to ${to}. Logging the link for local development.`,
+    );
+    logEmailLink(label, to, actionUrl);
+    return { delivered: false, loggedToConsole: true };
+  }
+
+  throw lastError ?? new Error('Email delivery failed');
 }
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<SendResult> {
@@ -146,8 +248,27 @@ export async function sendVerificationEmail(to: string, verifyUrl: string): Prom
 }
 
 export function emailDeliveryErrorMessage(err: unknown) {
-  if (isResendRecipientRestricted(err)) {
-    return 'Email could not be sent. Verify your domain in Resend and set EMAIL_FROM to an address on that domain.';
+  const text = errorText(err).toLowerCase();
+
+  if (text.includes('email_from is not configured')) {
+    return 'Email is not configured on the server. Set EMAIL_FROM in Firebase secrets.';
   }
+
+  if (isResendRecipientRestricted(err)) {
+    return 'Email could not be sent. Verify your domain in Resend and set EMAIL_FROM to an address on that domain (e.g. noreply@yourdomain.com).';
+  }
+
+  if (text.includes('domain') && (text.includes('verify') || text.includes('not verified'))) {
+    return 'Email could not be sent. Verify your sending domain in Resend and update EMAIL_FROM.';
+  }
+
+  if (text.includes('invalid') && text.includes('from')) {
+    return 'EMAIL_FROM must use an address on your verified Resend domain.';
+  }
+
+  if (text.includes('api key') || text.includes('unauthorized')) {
+    return 'Email is not configured correctly. Check your Resend API key in Firebase secrets.';
+  }
+
   return 'Could not send email. Try again later.';
 }

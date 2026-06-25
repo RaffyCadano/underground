@@ -57,7 +57,10 @@ export function CancelPremierButton({
     setError(null);
 
     try {
-      const response = await fetch('/api/stripe/cancel-subscription', { method: 'POST' });
+      const response = await fetch('/api/stripe/cancel-subscription', {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
       const data = (await response.json()) as {
         ok?: boolean;
         message?: string;

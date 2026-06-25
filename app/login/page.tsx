@@ -1,9 +1,9 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
-import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useActionState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { loginWithCredentials } from '@/app/actions/auth';
 import {
   ArrowRight,
   BarChart3,
@@ -24,28 +24,15 @@ const perks = [
 ];
 
 function LoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [state, action, pending] = useActionState(loginWithCredentials, null);
   const searchParams = useSearchParams();
   const registered = searchParams.get('registered');
   const reset = searchParams.get('reset');
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    const result = await signIn('credentials', { email, password, redirect: false });
-    if (result?.error) {
-      setError('Invalid email or password.');
-      setLoading(false);
-    } else {
-      router.push('/dashboard?signedIn=1');
-      router.refresh();
-    }
-  }
+  const callbackUrl = searchParams.get('callbackUrl');
+  const safeCallback =
+    callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//')
+      ? callbackUrl
+      : '/dashboard';
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-xl shadow-black/20">
@@ -84,10 +71,11 @@ function LoginForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4 sm:mt-8 sm:space-y-5">
-          {error && (
+        <form action={action} className="mt-6 space-y-4 sm:mt-8 sm:space-y-5">
+          <input type="hidden" name="callbackUrl" value={safeCallback} />
+          {state?.error && (
             <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-3 text-sm text-red-300 sm:px-4">
-              {error}
+              {state.error}
             </p>
           )}
 
@@ -102,11 +90,10 @@ function LoginForm() {
               />
               <input
                 id="email"
+                name="email"
                 type="email"
                 required
                 autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 className="input pl-9"
               />
@@ -127,20 +114,19 @@ function LoginForm() {
             </div>
             <PasswordInput
               id="password"
+              name="password"
               required
               autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               placeholder="Your password"
             />
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={pending}
             className="btn-primary inline-flex w-full items-center justify-center gap-2 py-3 disabled:opacity-60 sm:py-2.5"
           >
-            {loading ? (
+            {pending ? (
               'Signing in…'
             ) : (
               <>

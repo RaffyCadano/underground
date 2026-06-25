@@ -33,7 +33,14 @@ import {
   type SwissScoringFormFields,
 } from '@/lib/swiss-scoring';
 import { TournamentUrlField } from '@/app/components/tournament-url-field';
+import { TournamentPlanLimitNotice } from '@/app/components/tournament-plan-limit-notice';
 import { generateTournamentSlug } from '@/lib/tournament-slug';
+import type { TournamentPlanLimits } from '@/lib/tournament-plan-limits';
+import {
+  hostedTournamentsHelperText,
+  playerCapHelperText,
+  tournamentCreateLimitError,
+} from '@/lib/tournament-plan-limits';
 
 const FORMAT_OPTIONS = [
   {
@@ -503,6 +510,8 @@ export function CreateTournamentForm({
   lockFormat = false,
   cancelHref = '/dashboard/tournaments',
   permalinkPrefix,
+  planLimits,
+  hostedCount = 0,
 }: {
   imageUploadEnabled?: boolean;
   tournamentId?: string;
@@ -510,8 +519,13 @@ export function CreateTournamentForm({
   lockFormat?: boolean;
   cancelHref?: string;
   permalinkPrefix: string;
+  planLimits: TournamentPlanLimits;
+  hostedCount?: number;
 }) {
   const isEdit = Boolean(tournamentId);
+  const atCreateLimit =
+    !isEdit && tournamentCreateLimitError(hostedCount, planLimits) != null;
+  const hostedUsageText = hostedTournamentsHelperText(hostedCount, planLimits);
   const [state, action, pending] = useActionState(
     isEdit ? updateTournament : createTournament,
     null,
@@ -542,7 +556,9 @@ export function CreateTournamentForm({
   const [entryFee, setEntryFee] = useState(initial?.entryFee ?? '');
   const [prizePool, setPrizePool] = useState(initial?.prizePool ?? '');
   const [playerCap, setPlayerCap] = useState(initial?.playerCap ?? '');
-  const [isRanked, setIsRanked] = useState(initial?.isRanked ?? true);
+  const [isRanked, setIsRanked] = useState(
+    planLimits.canCreateRanked ? (initial?.isRanked ?? true) : false,
+  );
   const [gameType, setGameType] = useState(initial?.gameType ?? 'beyblade_x');
   const [swissScoring, setSwissScoring] = useState<SwissScoringFormFields>({
     swissPointsPerMatchWin: initial?.swissPointsPerMatchWin ?? DEFAULT_SWISS_SCORING_FORM.swissPointsPerMatchWin,
@@ -570,12 +586,19 @@ export function CreateTournamentForm({
   }
 
   useEffect(() => {
+    if (!planLimits.canCreateRanked) {
+      setIsRanked(false);
+    }
+  }, [planLimits.canCreateRanked]);
+
+  useEffect(() => {
     if (isSubmitting && !pending && state?.error) {
       setIsSubmitting(false);
     }
   }, [isSubmitting, pending, state?.error]);
 
   function handleSubmitClick() {
+    if (atCreateLimit) return;
     if (!formRef.current?.reportValidity()) return;
     setShowConfirm(true);
   }
@@ -610,6 +633,19 @@ export function CreateTournamentForm({
     <div className="w-full min-w-0 xl:grid xl:grid-cols-[minmax(0,1fr)_240px] xl:items-start xl:gap-6">
       <form ref={formRef} action={action} className="min-w-0">
         {tournamentId && <input type="hidden" name="tournamentId" value={tournamentId} />}
+        {atCreateLimit && (
+          <div className="mb-4">
+            <TournamentPlanLimitNotice
+              title="Tournament limit reached"
+              body={`Standard includes up to ${planLimits.maxHostedTournaments} hosted tournaments. Upgrade to`}
+            />
+          </div>
+        )}
+        {!atCreateLimit && hostedUsageText && (
+          <p className="mb-4 rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-400">
+            {hostedUsageText}
+          </p>
+        )}
         {state?.error && (
           <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
             {state.error}
@@ -773,54 +809,101 @@ export function CreateTournamentForm({
                 name="playerCap"
                 type="number"
                 min={2}
+                max={planLimits.maxPlayerCap ?? undefined}
                 value={playerCap}
                 onChange={(e) => setPlayerCap(e.target.value)}
-                placeholder="Unlimited"
+                placeholder={planLimits.maxPlayerCap != null ? String(planLimits.maxPlayerCap) : 'Unlimited'}
                 className="input pl-9"
               />
             </div>
-            <p className="mt-1.5 text-xs text-slate-500">Leave blank for no limit.</p>
+            <p className="mt-1.5 text-xs text-slate-500">{playerCapHelperText(planLimits)}</p>
           </div>
 
           <div>
             <FieldLabel>Ranked or unranked</FieldLabel>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              {RANKING_OPTIONS.map(({ value, label, description: desc, icon: Icon }) => {
-                const selected = (isRanked ? 'true' : 'false') === value;
-                return (
-                  <label
-                    key={value}
-                    className={`flex cursor-pointer gap-3 rounded-xl border p-3.5 transition ${
-                      selected
-                        ? 'border-brand-500/60 bg-brand-500/10 ring-1 ring-brand-500/30'
-                        : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="isRanked"
-                      value={value}
-                      checked={selected}
-                      onChange={() => setIsRanked(value === 'true')}
-                      className="sr-only"
-                    />
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
+            {!planLimits.canCreateRanked && (
+              <>
+                <input type="hidden" name="isRanked" value="false" />
+                <div className="mt-2 space-y-3">
+                  <TournamentPlanLimitNotice
+                    title="Ranked events are a Premier feature"
+                    body="Standard tournaments are unranked. Upgrade to"
+                  />
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {RANKING_OPTIONS.map(({ value, label, description: desc, icon: Icon }) => {
+                      const selected = value === 'false';
+                      const disabled = value === 'true';
+                      return (
+                        <div
+                          key={value}
+                          className={`flex gap-3 rounded-xl border p-3.5 transition ${
+                            disabled ? 'cursor-default opacity-60' : ''
+                          } ${
+                            selected
+                              ? 'border-brand-500/60 bg-brand-500/10 ring-1 ring-brand-500/30'
+                              : 'border-slate-800 bg-slate-950/40'
+                          }`}
+                          aria-disabled={disabled}
+                        >
+                          <span
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
+                              selected
+                                ? 'border-brand-500/40 bg-brand-500/15 text-brand-300'
+                                : 'border-slate-700 bg-slate-900 text-slate-400'
+                            }`}
+                          >
+                            <Icon size={16} />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold text-white">{label}</span>
+                            <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">{desc}</span>
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+            {planLimits.canCreateRanked && (
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {RANKING_OPTIONS.map(({ value, label, description: desc, icon: Icon }) => {
+                  const selected = (isRanked ? 'true' : 'false') === value;
+                  return (
+                    <label
+                      key={value}
+                      className={`flex cursor-pointer gap-3 rounded-xl border p-3.5 transition ${
                         selected
-                          ? 'border-brand-500/40 bg-brand-500/15 text-brand-300'
-                          : 'border-slate-700 bg-slate-900 text-slate-400'
+                          ? 'border-brand-500/60 bg-brand-500/10 ring-1 ring-brand-500/30'
+                          : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'
                       }`}
                     >
-                      <Icon size={16} />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-white">{label}</span>
-                      <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">{desc}</span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
+                      <input
+                        type="radio"
+                        name="isRanked"
+                        value={value}
+                        checked={selected}
+                        onChange={() => setIsRanked(value === 'true')}
+                        className="sr-only"
+                      />
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
+                          selected
+                            ? 'border-brand-500/40 bg-brand-500/15 text-brand-300'
+                            : 'border-slate-700 bg-slate-900 text-slate-400'
+                        }`}
+                      >
+                        <Icon size={16} />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-white">{label}</span>
+                        <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">{desc}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div>
@@ -984,7 +1067,7 @@ export function CreateTournamentForm({
         <button
             type="button"
             onClick={handleSubmitClick}
-            disabled={pending || isSubmitting}
+            disabled={pending || isSubmitting || atCreateLimit}
             className="btn-primary disabled:opacity-60"
           >
             {isEdit ? 'Save changes' : 'Create tournament'}

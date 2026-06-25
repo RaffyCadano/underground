@@ -1,4 +1,47 @@
 {
+  "hosting": {
+    "site": "ugncbbx",
+    "public": "public",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "headers": [
+      {
+        "source": "/api/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "private, no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/dashboard/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "private, no-cache, no-store"
+          }
+        ]
+      },
+      {
+        "source": "/profile/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "private, no-cache, no-store"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "ugncbbx",
+          "region": "us-central1"
+        }
+      }
+    ]
+  },
   "apphosting": [
     {
       "backendId": "ugncbbx",
