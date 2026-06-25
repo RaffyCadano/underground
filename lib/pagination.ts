@@ -1,6 +1,7 @@
 export const RANKINGS_PAGE_SIZE = 50;
 export const PLAYERS_PAGE_SIZE = 24;
 export const ADMIN_TOURNAMENTS_PAGE_SIZE = 25;
+export const TOURNAMENT_TEMPLATES_PAGE_SIZE = 25;
 
 export function totalPages(itemCount: number, pageSize: number) {
   return Math.max(1, Math.ceil(itemCount / pageSize));

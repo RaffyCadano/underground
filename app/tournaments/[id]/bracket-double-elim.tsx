@@ -55,7 +55,6 @@ function groupRounds(matches: RawMatch[], side: string): HqBracketRound[] {
 
   const sortedRounds = [...byRound.keys()].sort((a, b) => a - b);
   const rounds: HqBracketRound[] = [];
-  let displayNum = 1;
 
   for (const roundNum of sortedRounds) {
     const ms = (byRound.get(roundNum) ?? [])
@@ -66,10 +65,7 @@ function groupRounds(matches: RawMatch[], side: string): HqBracketRound[] {
 
     rounds.push({
       round: roundNum,
-      matches: ms.map((m) => ({
-        ...toBracketMatch(m),
-        displayNumber: displayNum++,
-      })),
+      matches: ms.map(toBracketMatch),
     });
   }
   return rounds;

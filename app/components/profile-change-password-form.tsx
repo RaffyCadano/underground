@@ -2,21 +2,37 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import {
-  KeyRound,
-  Loader2,
-  Lock,
-  ShieldCheck,
-} from 'lucide-react';
+import { KeyRound, Loader2, ShieldCheck, Sparkles } from 'lucide-react';
 import { changePassword } from '@/app/actions/auth';
 import { PasswordInput } from '@/app/components/password-input';
 import { SuccessToast } from '@/app/components/success-toast';
 
-const SECURITY_TIPS = [
-  'Use at least 8 characters with a mix of letters and numbers.',
-  'Avoid passwords you use on other sites.',
-  'You will stay signed in on this device after updating.',
-];
+function FieldBlock({
+  step,
+  label,
+  hint,
+  children,
+}: {
+  step: string;
+  label: string;
+  hint?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-800/90 bg-slate-900/35 p-4 sm:p-5">
+      <div className="mb-3 flex items-start gap-3">
+        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-brand-500/25 bg-brand-500/10 text-[11px] font-bold tabular-nums text-brand-300">
+          {step}
+        </span>
+        <div className="min-w-0 pt-0.5">
+          <label className="text-sm font-semibold text-white">{label}</label>
+          {hint ? <p className="mt-1 text-xs leading-relaxed text-slate-500">{hint}</p> : null}
+        </div>
+      </div>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
 
 export function ProfileChangePasswordForm() {
   const [state, action, pending] = useActionState(changePassword, null);
@@ -34,88 +50,80 @@ export function ProfileChangePasswordForm() {
   }, [state]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-lg shadow-black/20">
+    <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-xl shadow-black/25">
+      <div className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-brand-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-sky-500/8 blur-3xl" />
+      <div className="h-1 bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
+
       <SuccessToast
         open={successToastOpen}
         title="Password updated"
         body={state?.message ?? 'Your password has been changed.'}
         onDismiss={() => setSuccessToastOpen(false)}
       />
-      <div className="relative border-b border-slate-800/80 bg-gradient-to-br from-sky-500/15 via-slate-900 to-slate-950 px-5 py-6 sm:px-8 sm:py-8">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_70%_at_0%_0%,rgba(56,189,248,0.12),transparent_60%)]" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+      <div className="relative border-b border-slate-800/80 bg-gradient-to-br from-brand-500/10 via-slate-950 to-slate-950 px-5 py-5 sm:px-8 sm:py-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-4">
-            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-sky-500/30 bg-sky-500/10 text-sky-300 shadow-inner shadow-sky-950/20">
-              <ShieldCheck size={22} />
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/15 text-brand-300 shadow-inner shadow-brand-950/30">
+              <ShieldCheck size={20} />
             </span>
             <div>
-              <h2 className="text-lg font-semibold text-white sm:text-xl">Password & security</h2>
-              <p className="mt-1 max-w-md text-sm leading-relaxed text-slate-400">
-                Keep your UGNCBBX account secure. Choose a strong password only you know.
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-400/90">
+                Account security
+              </p>
+              <h2 className="mt-1 text-lg font-semibold text-white sm:text-xl">Update your password</h2>
+              <p className="mt-1 max-w-lg text-sm leading-relaxed text-slate-400">
+                Choose a strong password only you know.
               </p>
             </div>
           </div>
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-400">
-            <Lock size={12} className="text-sky-400" />
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/70 px-3 py-1.5 text-xs font-medium text-slate-400">
+            <Sparkles size={12} className="text-brand-400" />
             Encrypted sign-in
           </span>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:divide-x lg:divide-slate-800/80">
-        <aside className="border-b border-slate-800/80 p-5 sm:p-8 lg:border-b-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-            Good practices
-          </p>
-          <ul className="mt-4 space-y-3">
-            {SECURITY_TIPS.map((tip) => (
-              <li key={tip} className="flex gap-2.5 text-sm leading-relaxed text-slate-400">
-                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-sky-400/80" />
-                {tip}
-              </li>
-            ))}
-          </ul>
-          <Link
-            href="/forgot-password"
-            className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-sky-300"
-          >
-            <KeyRound size={14} />
-            Forgot your current password?
-          </Link>
-        </aside>
-
-        <form ref={formRef} action={action} className="space-y-5 p-5 sm:p-8">
+      <form ref={formRef} action={action}>
+        <div className="relative space-y-4 p-5 sm:p-8">
           {state?.error && (
-            <p className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
               {state.error}
             </p>
           )}
 
-          <div className="space-y-2">
-            <label
-              htmlFor="current-password"
-              className="block text-[10px] font-bold uppercase tracking-wider text-slate-500"
+          <FieldBlock
+              step="1"
+              label="Current password"
+              hint={
+                <>
+                  Required to confirm it&apos;s you.{' '}
+                  <Link
+                    href="/forgot-password"
+                    className="font-medium text-brand-300 transition hover:text-brand-200"
+                  >
+                    Forgot it?
+                  </Link>
+                </>
+              }
             >
-              Current password
-            </label>
             <PasswordInput
               id="current-password"
               name="currentPassword"
               required
               autoComplete="current-password"
-              placeholder="Enter your current password"
+              placeholder="Enter current password"
               disabled={pending}
             />
-          </div>
+          </FieldBlock>
 
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label
-                htmlFor="new-password"
-                className="block text-[10px] font-bold uppercase tracking-wider text-slate-500"
-              >
-                New password
-              </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FieldBlock
+              step="2"
+              label="New password"
+              hint="At least 8 characters."
+            >
               <PasswordInput
                 id="new-password"
                 name="password"
@@ -125,15 +133,9 @@ export function ProfileChangePasswordForm() {
                 placeholder="At least 8 characters"
                 disabled={pending}
               />
-            </div>
+            </FieldBlock>
 
-            <div className="space-y-2">
-              <label
-                htmlFor="confirm-password"
-                className="block text-[10px] font-bold uppercase tracking-wider text-slate-500"
-              >
-                Confirm password
-              </label>
+            <FieldBlock step="3" label="Confirm password" hint="Must match your new password.">
               <PasswordInput
                 id="confirm-password"
                 name="confirm"
@@ -143,10 +145,15 @@ export function ProfileChangePasswordForm() {
                 placeholder="Repeat new password"
                 disabled={pending}
               />
-            </div>
+            </FieldBlock>
           </div>
+        </div>
 
-          <div className="flex flex-col gap-3 border-t border-slate-800/80 pt-5 sm:flex-row sm:items-center sm:justify-end">
+        <div className="relative border-t border-slate-800 bg-slate-900/40 px-5 py-4 sm:px-8 sm:py-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-500 sm:max-w-sm">
+              Changes take effect immediately. Sign in on other devices with your new password.
+            </p>
             <button
               type="submit"
               disabled={pending}
@@ -159,14 +166,14 @@ export function ProfileChangePasswordForm() {
                 </>
               ) : (
                 <>
-                  <KeyRound size={16} />
                   Update password
+                  <KeyRound size={16} />
                 </>
               )}
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }

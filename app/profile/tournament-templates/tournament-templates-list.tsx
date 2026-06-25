@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { FileStack, Plus } from 'lucide-react';
 import { deleteTournamentTemplate } from '@/app/actions/tournament-templates';
+import { Pagination } from '@/app/components/pagination';
 import { SuccessToast } from '@/app/components/success-toast';
 import { FORMAT_LABELS } from '@/lib/tournament-labels';
 import { GAME_TYPE_LABELS } from '@/lib/tournament-options';
@@ -44,10 +45,24 @@ export function TournamentTemplatesList({
   templates,
   showCreatedToast,
   showUpdatedToast,
+  hasFilters = false,
+  page,
+  totalPages,
+  totalItems,
+  pageSize,
+  query,
+  format,
 }: {
   templates: TemplateRow[];
   showCreatedToast: boolean;
   showUpdatedToast: boolean;
+  hasFilters?: boolean;
+  page: number;
+  totalPages: number;
+  totalItems: number;
+  pageSize: number;
+  query?: string;
+  format?: string;
 }) {
   const router = useRouter();
   const [toast, setToast] = useState<'created' | 'updated' | null>(
@@ -85,23 +100,40 @@ export function TournamentTemplatesList({
         onDismiss={() => setToast(null)}
       />
 
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <Link href="/profile/tournament-templates/new" className="btn-primary inline-flex items-center gap-2">
-          <Plus size={16} />
-          New Template
-        </Link>
-      </div>
-
       {templates.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 px-6 py-12 text-center">
+        <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 px-6 py-12 text-center">
           <FileStack className="mx-auto text-slate-600" size={32} />
-          <p className="mt-4 font-semibold text-white">No templates yet</p>
-          <p className="mt-2 text-sm text-slate-500">
-            Save bracket formats, rules, and registration defaults to spin up events faster.
-          </p>
+          {hasFilters ? (
+            <>
+              <p className="mt-4 font-semibold text-white">No templates match your filters</p>
+              <p className="mt-2 text-sm text-slate-500">
+                Try a different search or format filter.
+              </p>
+              <Link
+                href="/profile/tournament-templates"
+                className="btn-secondary mt-5 inline-flex w-full sm:w-auto"
+              >
+                Clear filters
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="mt-4 font-semibold text-white">No templates yet</p>
+              <p className="mt-2 text-sm text-slate-500">
+                Save bracket formats, rules, and registration defaults to spin up events faster.
+              </p>
+              <Link
+                href="/profile/tournament-templates/new"
+                className="btn-primary mt-5 inline-flex items-center gap-2"
+              >
+                <Plus size={16} />
+                New Template
+              </Link>
+            </>
+          )}
         </div>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
+        <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
           <div className="overflow-x-auto">
             <table className="min-w-[40rem] w-full text-left text-sm">
               <thead className="border-b border-slate-800 bg-slate-900/80 text-slate-400">
@@ -165,6 +197,15 @@ export function TournamentTemplatesList({
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            pathname="/profile/tournament-templates"
+            query={query}
+            format={format}
+          />
         </div>
       )}
     </>

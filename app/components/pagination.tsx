@@ -11,6 +11,7 @@ export function Pagination({
   pathname,
   query,
   status,
+  format,
 }: {
   page: number;
   totalPages: number;
@@ -19,6 +20,7 @@ export function Pagination({
   pathname: string;
   query?: string;
   status?: string;
+  format?: string;
 }) {
   if (totalItems === 0) return null;
 
@@ -27,7 +29,7 @@ export function Pagination({
   const nextPage = page < totalPages ? page + 1 : null;
 
   function hrefFor(p: number) {
-    return buildListUrl(pathname, { page: p, q: query, status });
+    return buildListUrl(pathname, { page: p, q: query, status, format });
   }
 
   return (

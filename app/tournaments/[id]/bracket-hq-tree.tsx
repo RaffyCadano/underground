@@ -7,7 +7,7 @@ import type { BracketMatch } from './bracket-tree';
 
 export type HqBracketRound = {
   round: number;
-  matches: (BracketMatch & { displayNumber?: number })[];
+  matches: BracketMatch[];
 };
 
 type Props = {
@@ -23,7 +23,7 @@ const MATCH_H = 56;
 const GAP_R1 = 12;
 const UNIT = MATCH_H + GAP_R1;
 const CONN_W = 28;
-const COL_W = 196;
+const COL_W = 188;
 
 function topPad(roundIdx: number): number {
   return (UNIT * (Math.pow(2, roundIdx) - 1)) / 2;
@@ -49,13 +49,11 @@ function HqMatchCard({
   match,
   isAdmin,
   userId,
-  displayNumber,
   label,
 }: {
   match: BracketMatch;
   isAdmin: boolean;
   userId: string | null;
-  displayNumber?: number;
   label?: string;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -126,79 +124,74 @@ function HqMatchCard({
     setError('');
   }
 
+  const slots = [
+    {
+      player: match.player1,
+      won: match.winner?.id === match.player1?.id,
+      setScore: s1,
+    },
+    {
+      player: match.player2,
+      won: match.winner?.id === match.player2?.id,
+      setScore: s2,
+    },
+  ];
+
   return (
     <>
-      <div
-        role={clickable ? 'button' : undefined}
-        tabIndex={clickable ? 0 : undefined}
-        data-pan-exclude={clickable ? '' : undefined}
-        onClick={clickable ? openAction : undefined}
-        onKeyDown={
-          clickable
-            ? (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  openAction();
-                }
-              }
-            : undefined
-        }
-        className={`relative w-full overflow-hidden rounded border bg-slate-900/90 ${
-          isBye
-            ? 'border-slate-800 opacity-60'
-            : isComplete
-              ? 'border-slate-600'
-              : match.status === 'in_progress'
-                ? 'border-sky-500/70 ring-1 ring-sky-500/30'
-                : canReport
-                  ? 'border-slate-700 before:absolute before:inset-y-0 before:left-0 before:z-10 before:w-[3px] before:rounded-l before:bg-sky-500'
-                  : 'border-slate-700'
-        } ${clickable ? 'cursor-pointer transition hover:border-sky-500/60 hover:shadow-md' : ''}`}
-        style={{ height: MATCH_H }}
-      >
-        {displayNumber != null && (
-          <span className="absolute left-0 top-0 z-20 rounded-br bg-slate-700/90 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-slate-400">
-            {displayNumber}
-          </span>
-        )}
-        {label && (
-          <span className="absolute right-1 top-0.5 z-20 text-[8px] font-semibold uppercase tracking-wide text-slate-500">
+      <div className="relative shrink-0" style={{ width: COL_W, height: MATCH_H }}>
+        {label ? (
+          <p className="pointer-events-none absolute -top-4 left-0 right-0 truncate text-center text-[9px] font-bold uppercase tracking-wider text-slate-500">
             {label}
-          </span>
-        )}
+          </p>
+        ) : null}
 
         <div
-          className={`flex h-1/2 items-center border-b border-slate-700/80 px-2.5 ${
-            match.winner?.id === match.player1?.id
-              ? 'bg-emerald-950/50 font-semibold text-emerald-100'
-              : 'text-slate-300'
-          }`}
+          role={clickable ? 'button' : undefined}
+          tabIndex={clickable ? 0 : undefined}
+          data-pan-exclude={clickable ? '' : undefined}
+          onClick={clickable ? openAction : undefined}
+          onKeyDown={
+            clickable
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openAction();
+                  }
+                }
+              : undefined
+          }
+          className={`flex h-full flex-col overflow-hidden rounded border bg-slate-900/90 ${
+            isBye
+              ? 'border-slate-800 opacity-60'
+              : isComplete
+                ? 'border-slate-600'
+                : match.status === 'in_progress'
+                  ? 'border-sky-500/70 ring-1 ring-sky-500/30'
+                  : canReport
+                    ? 'relative border-slate-700 before:absolute before:inset-y-0 before:left-0 before:z-10 before:w-[3px] before:rounded-l before:bg-sky-500'
+                    : 'border-slate-700'
+          } ${clickable ? 'cursor-pointer transition hover:border-sky-500/60 hover:shadow-md' : ''}`}
         >
-          <span className="min-w-0 flex-1 truncate text-[11px] leading-tight">
-            {match.player1?.username ?? (
-              <span className="text-slate-600 italic">{isBye ? 'BYE' : 'TBD'}</span>
-            )}
-          </span>
-          {isComplete && (
-            <span className="ml-1 shrink-0 text-[11px] tabular-nums text-slate-400">{s1}</span>
-          )}
-        </div>
-
-        <div
-          className={`flex h-1/2 items-center px-2.5 ${
-            match.winner?.id === match.player2?.id
-              ? 'bg-emerald-950/50 font-semibold text-emerald-100'
-              : 'text-slate-300'
-          }`}
-        >
-          <span className="min-w-0 flex-1 truncate text-[11px] leading-tight">
-            {match.player2?.username ?? (
-              <span className="text-slate-600 italic">{isBye ? 'BYE' : 'TBD'}</span>
-            )}
-          </span>
-          {isComplete && (
-            <span className="ml-1 shrink-0 text-[11px] tabular-nums text-slate-400">{s2}</span>
-          )}
+          {slots.map(({ player, won, setScore }, i) => (
+            <div
+              key={i}
+              className={`flex flex-1 items-center justify-between gap-2 px-2.5 ${
+                i === 0 ? 'border-b border-slate-700/80' : ''
+              } ${won ? 'bg-emerald-950/50 font-semibold text-emerald-100' : 'text-slate-300'}`}
+            >
+              <span className="min-w-0 flex-1 truncate text-[11px] leading-none">
+                {player?.username ?? (
+                  <span className="font-normal italic text-slate-600">{isBye ? 'BYE' : 'TBD'}</span>
+                )}
+              </span>
+              {isComplete && setScore !== '' ? (
+                <span className="shrink-0 text-[11px] tabular-nums leading-none text-slate-400">
+                  {setScore}
+                </span>
+              ) : null}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -310,13 +303,7 @@ export function BracketHqTree({
               style={{ paddingTop: pad, gap: `${gap}px`, width: COL_W }}
             >
               {round.matches.map((match) => (
-                <HqMatchCard
-                  key={match.id}
-                  match={match}
-                  isAdmin={isAdmin}
-                  userId={userId}
-                  displayNumber={match.displayNumber}
-                />
+                <HqMatchCard key={match.id} match={match} isAdmin={isAdmin} userId={userId} />
               ))}
             </div>
           </Fragment>

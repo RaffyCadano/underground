@@ -77,13 +77,53 @@ export function accountSearchWhere(
 
 export function buildListUrl(
   pathname: string,
-  params: { page?: number; q?: string; status?: string; role?: string },
+  params: { page?: number; q?: string; status?: string; role?: string; format?: string },
 ) {
   const searchParams = new URLSearchParams();
   if (params.q) searchParams.set('q', params.q);
   if (params.status && params.status !== 'all') searchParams.set('status', params.status);
   if (params.role && params.role !== 'all') searchParams.set('role', params.role);
+  if (params.format && params.format !== 'all') searchParams.set('format', params.format);
   if (params.page && params.page > 1) searchParams.set('page', String(params.page));
   const qs = searchParams.toString();
   return qs ? `${pathname}?${qs}` : pathname;
+}
+
+export type TemplateFormatFilter =
+  | 'all'
+  | 'single_elimination'
+  | 'double_elimination'
+  | 'swiss'
+  | 'round_robin';
+
+export function parseTemplateFormatFilter(value?: string): TemplateFormatFilter {
+  if (
+    value === 'single_elimination' ||
+    value === 'double_elimination' ||
+    value === 'swiss' ||
+    value === 'round_robin'
+  ) {
+    return value;
+  }
+  return 'all';
+}
+
+export function tournamentTemplateSearchWhere(
+  query: string,
+  format: TemplateFormatFilter,
+): Prisma.TournamentTemplateWhereInput {
+  const where: Prisma.TournamentTemplateWhereInput = {};
+
+  if (format !== 'all') {
+    where.format = format;
+  }
+
+  if (query) {
+    where.OR = [
+      { name: { contains: query, mode: 'insensitive' } },
+      { description: { contains: query, mode: 'insensitive' } },
+    ];
+  }
+
+  return where;
 }
