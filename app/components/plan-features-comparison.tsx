@@ -71,7 +71,7 @@ function PlanColumnButton({
   href?: string;
   disabled?: boolean;
 }) {
-  const className = `mt-3 inline-flex w-full max-w-[12rem] items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm ${
+  const className = `inline-flex w-full items-center justify-center rounded-lg px-3 py-2.5 text-xs font-semibold transition sm:text-sm ${
     variant === 'premier'
       ? disabled
         ? 'cursor-default border border-amber-500/30 bg-amber-500/10 text-amber-200/80'
@@ -98,14 +98,12 @@ function PlanColumnButton({
 
 export function PlanFeaturesComparison() {
   const { data: session } = useSession();
-  const onPremier =
-    Boolean(session?.user) &&
-    (isAdminRole(session.user.role) ||
-      userHasActivePremier(
-        session.user.subscriptionPlan ?? 'free',
-        session.user.subscriptionStatus,
-      ));
-  const upgradeHref = session?.user ? '/profile/subscriptions' : '/login?callbackUrl=/profile/subscriptions';
+  const user = session?.user;
+  const onPremier = user
+    ? isAdminRole(user.role) ||
+      userHasActivePremier(user.subscriptionPlan ?? 'free', user.subscriptionStatus)
+    : false;
+  const upgradeHref = user ? '/profile/subscriptions' : '/login?callbackUrl=/profile/subscriptions';
   const [activeCategoryId, setActiveCategoryId] = useState(PLAN_FEATURE_CATEGORIES[0]?.id ?? 'tournaments');
   const activeCategory =
     PLAN_FEATURE_CATEGORIES.find((category) => category.id === activeCategoryId) ??
@@ -169,38 +167,16 @@ export function PlanFeaturesComparison() {
                     scope="col"
                     className="min-w-[8.5rem] px-3 py-3.5 text-sm font-semibold text-white sm:min-w-[10rem] sm:px-4 sm:py-4 lg:w-[28%] lg:px-6"
                   >
-                    <div className="flex flex-col items-start">
-                      <span>{FREE_PLAN.productName}</span>
-                      {!onPremier && (
-                        <PlanColumnButton variant="standard" disabled>
-                          Your current plan
-                        </PlanColumnButton>
-                      )}
-                    </div>
+                    {FREE_PLAN.productName}
                   </th>
                   <th
                     scope="col"
                     className="min-w-[8.5rem] border-l border-amber-500/10 bg-amber-500/5 px-3 py-3.5 text-sm font-semibold text-white sm:min-w-[10rem] sm:px-4 sm:py-4 lg:w-[32%] lg:px-6"
                   >
-                    <div className="flex flex-col items-start">
-                      <span className="inline-flex flex-wrap items-center gap-1">
-                        {PREMIER_PLAN.productName}
-                        <PremierHeaderBadge />
-                      </span>
-                      {onPremier ? (
-                        <PlanColumnButton
-                          variant="premier"
-                          href="/profile/subscriptions"
-                          disabled
-                        >
-                          Your current plan
-                        </PlanColumnButton>
-                      ) : (
-                        <PlanColumnButton variant="premier" href={upgradeHref}>
-                          Upgrade to Premier
-                        </PlanColumnButton>
-                      )}
-                    </div>
+                    <span className="inline-flex flex-wrap items-center gap-1">
+                      {PREMIER_PLAN.productName}
+                      <PremierHeaderBadge />
+                    </span>
                   </th>
                 </tr>
               </thead>
@@ -229,6 +205,29 @@ export function PlanFeaturesComparison() {
                   );
                 })}
               </tbody>
+              <tfoot>
+                <tr className="border-t border-slate-800 bg-slate-900/50">
+                  <td className={`px-3 py-4 sm:px-4 lg:px-6 ${stickyFeatureCell} bg-slate-900/50`} />
+                  <td className="px-3 py-4 sm:px-4 lg:px-6">
+                    {!onPremier && (
+                      <PlanColumnButton variant="standard" disabled>
+                        Your current plan
+                      </PlanColumnButton>
+                    )}
+                  </td>
+                  <td className="border-l border-amber-500/10 bg-amber-500/[0.03] px-3 py-4 sm:px-4 lg:px-6">
+                    {onPremier ? (
+                      <PlanColumnButton variant="premier" href="/profile/subscriptions" disabled>
+                        Your current plan
+                      </PlanColumnButton>
+                    ) : (
+                      <PlanColumnButton variant="premier" href={upgradeHref}>
+                        Upgrade to Premier
+                      </PlanColumnButton>
+                    )}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>

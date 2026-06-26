@@ -44,7 +44,7 @@ function buildMenuLinks(session: Session, unreadMessages = 0): MenuLink[] {
     { href: playerProfilePath(username), label: 'Public Profile' },
     { href: '/profile', label: 'Settings' },
     { href: '/messages', label: 'Messages', count: unreadMessages },
-    { href: '/news', label: 'News', count: 2 },
+    { href: '/news', label: 'News' },
   ];
 }
 

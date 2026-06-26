@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogIn,
   Mail,
+  Newspaper,
   Swords,
   Trophy,
   User,
@@ -30,6 +31,7 @@ const circuitLinks = [
 
 const platformLinks = [
   { href: '/about', label: 'About', icon: Info },
+  { href: '/news', label: 'News', icon: Newspaper },
   { href: '/learn-more', label: 'Learn more', icon: BookOpen },
   { href: '/features', label: 'Features', icon: Layers },
   { href: '/pricing', label: 'Pricing', icon: CreditCard },
