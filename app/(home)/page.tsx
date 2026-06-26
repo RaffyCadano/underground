@@ -19,6 +19,7 @@ import { dashboardHrefForRole } from '@/lib/roles';
 import { CircuitSection } from './circuit-section';
 import { HowItWorksSection } from './how-it-works-section';
 import { PricingPlansSection } from './pricing-plans-section';
+import { UnderDevelopmentNotice } from './under-development-notice';
 
 function formatShortDate(date: Date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -89,6 +90,7 @@ export default async function HomePage() {
 
   return (
     <div className="w-full overflow-x-clip">
+      <UnderDevelopmentNotice />
       {/* Hero */}
       <section className="relative overflow-x-hidden border-b border-slate-800 py-0">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(34,197,94,0.12),transparent)]" />

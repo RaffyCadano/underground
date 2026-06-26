@@ -45,7 +45,7 @@ const FORMAT_META: Record<
     icon: Trophy,
     groupHint:
       'Participants advance from each group — must be a power of 2 for single & double elim (1, 2, 4, 8, 16, …).',
-    finalNotes: ['Break ties with placement matches.'],
+    finalNotes: ['Optional 3rd place match between semifinal losers.'],
   },
   double_elimination: {
     label: 'Double Elimination',
@@ -437,7 +437,8 @@ export function TournamentFormatStages({
             <FormatOptionCheckbox
               checked={deBreakTiesPlacement}
               onChange={(enabled) => onDeBreakTiesPlacementChange?.(enabled)}
-              label="Break ties with placement matches"
+              label="3rd place match"
+              description="Semifinal losers play for bronze. Requires at least 5 players (semifinal round)."
               lockFormat={lockFormat}
               name={fieldNames.deBreakTiesPlacement ?? 'deBreakTiesPlacement'}
             />

@@ -7,6 +7,7 @@ import { canManageTournament } from '@/lib/tournament-host';
 import { TournamentActions } from './tournament-actions';
 import { ParticipantManager, TournamentParticipantList } from './participant-manager';
 import { BracketTree } from './bracket-tree';
+import { TournamentSingleElimTabs } from './tournament-single-elim-tabs';
 import { BracketSwiss } from './bracket-swiss';
 import { BracketShareActions } from './bracket-share-actions';
 import { TournamentDoubleElimTabs } from './tournament-double-elim-tabs';
@@ -97,7 +98,9 @@ export default async function TournamentDetail({
     if (!roundMap.has(m.round)) roundMap.set(m.round, []);
     roundMap.get(m.round)!.push(m);
   }
-  const sortedRounds = Array.from(roundMap.entries()).sort((a, b) => a[0] - b[0]);
+  const sortedRounds: [number, typeof displayMatches][] = Array.from(roundMap.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([round, matches]) => [round, [...matches].sort((a, b) => a.matchIndex - b.matchIndex)]);
   const totalRounds = sortedRounds.length;
 
   const pendingMatches = displayMatches.filter(
@@ -279,7 +282,8 @@ export default async function TournamentDetail({
           <div className="card p-4 sm:p-6" id="tournament-bracket-print">
             {sortedRounds.length > 0 ? (
               <>
-                {tournament.format !== 'double_elimination' && (
+                {tournament.format !== 'double_elimination' &&
+                  tournament.format !== 'single_elimination' && (
                   <div className="mb-5 flex justify-end">
                     <BracketShareActions tournamentId={tournament.id} />
                   </div>
@@ -294,6 +298,7 @@ export default async function TournamentDetail({
                     matches={displayMatches}
                     participants={tournament.participants}
                     tournament={tournament}
+                    tournamentStatus={tournament.status}
                     isAdmin={isAdmin}
                     userId={session?.user.id ?? null}
                   />
@@ -327,6 +332,16 @@ export default async function TournamentDetail({
                   groupSize={tournament.groupSize}
                   advancePerGroup={tournament.advancePerGroup}
                   grandFinalsModifier={tournament.grandFinalsModifier}
+                  isAdmin={isAdmin}
+                  userId={session?.user.id ?? null}
+                />
+              ) : tournament.format === 'single_elimination' ? (
+                <TournamentSingleElimTabs
+                  tournamentId={tournament.id}
+                  rounds={sortedRounds}
+                  matches={displayMatches}
+                  participants={tournament.participants}
+                  tournamentStatus={tournament.status}
                   isAdmin={isAdmin}
                   userId={session?.user.id ?? null}
                 />

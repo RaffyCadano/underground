@@ -2,6 +2,7 @@
 
 import { Fragment, useState, useTransition } from 'react';
 import { PenLine } from 'lucide-react';
+import { DraggablePan } from '@/app/components/draggable-pan';
 import { reportResult, correctScore } from '@/app/actions/matches';
 import { MatchResultModal } from './match-result-modal';
 
@@ -11,6 +12,7 @@ export type BracketMatch = {
   id: string;
   round: number;
   matchIndex: number;
+  bracketSide?: string;
   player1: Player;
   player2: Player;
   player1Id?: string | null;
@@ -22,6 +24,8 @@ export type BracketMatch = {
 
 const MATCH_H = 72;
 const GAP_R1 = 8;
+const THIRD_PLACE_GAP = 24;
+const THIRD_PLACE_BOTTOM = 24;
 const UNIT = MATCH_H + GAP_R1;
 const CONN_W = 28;
 const COL_W = 176;
@@ -59,11 +63,13 @@ function MatchCard({
   const [editing, setEditing] = useState(false);
   const [score, setScore] = useState('');
   const [editScore, setEditScore] = useState('');
+  const [editWinnerId, setEditWinnerId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const p1Won = !!match.winner && match.winner.id === match.player1?.id;
   const p2Won = !!match.winner && match.winner.id === match.player2?.id;
   const isBye = match.status === 'bye';
+  const isThirdPlace = match.bracketSide === 'third_place';
   const isDone = match.status === 'complete';
   const scoreParts = match.score ? match.score.split('-') : [];
   const p1Score = scoreParts[0] ?? null;
@@ -92,12 +98,14 @@ function MatchCard({
   }
 
   function handleEdit() {
+    if (!editWinnerId) return;
     setError('');
     startTransition(async () => {
       try {
-        await correctScore(match.id, editScore);
+        await correctScore(match.id, editScore, editWinnerId);
         setEditing(false);
         setEditScore('');
+        setEditWinnerId(null);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to update score.');
       }
@@ -116,6 +124,7 @@ function MatchCard({
       setEditing(true);
       setReporting(false);
       setEditScore(match.score ?? '');
+      setEditWinnerId(match.winner?.id ?? null);
       setError('');
     }
   }
@@ -125,6 +134,7 @@ function MatchCard({
     setEditing(false);
     setScore('');
     setEditScore('');
+    setEditWinnerId(null);
     setError('');
   }
 
@@ -148,7 +158,9 @@ function MatchCard({
             }
           }}
           className={`relative flex h-full flex-col overflow-hidden rounded-lg border transition ${
-            isBye
+            isThirdPlace
+              ? 'border-amber-500/30 bg-amber-500/5'
+              : isBye
               ? 'border-slate-800 bg-slate-900/40 opacity-60'
               : isDone
                 ? 'border-slate-700 bg-slate-900'
@@ -159,6 +171,11 @@ function MatchCard({
             reporting || editing ? 'border-brand-500/50 ring-2 ring-brand-500/25' : ''
           }`}
         >
+        {isThirdPlace && (
+          <div className="border-b border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-center text-[9px] font-bold uppercase tracking-wider text-amber-300">
+            3rd place
+          </div>
+        )}
         {slots.map(({ player, won, setScore: s }, i) => (
           <div
             key={i}
@@ -224,6 +241,8 @@ function MatchCard({
         score={reporting ? score : editScore}
         onScoreChange={reporting ? setScore : setEditScore}
         onReport={handleReport}
+        editWinnerId={editWinnerId}
+        onEditWinnerChange={setEditWinnerId}
         onSaveEdit={handleEdit}
         onClose={closeAction}
         isPending={isPending}
@@ -284,51 +303,95 @@ export function BracketTree({
 
   const totalRounds = rounds.length;
   const bracketHeight = rounds[0][1].length * UNIT - GAP_R1;
+  const lastColIdx = Math.max(0, totalRounds - 1);
+  const lastRoundPad = topPad(lastColIdx);
+  const hasThirdPlace = rounds.some(([, matches]) =>
+    matches.some((m) => m.bracketSide === 'third_place'),
+  );
+  const treeHeight = hasThirdPlace
+    ? Math.max(bracketHeight, lastRoundPad + MATCH_H + THIRD_PLACE_GAP + MATCH_H + THIRD_PLACE_BOTTOM)
+    : bracketHeight;
 
   return (
-    <div className="overflow-x-auto pb-2">
-      <div className="mb-2 flex">
-        {rounds.map(([round], colIdx) => (
-          <Fragment key={round}>
-            {colIdx > 0 && <div style={{ width: CONN_W }} />}
-            <div
-              className="shrink-0 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400"
-              style={{ width: COL_W }}
-            >
-              {roundLabel(round, totalRounds, format)}
+    <div className="space-y-3">
+      <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+        <DraggablePan className="relative max-h-[min(75vh,900px)]">
+          <div className="min-w-max p-4 md:p-6">
+            <div className="mb-2 flex">
+              {rounds.map(([round], colIdx) => (
+                <Fragment key={round}>
+                  {colIdx > 0 && <div style={{ width: CONN_W }} />}
+                  <div
+                    className="shrink-0 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                    style={{ width: COL_W }}
+                  >
+                    {roundLabel(round, totalRounds, format)}
+                  </div>
+                </Fragment>
+              ))}
             </div>
-          </Fragment>
-        ))}
+
+            <div className="flex items-start" style={{ minHeight: treeHeight }}>
+              {rounds.map(([round, matches], colIdx) => {
+                const pad = topPad(colIdx);
+                const gap = matchGap(colIdx);
+                const isLastColumn = colIdx === totalRounds - 1;
+                const bracketMatches = isLastColumn
+                  ? matches.filter((m) => m.bracketSide !== 'third_place')
+                  : matches;
+                const thirdPlaceMatch = isLastColumn
+                  ? matches.find((m) => m.bracketSide === 'third_place')
+                  : undefined;
+
+                return (
+                  <Fragment key={round}>
+                    {colIdx > 0 && (
+                      <ConnectorSvg
+                        matchCount={bracketMatches.length}
+                        colIdx={colIdx}
+                        totalHeight={treeHeight}
+                      />
+                    )}
+                    <div
+                      className="flex shrink-0 flex-col"
+                      style={{ paddingTop: pad, gap: `${gap}px`, width: COL_W }}
+                    >
+                      {bracketMatches.map((m) => (
+                        <MatchCard
+                          key={m.id}
+                          match={m}
+                          isAdmin={isAdmin}
+                          userId={userId}
+                          interactive={interactive}
+                        />
+                      ))}
+                      {thirdPlaceMatch && (
+                        <div
+                          style={{
+                            marginTop: THIRD_PLACE_GAP,
+                            marginBottom: THIRD_PLACE_BOTTOM,
+                          }}
+                        >
+                          <MatchCard
+                            match={thirdPlaceMatch}
+                            isAdmin={isAdmin}
+                            userId={userId}
+                            interactive={interactive}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </Fragment>
+                );
+              })}
+            </div>
+          </div>
+        </DraggablePan>
       </div>
 
-      <div className="flex items-start" style={{ height: bracketHeight }}>
-        {rounds.map(([round, matches], colIdx) => {
-          const pad = topPad(colIdx);
-          const gap = matchGap(colIdx);
-
-          return (
-            <Fragment key={round}>
-              {colIdx > 0 && (
-                <ConnectorSvg matchCount={matches.length} colIdx={colIdx} totalHeight={bracketHeight} />
-              )}
-              <div
-                className="flex shrink-0 flex-col"
-                style={{ paddingTop: pad, gap: `${gap}px`, width: COL_W }}
-              >
-                {matches.map((m) => (
-                  <MatchCard
-                    key={m.id}
-                    match={m}
-                    isAdmin={isAdmin}
-                    userId={userId}
-                    interactive={interactive}
-                  />
-                ))}
-              </div>
-            </Fragment>
-          );
-        })}
-      </div>
+      <p className="text-center text-xs text-slate-500">
+        Drag to pan · Scroll with trackpad or wheel · Click a match to report or edit results
+      </p>
     </div>
   );
 }

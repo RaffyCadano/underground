@@ -3,7 +3,7 @@
 import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { Check, Code2, Copy, Crown, Printer, X } from 'lucide-react';
+import { Check, Code2, Copy, Crown, Link2, Printer, X } from 'lucide-react';
 import { SITE_NAME } from '@/lib/site';
 
 const bracketToolbarIconButtonClass =
@@ -20,6 +20,7 @@ export function BracketShareActions({
   const [mounted, setMounted] = useState(false);
   const [embedOpen, setEmbedOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [embedCode, setEmbedCode] = useState('');
 
   useEffect(() => setMounted(true), []);
@@ -61,8 +62,32 @@ export function BracketShareActions({
     window.print();
   }
 
+  async function copyShareLink() {
+    try {
+      const url = `${window.location.origin}${window.location.pathname}`;
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      window.setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      setLinkCopied(false);
+    }
+  }
+
   const buttons = (
     <div className="flex gap-1">
+      <button
+        type="button"
+        onClick={copyShareLink}
+        className={bracketToolbarIconButtonClass}
+        aria-label="Copy tournament link"
+        title={linkCopied ? 'Link copied' : 'Copy tournament link'}
+      >
+        {linkCopied ? (
+          <Check size={16} className="shrink-0 text-emerald-400" />
+        ) : (
+          <Link2 size={16} className="shrink-0" />
+        )}
+      </button>
       <button
         type="button"
         onClick={() => setEmbedOpen(true)}

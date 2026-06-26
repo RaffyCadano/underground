@@ -4,11 +4,11 @@ import { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, ArrowRight, CheckCircle2, Loader2, RotateCcw, Swords, UserPlus, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { joinTournament, leaveTournament, generateBracket, generateNextSwissRound, generatePlayoffs, resetBracketForRegistration } from '@/app/actions/tournaments';
+import { joinTournament, leaveTournament, generateBracket, generateNextSwissRound, generatePlayoffs, regenerateRound1, resetBracketForRegistration } from '@/app/actions/tournaments';
 import { reportResult, correctScore } from '@/app/actions/matches';
 import { formatPlayerCapLabel, isTournamentFull } from '@/lib/tournament-registration';
 
-type PendingAction = 'join' | 'leave' | 'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'report' | 'edit' | null;
+type PendingAction = 'join' | 'leave' | 'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1' | 'report' | 'edit' | null;
 
 type Player = { id: string; username: string } | null;
 
@@ -443,13 +443,172 @@ function ResetRosterConfirmModal({
   );
 }
 
+function RegenerateRound1ConfirmModal({
+  open,
+  onClose,
+  onConfirm,
+  isPending,
+  error,
+  tournamentFormat,
+  currentRound,
+  participantCount,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+  error: string;
+  tournamentFormat: string;
+  currentRound: number;
+  participantCount: number;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const formatLabel = tournamentFormat === 'round_robin' ? 'round robin' : 'Swiss';
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !isPending) onClose();
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, isPending, onClose]);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="regenerate-round-1-title"
+      onClick={() => !isPending && onClose()}
+    >
+      <div
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl shadow-black/50"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-transparent px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300">
+                <RotateCcw size={20} />
+              </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-300/80">
+                  Bracket reset
+                </p>
+                <h2 id="regenerate-round-1-title" className="mt-1 text-lg font-semibold text-white">
+                  Regenerate Round 1?
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Wipe all rounds and scores, then build fresh Round 1 pairings for this {formatLabel} event.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isPending}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-white disabled:opacity-50"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 px-5 py-4">
+          <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Current state
+            </p>
+            <p className="mt-1 font-semibold text-white">
+              {participantCount} players · Round {currentRound}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm text-slate-400">This will:</p>
+            <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+              {[
+                'Delete every match and reported score from all rounds',
+                'Keep registration closed with the same roster',
+                'Generate new Round 1 pairings immediately',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-rose-400/80" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="flex items-start gap-2.5 rounded-xl border border-rose-500/25 bg-rose-500/10 px-3.5 py-3">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-rose-400" />
+            <p className="text-xs leading-relaxed text-rose-100/90">
+              This cannot be undone. Use &ldquo;Edit roster&rdquo; instead if you need to add or remove players.
+            </p>
+          </div>
+
+          {error && (
+            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-200">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-800 px-5 py-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isPending}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:opacity-60"
+          >
+            {isPending ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                Regenerating…
+              </>
+            ) : (
+              <>
+                <RotateCcw size={15} />
+                Regenerate Round 1
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function ActionSuccessNotice({
   action,
   tournamentFormat,
   currentRound,
   onDismiss,
 }: {
-  action: 'generate' | 'generate-next' | 'playoffs' | 'reset-roster';
+  action: 'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1';
   tournamentFormat: string;
   currentRound: number;
   onDismiss: () => void;
@@ -496,6 +655,11 @@ function ActionSuccessNotice({
         return {
           title: 'Roster unlocked',
           body: 'Add or remove players on the Bracket tab, then generate again.',
+        };
+      case 'regenerate-round-1':
+        return {
+          title: 'Round 1 regenerated',
+          body: 'All previous rounds were cleared and new pairings are live.',
         };
     }
   })();
@@ -650,14 +814,16 @@ export function TournamentActions({
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
   const [showResetRosterConfirm, setShowResetRosterConfirm] = useState(false);
+  const [showRegenerateRound1Confirm, setShowRegenerateRound1Confirm] = useState(false);
   const [successAction, setSuccessAction] = useState<
-    'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | null
+    'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1' | null
   >(null);
   const [error, setError] = useState('');
   const [reportingMatch, setReportingMatch] = useState<string | null>(null);
   const [score, setScore] = useState('');
   const [editingMatch, setEditingMatch] = useState<string | null>(null);
   const [editScore, setEditScore] = useState('');
+  const [editWinnerId, setEditWinnerId] = useState<string | null>(null);
 
   function handleJoin() {
     setError('');
@@ -743,13 +909,43 @@ export function TournamentActions({
     setError('');
   }
 
+  function handleRegenerateRound1() {
+    setError('');
+    setShowRegenerateRound1Confirm(false);
+    setPendingAction('regenerate-round-1');
+    startTransition(async () => {
+      try {
+        await regenerateRound1(tournamentId);
+        setSuccessAction('regenerate-round-1');
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Failed to regenerate Round 1.');
+        setShowRegenerateRound1Confirm(true);
+      } finally {
+        setPendingAction(null);
+      }
+    });
+  }
+
+  function openRegenerateRound1Confirm() {
+    setError('');
+    setShowRegenerateRound1Confirm(true);
+  }
+
+  function closeRegenerateRound1Confirm() {
+    if (isPending) return;
+    setShowRegenerateRound1Confirm(false);
+    setError('');
+  }
+
   function handleCorrectScore(matchId: string) {
+    if (!editWinnerId) return;
     setError('');
     startTransition(async () => {
       try {
-        await correctScore(matchId, editScore);
+        await correctScore(matchId, editScore, editWinnerId);
         setEditingMatch(null);
         setEditScore('');
+        setEditWinnerId(null);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to update score.');
       }
@@ -830,12 +1026,19 @@ export function TournamentActions({
   const showReport = myPendingMatches.length > 0 && !inlineBracketFormat;
   const showEdit = isAdmin && completedMatches.length > 0 && !inlineBracketFormat;
   const showResetRoster = isAdmin && canResetRoster && tournamentStatus === 'active';
+  const showRegenerateRound1 =
+    isAdmin &&
+    tournamentStatus === 'active' &&
+    currentRound > 0 &&
+    (tournamentFormat === 'swiss' || tournamentFormat === 'round_robin') &&
+    !(groupStageEnabled && phase === 'group');
   const hasContent =
     showJoinLeave ||
     showGenerate ||
     showStartPlayoffs ||
     showSwissNext ||
     showResetRoster ||
+    showRegenerateRound1 ||
     showReport ||
     showEdit;
 
@@ -860,6 +1063,17 @@ export function TournamentActions({
         onConfirm={handleResetRoster}
         isPending={isPending && pendingAction === 'reset-roster'}
         error={error}
+        participantCount={participantCount}
+      />
+
+      <RegenerateRound1ConfirmModal
+        open={showRegenerateRound1Confirm}
+        onClose={closeRegenerateRound1Confirm}
+        onConfirm={handleRegenerateRound1}
+        isPending={isPending && pendingAction === 'regenerate-round-1'}
+        error={error}
+        tournamentFormat={tournamentFormat}
+        currentRound={currentRound}
         participantCount={participantCount}
       />
 
@@ -978,6 +1192,21 @@ export function TournamentActions({
         />
       )}
 
+      {showRegenerateRound1 && (
+        <TournamentActionCard
+          icon={RotateCcw}
+          eyebrow="Admin"
+          title="Fix pairings or start over?"
+          description="Clear all rounds and scores, then regenerate Round 1 with the current roster. Registration stays closed."
+          buttonLabel="Regenerate Round 1"
+          pendingLabel="Regenerating…"
+          onClick={openRegenerateRound1Confirm}
+          disabled={isPending}
+          isPending={isPending && pendingAction === 'regenerate-round-1'}
+          tone="admin"
+        />
+      )}
+
       {showResetRoster && (
         <TournamentActionCard
           icon={RotateCcw}
@@ -1090,31 +1319,69 @@ export function TournamentActions({
                 {m.score && <span className="text-xs text-slate-400">{m.score}</span>}
               </div>
               {editingMatch === m.id ? (
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 space-y-3">
                   <input
                     type="text"
                     placeholder="New score (e.g. 3-1)"
                     value={editScore}
                     onChange={(e) => setEditScore(e.target.value)}
-                    className="input flex-1"
+                    className="input w-full"
                   />
-                  <button
-                    onClick={() => handleCorrectScore(m.id)}
-                    disabled={isPending}
-                    className="rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-500 disabled:opacity-60"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => { setEditingMatch(null); setEditScore(''); }}
-                    className="rounded-lg px-3 py-2 text-xs text-slate-400 transition hover:text-slate-200"
-                  >
-                    Cancel
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    {m.player1 && (
+                      <button
+                        type="button"
+                        onClick={() => setEditWinnerId(m.player1!.id)}
+                        className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                          editWinnerId === m.player1.id
+                            ? 'border-brand-500 bg-brand-500/15 text-brand-200'
+                            : 'border-slate-700 text-slate-300 hover:border-slate-600'
+                        }`}
+                      >
+                        {m.player1.username} wins
+                      </button>
+                    )}
+                    {m.player2 && (
+                      <button
+                        type="button"
+                        onClick={() => setEditWinnerId(m.player2!.id)}
+                        className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                          editWinnerId === m.player2.id
+                            ? 'border-brand-500 bg-brand-500/15 text-brand-200'
+                            : 'border-slate-700 text-slate-300 hover:border-slate-600'
+                        }`}
+                      >
+                        {m.player2.username} wins
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleCorrectScore(m.id)}
+                      disabled={isPending || !editWinnerId}
+                      className="rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-500 disabled:opacity-60"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingMatch(null);
+                        setEditScore('');
+                        setEditWinnerId(null);
+                      }}
+                      className="rounded-lg px-3 py-2 text-xs text-slate-400 transition hover:text-slate-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <button
-                  onClick={() => { setEditingMatch(m.id); setEditScore(m.score ?? ''); }}
+                  onClick={() => {
+                    setEditingMatch(m.id);
+                    setEditScore(m.score ?? '');
+                    setEditWinnerId(m.winner?.id ?? null);
+                  }}
                   className="mt-2 text-xs font-semibold text-slate-400 transition hover:text-brand-300"
                 >
                   Edit score

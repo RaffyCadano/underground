@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { BracketSwiss } from './bracket-swiss';
 import { BracketTree } from './bracket-tree';
+import { TournamentSingleElimTabs } from './tournament-single-elim-tabs';
 import { BracketShareActions } from './bracket-share-actions';
 import { GroupStagePanel } from './group-stage-panel';
 import { buildGroupStageView } from '@/lib/group-stage';
@@ -43,6 +44,7 @@ export function TournamentStagedTabs({
   matches,
   participants,
   tournament,
+  tournamentStatus,
   isAdmin,
   userId,
 }: {
@@ -61,6 +63,7 @@ export function TournamentStagedTabs({
     swissPointsPerBye?: number | null;
     roundRobinRankBy?: string | null;
   };
+  tournamentStatus: string;
   isAdmin: boolean;
   userId: string | null;
 }) {
@@ -89,7 +92,9 @@ export function TournamentStagedTabs({
     if (!roundMap.has(m.round)) roundMap.set(m.round, []);
     roundMap.get(m.round)!.push(m);
   }
-  const sortedRounds = Array.from(roundMap.entries()).sort((a, b) => a[0] - b[0]);
+  const sortedRounds = Array.from(roundMap.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([round, matches]) => [round, [...matches].sort((a, b) => a.matchIndex - b.matchIndex)] as [number, typeof playoffMatches]);
 
   const tabs: { id: MainTab; label: string }[] = [
     { id: 'groups', label: 'Group Stage' },
@@ -125,11 +130,14 @@ export function TournamentStagedTabs({
         />
       )}
 
+      {mainTab === 'final' && hasPlayoffs && format !== 'single_elimination' && (
+        <div className="mb-5 flex justify-end">
+          <BracketShareActions tournamentId={tournamentId} />
+        </div>
+      )}
+
       {mainTab === 'final' && hasPlayoffs && (
         <>
-          <div className="mb-5 flex justify-end">
-            <BracketShareActions tournamentId={tournamentId} />
-          </div>
           {format === 'swiss' || format === 'round_robin' ? (
             <BracketSwiss
               rounds={sortedRounds}
@@ -144,6 +152,19 @@ export function TournamentStagedTabs({
                   ? parseRoundRobinRankBy(tournament.roundRobinRankBy)
                   : undefined
               }
+            />
+          ) : format === 'single_elimination' ? (
+            <TournamentSingleElimTabs
+              tournamentId={tournamentId}
+              rounds={sortedRounds}
+              matches={playoffMatches}
+              participants={playoffParticipants.map((p) => ({
+                ...p,
+                seed: p.seed ?? null,
+              }))}
+              tournamentStatus={tournamentStatus}
+              isAdmin={isAdmin}
+              userId={userId}
             />
           ) : (
             <BracketTree

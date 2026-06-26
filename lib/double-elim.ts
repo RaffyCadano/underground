@@ -14,6 +14,7 @@ import {
   findTournamentGrandFinalsModifier,
   updateTournamentPhase,
 } from '@/lib/tournament-de-settings';
+import { generateSeedPairs, nextPowerOf2 } from '@/lib/bracket-seeding';
 
 export type BracketSide = 'winners' | 'losers' | 'grand_final' | 'reset';
 
@@ -29,28 +30,6 @@ type DeMatch = {
   loserNextId: string | null;
   loserNextSlot: number | null;
 };
-
-function nextPowerOf2(n: number) {
-  return Math.pow(2, Math.ceil(Math.log2(n)));
-}
-
-function generateSeedPairs(size: number): [number, number][] {
-  let positions = [1, 2];
-  while (positions.length < size) {
-    const sum = positions.length * 2 + 1;
-    const next: number[] = [];
-    for (const pos of positions) {
-      next.push(pos);
-      next.push(sum - pos);
-    }
-    positions = next;
-  }
-  const pairs: [number, number][] = [];
-  for (let i = 0; i < positions.length; i += 2) {
-    pairs.push([positions[i], positions[i + 1]]);
-  }
-  return pairs;
-}
 
 function createWinnersBracket(bracketSize: number, rounds: number, idFactory: () => string): DeMatch[] {
   const matches: DeMatch[] = [];
@@ -620,7 +599,7 @@ export async function generateDoubleElimination(tournamentId: string) {
 export async function advanceDoubleElimMatch(
   matchId: string,
   winnerId: string,
-  options?: { resolveByes?: boolean },
+  options?: { resolveByes?: boolean; forceReplace?: boolean },
 ) {
   const match = await findAdvancementMatch(matchId);
   if (!match) return;
@@ -633,12 +612,16 @@ export async function advanceDoubleElimMatch(
   }
 
   if (match.loserNextId && match.loserNextSlot && loserId) {
-    await placeLoserInBracket(
-      match.tournamentId,
-      match.loserNextId,
-      match.loserNextSlot,
-      loserId,
-    );
+    if (options?.forceReplace) {
+      await placeInSlot(match.loserNextId, match.loserNextSlot, loserId);
+    } else {
+      await placeLoserInBracket(
+        match.tournamentId,
+        match.loserNextId,
+        match.loserNextSlot,
+        loserId,
+      );
+    }
   }
 
   if (options?.resolveByes !== false) {

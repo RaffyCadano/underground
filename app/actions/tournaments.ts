@@ -5,7 +5,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { canManageTournaments } from '@/lib/roles';
 import { assertCanManageTournament } from '@/lib/tournament-host';
-import { generateSingleElimination, generateSwissRound } from '@/lib/bracket';
+import { generateSingleElimination, generateSwissRound, generateRoundRobinRound } from '@/lib/bracket';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { parseGameType, parseRoundRobinRankBy } from '@/lib/tournament-options';
@@ -302,7 +302,9 @@ export async function generateBracket(tournamentId: string) {
   if (tournament.groupStageEnabled) {
     const { generateGroupStage } = await import('@/lib/group-stage');
     await generateGroupStage(tournamentId);
-  } else if (tournament.format === 'swiss' || tournament.format === 'round_robin') {
+  } else if (tournament.format === 'round_robin') {
+    await generateRoundRobinRound(tournamentId);
+  } else if (tournament.format === 'swiss') {
     await generateSwissRound(tournamentId);
   } else if (tournament.format === 'double_elimination') {
     const { generateDoubleElimination } = await import('@/lib/double-elim');
@@ -327,11 +329,59 @@ export async function generateNextSwissRound(tournamentId: string) {
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
-    select: { phase: true },
+    select: { phase: true, format: true },
   });
 
-  await generateSwissRound(tournamentId, { playoffsOnly: tournament?.phase === 'playoffs' });
+  if (tournament?.format === 'round_robin') {
+    await generateRoundRobinRound(tournamentId, { playoffsOnly: tournament.phase === 'playoffs' });
+  } else {
+    await generateSwissRound(tournamentId, { playoffsOnly: tournament?.phase === 'playoffs' });
+  }
   revalidatePath(`/tournaments/${tournamentId}`);
+}
+
+export async function regenerateRound1(tournamentId: string) {
+  await requireTournamentHost(tournamentId);
+
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    include: { _count: { select: { matches: true } } },
+  });
+  if (!tournament) throw new Error('Tournament not found.');
+  if (tournament.status === 'complete') {
+    throw new Error('Cannot reset the bracket after the tournament is complete.');
+  }
+  if (tournament._count.matches === 0) {
+    throw new Error('No bracket has been generated yet.');
+  }
+  if (tournament.format !== 'swiss' && tournament.format !== 'round_robin') {
+    throw new Error('Round regeneration is only available for Swiss and round robin events.');
+  }
+  if (tournament.groupStageEnabled && tournament.phase === 'group') {
+    throw new Error('Finish the group stage before regenerating the main bracket.');
+  }
+
+  const playoffsOnly = tournament.groupStageEnabled && tournament.phase === 'playoffs';
+
+  if (playoffsOnly) {
+    await prisma.match.deleteMany({ where: { tournamentId, bracketSide: { not: 'group' } } });
+  } else {
+    await prisma.match.deleteMany({ where: { tournamentId } });
+  }
+
+  await prisma.tournament.update({
+    where: { id: tournamentId },
+    data: { status: 'active' },
+  });
+
+  if (tournament.format === 'round_robin') {
+    await generateRoundRobinRound(tournamentId, { playoffsOnly });
+  } else {
+    await generateSwissRound(tournamentId, { playoffsOnly });
+  }
+
+  revalidatePath(`/tournaments/${tournamentId}`);
+  revalidatePath('/dashboard');
 }
 
 export async function resetBracketForRegistration(tournamentId: string) {

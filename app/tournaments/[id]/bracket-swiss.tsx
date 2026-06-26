@@ -31,6 +31,7 @@ import {
   compareRoundRobinStandings,
   roundRobinRankValue,
 } from '@/lib/round-robin-ranking';
+import { computeRoundRobinProgress } from '@/lib/round-robin-schedule';
 import type { RoundRobinRankBy } from '@/lib/tournament-options';
 
 type Participant = {
@@ -64,12 +65,20 @@ export function BracketSwiss({
   const [modalMatch, setModalMatch] = useState<SwissMatch | null>(null);
   const [modalMode, setModalMode] = useState<'report' | 'edit'>('report');
   const [score, setScore] = useState('');
+  const [editWinnerId, setEditWinnerId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
 
   const maxRound = useMemo(
     () => (rounds.length > 0 ? Math.max(...rounds.map(([r]) => r)) : 0),
     [rounds],
+  );
+
+  const isRoundRobin = !!roundRobinRankBy;
+  const playerIds = useMemo(() => participants.map((p) => p.userId), [participants]);
+  const roundRobinProgress = useMemo(
+    () => (isRoundRobin ? computeRoundRobinProgress(playerIds, allMatches) : null),
+    [isRoundRobin, playerIds, allMatches],
   );
 
   function openReport(match: SwissMatch) {
@@ -83,12 +92,14 @@ export function BracketSwiss({
     setModalMatch(match);
     setModalMode('edit');
     setScore(match.score ?? '');
+    setEditWinnerId(match.winner?.id ?? null);
     setError('');
   }
 
   function closeModal() {
     setModalMatch(null);
     setScore('');
+    setEditWinnerId(null);
     setError('');
   }
 
@@ -106,11 +117,11 @@ export function BracketSwiss({
   }
 
   function handleEditScore() {
-    if (!modalMatch) return;
+    if (!modalMatch || !editWinnerId) return;
     setError('');
     startTransition(async () => {
       try {
-        await correctScore(modalMatch.id, score);
+        await correctScore(modalMatch.id, score, editWinnerId);
         closeModal();
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to update score.');
@@ -132,6 +143,7 @@ export function BracketSwiss({
             points: playerStats.points,
             rankValue: playerStats.points,
             pointDifferential: 0,
+            gamesPlayed: 0,
           },
         ];
       }
@@ -139,6 +151,11 @@ export function BracketSwiss({
       if (roundRobinRankBy) {
         const rr = computeRoundRobinPlayerStats(p.userId, allMatches);
         const rankValue = roundRobinRankValue(rr, roundRobinRankBy);
+        const gamesPlayed = allMatches.filter(
+          (m) =>
+            m.status === 'complete' &&
+            (m.player1Id === p.userId || m.player2Id === p.userId),
+        ).length;
         return [
           p.userId,
           {
@@ -147,6 +164,7 @@ export function BracketSwiss({
             ...rr,
             points: rankValue,
             rankValue,
+            gamesPlayed,
           },
         ];
       }
@@ -161,6 +179,7 @@ export function BracketSwiss({
           points: 0,
           rankValue: 0,
           pointDifferential: 0,
+          gamesPlayed: 0,
         },
       ];
     }),
@@ -193,6 +212,57 @@ export function BracketSwiss({
 
   return (
     <div>
+      {isRoundRobin && roundRobinProgress && (
+        <div
+          className={`mb-5 rounded-xl border px-4 py-3.5 ${
+            roundRobinProgress.allPairingsComplete
+              ? 'border-emerald-500/30 bg-emerald-500/10'
+              : 'border-slate-800 bg-slate-900/70'
+          }`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-white">Round robin progress</p>
+            <span
+              className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                roundRobinProgress.allPairingsComplete
+                  ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
+                  : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+              }`}
+            >
+              {roundRobinProgress.allPairingsComplete ? 'All pairings complete' : 'In progress'}
+            </span>
+          </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-slate-400">
+            {roundRobinProgress.completedPairings} of {roundRobinProgress.totalPairings} unique
+            pairings played
+            {' · '}
+            Round {roundRobinProgress.roundsGenerated} of {roundRobinProgress.totalRounds} generated
+          </p>
+          {!roundRobinProgress.allPairingsComplete && roundRobinProgress.gamesPerPlayer > 0 && (
+            <p className="mt-1 text-xs text-slate-500">
+              Each player should face every opponent once ({roundRobinProgress.gamesPerPlayer} games
+              each). Games played so far: {roundRobinProgress.minGamesPlayed}–
+              {roundRobinProgress.maxGamesPlayed}.
+            </p>
+          )}
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800">
+            <div
+              className={`h-full rounded-full transition-all ${
+                roundRobinProgress.allPairingsComplete ? 'bg-emerald-500' : 'bg-brand-500'
+              }`}
+              style={{
+                width: `${Math.min(
+                  100,
+                  roundRobinProgress.totalPairings > 0
+                    ? (roundRobinProgress.completedPairings / roundRobinProgress.totalPairings) * 100
+                    : 0,
+                )}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="mb-5 flex gap-1 rounded-xl border border-slate-800 bg-slate-900 p-1">
         {(['standings', 'rounds'] as const).map((t) => (
           <button
@@ -204,7 +274,11 @@ export function BracketSwiss({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            {t === 'rounds' ? `Rounds (${rounds.length})` : 'Standings'}
+            {t === 'rounds'
+              ? isRoundRobin && roundRobinProgress
+                ? `Rounds (${roundRobinProgress.roundsGenerated}/${roundRobinProgress.totalRounds})`
+                : `Rounds (${rounds.length})`
+              : 'Standings'}
           </button>
         ))}
       </div>
@@ -218,6 +292,11 @@ export function BracketSwiss({
                 <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Player</th>
                 <th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">W</th>
                 <th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">L</th>
+                {isRoundRobin && (
+                  <th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    GP
+                  </th>
+                )}
                 {showSwissPoints && (
                   <th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     Pts
@@ -233,6 +312,19 @@ export function BracketSwiss({
                   <td className="px-4 py-2.5 font-semibold text-white">{s.username}</td>
                   <td className="px-4 py-2.5 text-center font-bold tabular-nums text-emerald-400">{s.wins}</td>
                   <td className="px-4 py-2.5 text-center tabular-nums text-slate-400">{s.losses}</td>
+                  {isRoundRobin && (
+                    <td
+                      className={`px-4 py-2.5 text-center tabular-nums ${
+                        roundRobinProgress &&
+                        s.gamesPlayed != null &&
+                        s.gamesPlayed < roundRobinProgress.gamesPerPlayer
+                          ? 'font-semibold text-amber-300'
+                          : 'text-slate-400'
+                      }`}
+                    >
+                      {s.gamesPlayed ?? 0}
+                    </td>
+                  )}
                   {showSwissPoints && (
                     <td className="px-4 py-2.5 text-center font-bold tabular-nums text-brand-300">
                       {formatSwissPoint(s.points)}
@@ -364,6 +456,8 @@ export function BracketSwiss({
         score={score}
         onScoreChange={setScore}
         onReport={handleReport}
+        editWinnerId={editWinnerId}
+        onEditWinnerChange={setEditWinnerId}
         onSaveEdit={handleEditScore}
         onClose={closeModal}
         isPending={isPending}

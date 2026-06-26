@@ -7,6 +7,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type WheelEvent as ReactWheelEvent,
 } from 'react';
 
 type DraggablePanProps = {
@@ -101,6 +102,17 @@ export function DraggablePan({ children, className = '', style }: DraggablePanPr
     }
   }
 
+  function handleWheel(e: ReactWheelEvent<HTMLDivElement>) {
+    const el = containerRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth) return;
+
+    const dominantVertical = Math.abs(e.deltaY) > Math.abs(e.deltaX);
+    if (!dominantVertical) return;
+
+    el.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }
+
   return (
     <div
       ref={containerRef}
@@ -110,6 +122,7 @@ export function DraggablePan({ children, className = '', style }: DraggablePanPr
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       onClickCapture={handleClickCapture}
+      onWheel={handleWheel}
       className={`overflow-auto overscroll-contain ${
         isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
       } ${className}`}

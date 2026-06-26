@@ -29,6 +29,7 @@ export const BRACKET_FORMAT_GUIDES: BracketFormatGuide[] = [
       'If the field is not a perfect power of two, empty slots become byes — those players auto-advance without playing.',
       'Every match in later rounds is created up front. As you report scores, winners are placed into the correct next-round slot automatically.',
       'When the final match is completed, the tournament is marked complete.',
+      'If enabled, semifinal losers are paired in a separate 3rd place match (shown beside the final).',
     ],
     duringEvent: [
       'Find your name on the bracket — matches with both players assigned are ready to play.',

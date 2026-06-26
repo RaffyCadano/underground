@@ -5,6 +5,7 @@ import { AdcashEmbedStrip } from '@/app/components/adcash-embed-strip';
 import { getViewerShowAds } from '@/lib/ads';
 import { prisma } from '@/lib/prisma';
 import { BracketTree } from '@/app/tournaments/[id]/bracket-tree';
+import { TournamentSingleElimTabs } from '@/app/tournaments/[id]/tournament-single-elim-tabs';
 import { BracketSwiss } from '@/app/tournaments/[id]/bracket-swiss';
 import { TournamentDoubleElimTabs } from '@/app/tournaments/[id]/tournament-double-elim-tabs';
 import { buildPlayerNameMap } from '@/lib/tournament-participant';
@@ -68,7 +69,9 @@ export default async function TournamentEmbedPage({
     if (!roundMap.has(match.round)) roundMap.set(match.round, []);
     roundMap.get(match.round)!.push(match);
   }
-  const sortedRounds = Array.from(roundMap.entries()).sort((a, b) => a[0] - b[0]);
+  const sortedRounds: [number, typeof displayMatches][] = Array.from(roundMap.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([round, matches]) => [round, [...matches].sort((a, b) => a.matchIndex - b.matchIndex)]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -130,6 +133,17 @@ export default async function TournamentEmbedPage({
             groupSize={tournament.groupSize}
             advancePerGroup={tournament.advancePerGroup}
             grandFinalsModifier={tournament.grandFinalsModifier}
+            isAdmin={false}
+            userId={null}
+            showShareActions={false}
+          />
+        ) : tournament.format === 'single_elimination' ? (
+          <TournamentSingleElimTabs
+            tournamentId={tournament.id}
+            rounds={sortedRounds}
+            matches={displayMatches}
+            participants={tournament.participants}
+            tournamentStatus={tournament.status}
             isAdmin={false}
             userId={null}
             showShareActions={false}

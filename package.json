@@ -13,6 +13,7 @@
     "deploy:hosting": "firebase deploy --only hosting",
     "prisma:generate": "prisma generate",
     "seed:players": "npx tsx prisma/seed-players.ts",
+    "seed:single-elim-10p": "npx tsx prisma/seed-single-elim-10p.ts",
     "setup:storage": "node scripts/ensure-tournament-images-bucket.mjs"
   },
   "dependencies": {

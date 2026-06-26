@@ -1,4 +1,9 @@
 import { prisma } from '@/lib/prisma';
+import { generateSeedPairs, nextPowerOf2 } from '@/lib/bracket-seeding';
+import {
+  buildRoundRobinSchedule,
+  roundRobinRoundCount,
+} from '@/lib/round-robin-schedule';
 import {
   computeSwissPlayerStats,
   swissScoringFromTournament,
@@ -31,11 +36,10 @@ export async function generateSingleEliminationBracket(
   }
 
   const n = ids.length;
-  const size = Math.pow(2, Math.ceil(Math.log2(n)));
-  const slots: (string | null)[] = [...ids];
-  while (slots.length < size) slots.push(null);
-
+  const size = nextPowerOf2(n);
   const totalRounds = Math.log2(size);
+  const pairs = generateSeedPairs(size);
+  const seedToId = new Map(ids.map((id, i) => [i + 1, id]));
 
   for (let round = 1; round <= totalRounds; round++) {
     const matchesInRound = size / Math.pow(2, round);
@@ -46,8 +50,9 @@ export async function generateSingleEliminationBracket(
       let status = 'pending';
 
       if (round === 1) {
-        p1Id = slots[idx * 2];
-        p2Id = slots[idx * 2 + 1];
+        const [seed1, seed2] = pairs[idx];
+        p1Id = seedToId.get(seed1) ?? null;
+        p2Id = seedToId.get(seed2) ?? null;
 
         if (p1Id && !p2Id) {
           winnerId = p1Id;
@@ -73,6 +78,22 @@ export async function generateSingleEliminationBracket(
     if (m.winnerId) await advanceWinner(tournamentId, m.round, m.matchIndex, m.winnerId);
   }
 
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { deBreakTiesPlacement: true },
+  });
+  if (tournament?.deBreakTiesPlacement && totalRounds >= 3) {
+    await prisma.match.create({
+      data: {
+        tournamentId,
+        round: totalRounds,
+        matchIndex: 1,
+        bracketSide: 'third_place',
+        status: 'pending',
+      },
+    });
+  }
+
   await prisma.tournament.update({
     where: { id: tournamentId },
     data: { status: 'active', ...(options?.keepGroupMatches ? { phase: 'playoffs' } : {}) },
@@ -85,16 +106,74 @@ export async function advanceWinner(
   completedMatchIndex: number,
   winnerId: string,
 ) {
+  const completedMatch = await prisma.match.findFirst({
+    where: {
+      tournamentId,
+      round: completedRound,
+      matchIndex: completedMatchIndex,
+      bracketSide: { not: 'third_place' },
+    },
+  });
+  if (!completedMatch) return;
+
+  const loserId =
+    completedMatch.player1Id === winnerId ? completedMatch.player2Id : completedMatch.player1Id;
+
+  const [tournament, participantCount] = await Promise.all([
+    prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      select: { deBreakTiesPlacement: true, format: true },
+    }),
+    prisma.tournamentParticipant.count({ where: { tournamentId } }),
+  ]);
+
+  const size = nextPowerOf2(participantCount);
+  const totalRounds = Math.log2(size);
+
+  if (
+    tournament?.format === 'single_elimination' &&
+    tournament.deBreakTiesPlacement &&
+    totalRounds >= 3 &&
+    completedRound === totalRounds - 1 &&
+    loserId
+  ) {
+    const slot = completedMatchIndex === 0 ? 'player1Id' : 'player2Id';
+    const thirdPlace = await prisma.match.findFirst({
+      where: { tournamentId, bracketSide: 'third_place' },
+    });
+    if (thirdPlace) {
+      await prisma.match.update({
+        where: { id: thirdPlace.id },
+        data: { [slot]: loserId },
+      });
+    } else {
+      await prisma.match.create({
+        data: {
+          tournamentId,
+          round: totalRounds,
+          matchIndex: 1,
+          bracketSide: 'third_place',
+          [slot]: loserId,
+          status: 'pending',
+        },
+      });
+    }
+  }
+
   const nextRound = completedRound + 1;
   const nextMatchIndex = Math.floor(completedMatchIndex / 2);
   const slot = completedMatchIndex % 2 === 0 ? 'player1Id' : 'player2Id';
 
   const nextMatch = await prisma.match.findFirst({
-    where: { tournamentId, round: nextRound, matchIndex: nextMatchIndex },
+    where: {
+      tournamentId,
+      round: nextRound,
+      matchIndex: nextMatchIndex,
+      bracketSide: { not: 'third_place' },
+    },
   });
 
   if (!nextMatch) {
-    // This was the final — tournament complete
     await prisma.tournament.update({ where: { id: tournamentId }, data: { status: 'complete' } });
     return;
   }
@@ -190,6 +269,77 @@ export async function generateSwissRound(tournamentId: string, options?: { playo
         matchIndex: i,
         player1Id: pairs[i].p1,
         player2Id: pairs[i].p2,
+        status: 'pending',
+      },
+    });
+  }
+
+  await prisma.tournament.update({
+    where: { id: tournamentId },
+    data: { status: 'active' },
+  });
+}
+
+export async function generateRoundRobinRound(
+  tournamentId: string,
+  options?: { playoffsOnly?: boolean },
+) {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      participants: {
+        orderBy: [{ seed: 'asc' }, { createdAt: 'asc' }],
+        include: { user: { select: { id: true, rankPoints: true } } },
+      },
+      matches: true,
+    },
+  });
+  if (!tournament) throw new Error('Tournament not found.');
+
+  const playoffParticipants =
+    options?.playoffsOnly || tournament.phase === 'playoffs'
+      ? tournament.participants.filter((p) => p.seed != null)
+      : tournament.participants;
+
+  if (playoffParticipants.length < 2) throw new Error('Need at least 2 participants.');
+
+  const existingMatches = tournament.matches.filter((m) =>
+    options?.playoffsOnly || tournament.phase === 'playoffs' ? m.bracketSide !== 'group' : true,
+  );
+  const currentMaxRound =
+    existingMatches.length > 0 ? Math.max(...existingMatches.map((m) => m.round)) : 0;
+
+  if (currentMaxRound > 0) {
+    const incomplete = existingMatches.filter(
+      (m) => m.round === currentMaxRound && m.status !== 'complete',
+    );
+    if (incomplete.length > 0) throw new Error('Finish all matches in the current round first.');
+  }
+
+  const nextRound = currentMaxRound + 1;
+  const playerIds = playoffParticipants.map((p) => p.userId);
+  const totalRounds = roundRobinRoundCount(playerIds.length);
+
+  if (nextRound > totalRounds) {
+    throw new Error('All round robin rounds have been generated.');
+  }
+
+  const schedule = buildRoundRobinSchedule(playerIds);
+  const pairs = schedule[nextRound - 1] ?? [];
+
+  if (pairs.length === 0) {
+    throw new Error('Could not build pairings for this round.');
+  }
+
+  for (let i = 0; i < pairs.length; i++) {
+    const [p1, p2] = pairs[i];
+    await prisma.match.create({
+      data: {
+        tournamentId,
+        round: nextRound,
+        matchIndex: i,
+        player1Id: p1,
+        player2Id: p2,
         status: 'pending',
       },
     });

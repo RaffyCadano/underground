@@ -61,6 +61,7 @@ function HqMatchCard({
   const [editing, setEditing] = useState(false);
   const [score, setScore] = useState('');
   const [editScore, setEditScore] = useState('');
+  const [editWinnerId, setEditWinnerId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const [s1, s2] = parseScore(match.score);
@@ -90,12 +91,14 @@ function HqMatchCard({
   }
 
   function handleEdit() {
+    if (!editWinnerId) return;
     setError('');
     startTransition(async () => {
       try {
-        await correctScore(match.id, editScore);
+        await correctScore(match.id, editScore, editWinnerId);
         setEditing(false);
         setEditScore('');
+        setEditWinnerId(null);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to update score.');
       }
@@ -112,6 +115,7 @@ function HqMatchCard({
       setEditing(true);
       setReporting(false);
       setEditScore(match.score ?? '');
+      setEditWinnerId(match.winner?.id ?? null);
       setError('');
     }
   }
@@ -121,6 +125,7 @@ function HqMatchCard({
     setEditing(false);
     setScore('');
     setEditScore('');
+    setEditWinnerId(null);
     setError('');
   }
 
@@ -203,6 +208,8 @@ function HqMatchCard({
         score={reporting ? score : editScore}
         onScoreChange={reporting ? setScore : setEditScore}
         onReport={handleReport}
+        editWinnerId={editWinnerId}
+        onEditWinnerChange={setEditWinnerId}
         onSaveEdit={handleEdit}
         onClose={closeAction}
         isPending={isPending}

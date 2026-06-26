@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { registeredAccountsWhere } from '@/lib/search';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,7 +83,8 @@ function OverviewCard({
 
 export default async function DashboardOverviewPage() {
   const [
-    userCount,
+    registeredCount,
+    guestCount,
     playerCount,
     adminCount,
     organizerCount,
@@ -96,7 +98,8 @@ export default async function DashboardOverviewPage() {
     pendingOrganizerRequests,
     pendingContactMessages,
   ] = await Promise.all([
-    prisma.user.count(),
+    prisma.user.count({ where: registeredAccountsWhere() }),
+    prisma.user.count({ where: { role: 'guest' } }),
     prisma.user.count({ where: { role: 'player' } }),
     prisma.user.count({ where: { role: 'admin' } }),
     prisma.user.count({ where: { role: 'organizer' } }),
@@ -131,6 +134,17 @@ export default async function DashboardOverviewPage() {
     pendingClubRequests > 0
       ? `${clubCount} listed · ${pendingClubRequests} request${pendingClubRequests === 1 ? '' : 's'} pending`
       : `${clubCount} listed on teams page`;
+
+  const accountDetail = [
+    `${playerCount} player${playerCount === 1 ? '' : 's'}`,
+    `${organizerCount} organizer${organizerCount === 1 ? '' : 's'}`,
+    `${adminCount} admin${adminCount === 1 ? '' : 's'}`,
+    guestCount > 0
+      ? `${guestCount} walk-in${guestCount === 1 ? '' : 's'} (not listed by default)`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <div className="space-y-6">
@@ -182,8 +196,8 @@ export default async function DashboardOverviewPage() {
         <OverviewCard
           href="/dashboard/accounts"
           label="Accounts"
-          value={userCount}
-          detail={`${playerCount} players · ${organizerCount} organizers · ${adminCount} admin${adminCount === 1 ? '' : 's'}`}
+          value={registeredCount}
+          detail={accountDetail}
           icon={Users}
           tone="brand"
         />

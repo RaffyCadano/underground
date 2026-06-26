@@ -14,6 +14,8 @@ type Props = {
   score: string;
   onScoreChange: (value: string) => void;
   onReport: (winnerId: string) => void;
+  editWinnerId?: string | null;
+  onEditWinnerChange?: (winnerId: string) => void;
   onSaveEdit: () => void;
   onClose: () => void;
   isPending: boolean;
@@ -28,6 +30,8 @@ export function MatchResultModal({
   score,
   onScoreChange,
   onReport,
+  editWinnerId,
+  onEditWinnerChange,
   onSaveEdit,
   onClose,
   isPending,
@@ -144,21 +148,54 @@ export function MatchResultModal({
               )}
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={onSaveEdit}
-              disabled={isPending}
-              className="btn-primary mt-4 w-full disabled:opacity-60"
-            >
-              {isPending ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 size={14} className="animate-spin" />
-                  Saving…
-                </span>
-              ) : (
-                'Save score'
-              )}
-            </button>
+            <>
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Winner</p>
+                {player1 && (
+                  <button
+                    type="button"
+                    onClick={() => onEditWinnerChange?.(player1.id)}
+                    disabled={isPending}
+                    className={`w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition disabled:opacity-60 ${
+                      editWinnerId === player1.id
+                        ? 'border-brand-500 bg-brand-500/15 text-brand-200'
+                        : 'border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-600'
+                    }`}
+                  >
+                    {player1.username}
+                  </button>
+                )}
+                {player2 && (
+                  <button
+                    type="button"
+                    onClick={() => onEditWinnerChange?.(player2.id)}
+                    disabled={isPending}
+                    className={`w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition disabled:opacity-60 ${
+                      editWinnerId === player2.id
+                        ? 'border-brand-500 bg-brand-500/15 text-brand-200'
+                        : 'border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-600'
+                    }`}
+                  >
+                    {player2.username}
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={onSaveEdit}
+                disabled={isPending || !editWinnerId}
+                className="btn-primary mt-4 w-full disabled:opacity-60"
+              >
+                {isPending ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin" />
+                    Saving…
+                  </span>
+                ) : (
+                  'Save changes'
+                )}
+              </button>
+            </>
           )}
 
           <button
