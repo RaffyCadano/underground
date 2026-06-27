@@ -80,6 +80,10 @@ export default async function DashboardAccountsPage({
               ? `${filteredCount} of ${registeredCount} accounts match your filters`
               : `All registered users on UGNCBBX (${registeredCount}).`}
           </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Tournament walk-ins are scoped to each event and are not listed here. Filter by
+            &ldquo;Walk-ins (internal)&rdquo; to audit guest records.
+          </p>
         </div>
         <div className="min-w-0 w-full md:max-w-xl md:flex-1 lg:max-w-2xl">
           <ListSearch

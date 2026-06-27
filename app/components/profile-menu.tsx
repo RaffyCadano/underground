@@ -8,7 +8,7 @@ import { useSession } from 'next-auth/react';
 import { ChevronDown } from 'lucide-react';
 import { PlayerAvatar } from '@/app/components/player-avatar';
 import { SignOutDialog } from '@/app/components/sign-out-dialog';
-import { isAdminRole } from '@/lib/roles';
+import { isAdminRole, dashboardHrefForRole } from '@/lib/roles';
 import { userHasActivePremier } from '@/lib/sync-stripe-subscription';
 import { playerProfilePath } from '@/lib/player-profile';
 
@@ -32,12 +32,7 @@ function getSessionUsername(session: Session) {
 function buildMenuLinks(session: Session, unreadMessages = 0): MenuLink[] {
   const username = getSessionUsername(session);
   const role = session.user.role;
-  const dashboardHref =
-    role === 'admin'
-      ? '/dashboard/overview'
-      : role === 'organizer'
-        ? '/dashboard/tournaments'
-        : '/dashboard';
+  const dashboardHref = dashboardHrefForRole(role ?? 'player');
 
   return [
     { href: dashboardHref, label: 'Dashboard' },

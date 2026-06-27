@@ -14,6 +14,7 @@ import {
   hashResetToken,
   resetTokenExpiresAt,
 } from '@/lib/password-reset';
+import { resolvePostLoginRedirect } from '@/lib/roles';
 import { validateUsername } from '@/lib/username';
 import { cookies } from 'next/headers';
 import { encode } from 'next-auth/jwt';
@@ -96,7 +97,7 @@ export async function loginWithCredentials(
 
   const user = await prisma.user.findFirst({
     where: { email: { equals: email, mode: 'insensitive' } },
-    select: { id: true, email: true, username: true, role: true, password: true, subscriptionPlan: true, subscriptionStatus: true },
+    select: { id: true, email: true, username: true, role: true, password: true, subscriptionPlan: true, subscriptionStatus: true, avatar: true },
   });
 
   if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -112,6 +113,7 @@ export async function loginWithCredentials(
       role: user.role,
       subscriptionPlan: user.subscriptionPlan,
       subscriptionStatus: user.subscriptionStatus,
+      avatar: user.avatar,
       userRefreshedAt: Date.now(),
     },
     secret,
@@ -121,7 +123,7 @@ export async function loginWithCredentials(
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, sessionCookieOptions());
 
-  redirect(safeCallback);
+  redirect(resolvePostLoginRedirect(safeCallback, user.role));
 }
 
 export async function clearSessionCookie() {

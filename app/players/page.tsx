@@ -16,7 +16,7 @@ import { PlayerAvatar } from '@/app/components/player-avatar';
 import { ScrollReveal } from '@/app/components/scroll-reveal';
 import { prisma } from '@/lib/prisma';
 import { parsePageParam, PLAYERS_PAGE_SIZE, totalPages } from '@/lib/pagination';
-import { rankedPlayerOrderBy, rankedPlayerSelect, rankedPlayerWhere } from '@/lib/rankings';
+import { rankedPlayerOrderBy, rankedPlayerSelect, rankedPlayerWhere, rankedPlayerWithPointsWhere } from '@/lib/rankings';
 import { playerProfilePath } from '@/lib/player-profile';
 import { parseSearchQuery, playerSearchWhere } from '@/lib/search';
 
@@ -213,12 +213,12 @@ export default async function PlayersPage({
   const pages = totalPages(filteredTotal, PLAYERS_PAGE_SIZE);
   const page = parsePageParam(pageParam, pages);
   const skip = (page - 1) * PLAYERS_PAGE_SIZE;
-  const showSpotlight = !isSearching && page === 1 && globalTotal > 0;
+  const showSpotlight = !isSearching && page === 1;
 
   const [topThree, players, pointsAgg, totalMatches] = await Promise.all([
     showSpotlight
       ? prisma.user.findMany({
-          where: rankedPlayerWhere,
+          where: rankedPlayerWithPointsWhere,
           orderBy: rankedPlayerOrderBy,
           take: 3,
           select: rankedPlayerSelect,
@@ -231,7 +231,7 @@ export default async function PlayersPage({
       take: PLAYERS_PAGE_SIZE,
       select: rankedPlayerSelect,
     }),
-    prisma.user.aggregate({ where: rankedPlayerWhere, _sum: { rankPoints: true } }),
+    prisma.user.aggregate({ where: rankedPlayerWithPointsWhere, _sum: { rankPoints: true } }),
     prisma.match.count({ where: { status: 'complete' } }),
   ]);
 

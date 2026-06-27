@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { Check, Crown, Minus } from 'lucide-react';
@@ -12,7 +12,7 @@ import {
   PREMIER_PLAN,
 } from '@/lib/subscriptions';
 import {
-  PLAN_FEATURE_CATEGORIES,
+  planFeatureCategoriesWithHostedLimit,
   type PlanFeatureCell,
 } from '@/lib/plan-features';
 import { SITE_NAME } from '@/lib/site';
@@ -96,7 +96,15 @@ function PlanColumnButton({
   );
 }
 
-export function PlanFeaturesComparison() {
+export function PlanFeaturesComparison({
+  standardMaxHosted,
+}: {
+  standardMaxHosted: number;
+}) {
+  const categories = useMemo(
+    () => planFeatureCategoriesWithHostedLimit(standardMaxHosted),
+    [standardMaxHosted],
+  );
   const { data: session } = useSession();
   const user = session?.user;
   const onPremier = user
@@ -104,10 +112,9 @@ export function PlanFeaturesComparison() {
       userHasActivePremier(user.subscriptionPlan ?? 'free', user.subscriptionStatus)
     : false;
   const upgradeHref = user ? '/profile/subscriptions' : '/login?callbackUrl=/profile/subscriptions';
-  const [activeCategoryId, setActiveCategoryId] = useState(PLAN_FEATURE_CATEGORIES[0]?.id ?? 'tournaments');
+  const [activeCategoryId, setActiveCategoryId] = useState(categories[0]?.id ?? 'tournaments');
   const activeCategory =
-    PLAN_FEATURE_CATEGORIES.find((category) => category.id === activeCategoryId) ??
-    PLAN_FEATURE_CATEGORIES[0];
+    categories.find((category) => category.id === activeCategoryId) ?? categories[0];
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8 lg:flex-row lg:items-start lg:gap-10">
@@ -119,7 +126,7 @@ export function PlanFeaturesComparison() {
           Features
         </p>
         <ul className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-col lg:overflow-visible lg:pb-0 lg:snap-none [&::-webkit-scrollbar]:hidden">
-          {PLAN_FEATURE_CATEGORIES.map((category) => {
+          {categories.map((category) => {
             const Icon = category.icon;
             const active = category.id === activeCategoryId;
 

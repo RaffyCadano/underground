@@ -31,6 +31,7 @@ function NavLink({
     <Link
       href={item.href}
       onClick={() => onNavigate?.()}
+      aria-current={active ? 'page' : undefined}
       className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
         active
           ? 'border border-brand-500/30 bg-brand-500/10 text-white'
@@ -66,12 +67,20 @@ function SideNavLinks({
   );
 }
 
-export function PlayerSideNav() {
-  const pathname = usePathname();
+export function PlayerSideNav({
+  role,
+  initialPathname = '',
+}: {
+  role: string;
+  initialPathname?: string;
+}) {
+  const clientPathname = usePathname();
+  const pathname = clientPathname || initialPathname;
   const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const navItems = getPlayerDashboardNav(session?.user?.role);
+  const sessionRole = session?.user?.role ?? role;
+  const navItems = getPlayerDashboardNav(sessionRole);
   const currentLabel =
     navItems.find((item) => isPlayerDashboardNavActive(pathname, item.href))?.label ??
     'Player dashboard';

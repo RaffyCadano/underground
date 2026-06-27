@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowRight, LogOut, ShieldCheck, X } from 'lucide-react';
-import { clearSessionCookie } from '@/app/actions/auth';
 import { useSession } from 'next-auth/react';
 
-export function SignOutDialog({  open,
+export function SignOutDialog({
+  open,
   onClose,
   onBeforeSignOut,
 }: {
@@ -16,7 +16,7 @@ export function SignOutDialog({  open,
 }) {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [signingOut, setSigningOut] = useState(false);
 
   const displayName = session?.user?.name ?? session?.user?.email?.split('@')[0] ?? 'Your account';
   const displayEmail = session?.user?.email;
@@ -31,7 +31,7 @@ export function SignOutDialog({  open,
     document.body.style.overflow = 'hidden';
 
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape' && !isPending) onClose();
+      if (e.key === 'Escape' && !signingOut) onClose();
     }
 
     document.addEventListener('keydown', onKeyDown);
@@ -39,20 +39,19 @@ export function SignOutDialog({  open,
       document.body.style.overflow = prev;
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open, isPending, onClose]);
+  }, [open, signingOut, onClose]);
 
   function closeModal() {
-    if (isPending) return;
+    if (signingOut) return;
     onClose();
   }
 
   function confirmSignOut() {
     onBeforeSignOut?.();
-    startTransition(async () => {
-      await clearSessionCookie();
-      window.location.assign('/?signedOut=1');
-    });
+    setSigningOut(true);
+    window.location.href = '/api/logout';
   }
+
   if (!mounted || !open) return null;
 
   return createPortal(
@@ -66,7 +65,7 @@ export function SignOutDialog({  open,
         type="button"
         aria-label="Close dialog"
         onClick={closeModal}
-        disabled={isPending}
+        disabled={signingOut}
         className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
       />
 
@@ -94,7 +93,7 @@ export function SignOutDialog({  open,
             <button
               type="button"
               onClick={closeModal}
-              disabled={isPending}
+              disabled={signingOut}
               className="rounded-lg border border-slate-700 bg-slate-800 p-1.5 text-slate-400 transition hover:text-white disabled:opacity-60"
             >
               <X size={18} />
@@ -132,18 +131,18 @@ export function SignOutDialog({  open,
         </div>
 
         <div className="flex flex-col-reverse gap-3 border-t border-slate-800 bg-slate-950/50 px-6 py-4 sm:flex-row sm:justify-end">
-          <button type="button" onClick={closeModal} disabled={isPending} className="btn-secondary disabled:opacity-60">
+          <button type="button" onClick={closeModal} disabled={signingOut} className="btn-secondary disabled:opacity-60">
             Stay signed in
           </button>
           <button
             type="button"
             onClick={confirmSignOut}
-            disabled={isPending}
+            disabled={signingOut}
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/15 px-5 py-2.5 text-sm font-semibold text-amber-100 transition hover:border-amber-400/60 hover:bg-amber-500/25 disabled:opacity-60"
           >
             <LogOut size={15} />
-            {isPending ? 'Signing out…' : 'Sign out'}
-            {!isPending && <ArrowRight size={15} className="opacity-70" />}
+            {signingOut ? 'Signing out…' : 'Sign out'}
+            {!signingOut && <ArrowRight size={15} className="opacity-70" />}
           </button>
         </div>
       </div>

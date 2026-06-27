@@ -9,6 +9,7 @@ declare module 'next-auth' {
       role: string;
       subscriptionPlan: string;
       subscriptionStatus: string | null;
+      avatar: string | null;
     };
   }
   interface User {
@@ -22,6 +23,7 @@ declare module 'next-auth/jwt' {
     role: string;
     subscriptionPlan?: string;
     subscriptionStatus?: string | null;
+    avatar?: string | null;
     userRefreshedAt?: number;
   }
 }

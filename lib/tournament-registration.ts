@@ -1,16 +1,15 @@
 import type { Prisma } from '@prisma/client';
 import type { Tournament } from '@prisma/client';
-import { rankedPlayerWhere } from '@/lib/rankings';
+import { HIDDEN_STAFF_USERNAMES, rankedPlayerWhere } from '@/lib/rankings';
 
 /** Site/staff accounts hidden from the tournament add-player picker. */
-const EXCLUDED_PICKER_USERNAMES = ['admin', 'TheVandaminator'] as const;
 
 export function tournamentPlayerPickerWhere(excludeUserIds: string[]): Prisma.UserWhereInput {
   return {
     ...rankedPlayerWhere,
     id: { notIn: excludeUserIds },
     NOT: {
-      OR: EXCLUDED_PICKER_USERNAMES.map((username) => ({
+      OR: HIDDEN_STAFF_USERNAMES.map((username) => ({
         username: { equals: username, mode: 'insensitive' as const },
       })),
     },
@@ -20,7 +19,7 @@ export function tournamentPlayerPickerWhere(excludeUserIds: string[]): Prisma.Us
 export function isTournamentPickablePlayer(user: { role: string; username: string }): boolean {
   if (user.role !== 'player') return false;
   const normalized = user.username.trim().toLowerCase();
-  return !EXCLUDED_PICKER_USERNAMES.some((name) => name === normalized);
+  return !HIDDEN_STAFF_USERNAMES.some((name) => name.toLowerCase() === normalized);
 }
 
 export function isTournamentFull(

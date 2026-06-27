@@ -367,3 +367,9 @@ model Match {
 
   @@index([tournamentId, bracketSide, round, matchIndex])
 }
+
+model PlatformSettings {
+  id                           String   @id @default("default")
+  standardMaxHostedTournaments Int      @default(3)
+  updatedAt                    DateTime @updatedAt
+}

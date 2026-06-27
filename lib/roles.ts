@@ -56,6 +56,15 @@ export function dashboardHrefForRole(role: string): string {
   return '/dashboard/your-events';
 }
 
+/** Send users to their real dashboard — `/dashboard` is only a redirect hop. */
+export function resolvePostLoginRedirect(callbackUrl: string, role: string): string {
+  const normalized = callbackUrl.replace(/\/$/, '') || '/dashboard';
+  if (normalized !== '/dashboard') return callbackUrl;
+
+  const href = dashboardHrefForRole(role);
+  return role === 'admin' ? `${href}?signedIn=1` : href;
+}
+
 /** Primary site owner account — cannot be deleted or modified by other admins. */
 export const MAIN_ADMIN_USERNAME = 'TheVandaminator';
 

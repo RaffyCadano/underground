@@ -10,8 +10,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { prisma } from '@/lib/prisma';
-import { registeredAccountsWhere } from '@/lib/search';
+import { getAdminOverviewStats } from '@/lib/admin-overview-stats';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,7 +81,7 @@ function OverviewCard({
 }
 
 export default async function DashboardOverviewPage() {
-  const [
+  const {
     registeredCount,
     guestCount,
     playerCount,
@@ -97,30 +96,7 @@ export default async function DashboardOverviewPage() {
     pendingClubRequests,
     pendingOrganizerRequests,
     pendingContactMessages,
-  ] = await Promise.all([
-    prisma.user.count({ where: registeredAccountsWhere() }),
-    prisma.user.count({ where: { role: 'guest' } }),
-    prisma.user.count({ where: { role: 'player' } }),
-    prisma.user.count({ where: { role: 'admin' } }),
-    prisma.user.count({ where: { role: 'organizer' } }),
-    prisma.user.count({
-      where: {
-        subscriptionPlan: 'premier',
-        OR: [
-          { subscriptionStatus: null },
-          { subscriptionStatus: { in: ['active', 'trialing'] } },
-        ],
-      },
-    }),
-    prisma.tournament.count(),
-    prisma.tournament.count({ where: { status: 'open' } }),
-    prisma.tournament.count({ where: { status: 'active' } }),
-    prisma.tournament.count({ where: { status: 'complete' } }),
-    prisma.communityClub.count(),
-    prisma.clubRequest.count({ where: { status: 'pending' } }),
-    prisma.organizerRequest.count({ where: { status: 'pending' } }),
-    prisma.contactMessage.count({ where: { status: 'pending' } }),
-  ]);
+  } = await getAdminOverviewStats();
 
   const pendingTotal = pendingClubRequests + pendingOrganizerRequests + pendingContactMessages;
   const pendingHref =

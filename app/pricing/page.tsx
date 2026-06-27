@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, CreditCard } from 'lucide-react';
 import { PricingPlans } from '@/app/components/pricing-plans';
+import { getStandardMaxHostedTournaments } from '@/lib/platform-settings';
 import { SITE_NAME } from '@/lib/site';
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
   description: `Compare ${SITE_NAME} Standard and Premier plans for tournament organizers.`,
 };
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const standardMaxHosted = await getStandardMaxHostedTournaments();
+
   return (
     <div className="w-full overflow-x-hidden">
       <section className="relative border-b border-slate-800">
@@ -32,7 +35,7 @@ export default function PricingPage() {
       </section>
 
       <section className="container py-10 sm:py-14 lg:py-16">
-        <PricingPlans showHeader={false} />
+        <PricingPlans showHeader={false} standardMaxHosted={standardMaxHosted} />
         <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-slate-500">
           Compare all plan features on the{' '}
           <Link href="/features" className="font-medium text-brand-300 hover:text-brand-200">

@@ -89,7 +89,6 @@ export function DeleteTournamentButton({
         pathname === `/tournaments/${tournamentId}` ? '/dashboard/tournaments' : pathname;
       const params = new URLSearchParams({ deleted: '1', name: result.name });
       router.replace(`${targetPath}?${params.toString()}`, { scroll: false });
-      router.refresh();
     });
   }
 

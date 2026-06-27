@@ -9,11 +9,11 @@ import { isAdminRole } from '@/lib/roles';
 import { userHasActivePremier } from '@/lib/sync-stripe-subscription';
 import {
   FREE_PLAN,
-  FREE_PLAN_FEATURES,
   PREMIER_PLAN,
   PREMIER_PLAN_FEATURES,
   PREMIER_ANNUAL_SAVINGS_PERCENT,
   formatPlanPrice,
+  freePlanFeatures,
 } from '@/lib/subscriptions';
 import { SITE_NAME } from '@/lib/site';
 
@@ -117,9 +117,11 @@ function PlanCard({
 export function PricingPlans({
   showHeader = true,
   className = '',
+  standardMaxHosted,
 }: {
   showHeader?: boolean;
   className?: string;
+  standardMaxHosted: number;
 }) {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('annual');
   const { data: session } = useSession();
@@ -208,7 +210,7 @@ export function PricingPlans({
             price={FREE_PLAN.priceMonthly}
             billingPeriod={billingPeriod}
             description={FREE_PLAN.description}
-            features={FREE_PLAN_FEATURES}
+            features={freePlanFeatures(standardMaxHosted)}
             cta={{ href: '/register', label: 'Get started free' }}
           />
         </ScrollReveal>

@@ -12,7 +12,7 @@ import { tournamentsPermalinkHostFromRequest } from '@/lib/site-request';
 import { tournamentsPermalinkPrefix } from '@/lib/tournament-slug';
 import {
   countHostedTournaments,
-  tournamentPlanLimitsFromSubscription,
+  getTournamentPlanLimitsForUser,
 } from '@/lib/tournament-plan-limits';
 
 export default async function CreateTournamentPage({
@@ -38,19 +38,10 @@ export default async function CreateTournamentPage({
 
   const permalinkPrefix = tournamentsPermalinkPrefix(await tournamentsPermalinkHostFromRequest());
 
-  const [billing, hostedCount] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { subscriptionPlan: true, subscriptionStatus: true },
-    }),
+  const [planLimits, hostedCount] = await Promise.all([
+    getTournamentPlanLimitsForUser(session.user.id, session.user.role),
     countHostedTournaments(session.user.id),
   ]);
-
-  const planLimits = tournamentPlanLimitsFromSubscription(
-    billing?.subscriptionPlan ?? 'free',
-    billing?.subscriptionStatus,
-    session.user.role,
-  );
 
   return (
     <div className="w-full min-w-0">

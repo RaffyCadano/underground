@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Mail,
   Menu,
+  Settings,
   Shield,
   Trophy,
   User,
@@ -20,6 +21,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { SlidingDrawer } from '@/app/components/sliding-drawer';
+import { isDashboardSideNavActive } from '@/lib/dashboard-nav';
 
 type NavItem = {
   href: string;
@@ -33,6 +35,7 @@ const adminMainNav: NavItem[] = [
   { href: '/dashboard/clubs', label: 'Community clubs', icon: UsersRound },
   { href: '/dashboard/contact', label: 'Contact inbox', icon: Mail },
   { href: '/dashboard/accounts', label: 'Accounts', icon: Shield },
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
   { href: '/profile', label: 'Profile settings', icon: User },
   { href: '/profile/password', label: 'Change password', icon: KeyRound },
 ];
@@ -51,16 +54,7 @@ const siteNav: NavItem[] = [
 ];
 
 function isActive(pathname: string, href: string) {
-  if (href === '/dashboard/overview') {
-    return pathname === '/dashboard/overview' || pathname === '/dashboard';
-  }
-  if (href === '/profile') {
-    return pathname === '/profile';
-  }
-  if (href === '/profile/password') {
-    return pathname === '/profile/password';
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
+  return isDashboardSideNavActive(pathname, href);
 }
 
 function NavLink({
@@ -77,6 +71,7 @@ function NavLink({
     <Link
       href={item.href}
       onClick={() => onNavigate?.()}
+      aria-current={active ? 'page' : undefined}
       className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
         active
           ? 'border border-brand-500/30 bg-brand-500/10 text-white'
@@ -135,12 +130,20 @@ function SideNavLinks({
   );
 }
 
-export function AdminSideNav() {
-  const pathname = usePathname();
+export function AdminSideNav({
+  role,
+  initialPathname = '',
+}: {
+  role: string;
+  initialPathname?: string;
+}) {
+  const clientPathname = usePathname();
+  const pathname = clientPathname || initialPathname;
   const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isOrganizer = session?.user?.role === 'organizer';
+  const sessionRole = session?.user?.role ?? role;
+  const isOrganizer = sessionRole === 'organizer';
   const mainNav = isOrganizer ? organizerMainNav : adminMainNav;
   const panelTitle = isOrganizer ? 'Organizer panel' : 'Admin panel';
 

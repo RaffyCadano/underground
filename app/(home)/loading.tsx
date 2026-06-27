@@ -178,27 +178,7 @@ function LeaderboardRowSkeleton() {
   );
 }
 
-function MatchCardSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/50">
-      <Skeleton className="h-8 w-full rounded-none" />
-      <div className="grid grid-cols-[1fr_auto_1fr] items-stretch">
-        <div className="flex items-center justify-end px-3 py-3 sm:px-4">
-          <Skeleton className="h-4 w-20" />
-        </div>
-        <div className="flex flex-col items-center justify-center border-x border-slate-800/80 px-2.5 py-2 sm:px-3">
-          <Skeleton className="h-2 w-8" />
-          <Skeleton className="mt-1 h-5 w-10" />
-        </div>
-        <div className="flex items-center px-3 py-3 sm:px-4">
-          <Skeleton className="h-4 w-20" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CircuitPanelSkeleton({ variant }: { variant: 'leaderboard' | 'matches' }) {
+function CircuitPanelSkeleton() {
   return (
     <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50">
       <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-4 sm:px-6 sm:py-5">
@@ -208,27 +188,18 @@ function CircuitPanelSkeleton({ variant }: { variant: 'leaderboard' | 'matches' 
           <Skeleton className="h-3 w-36" />
         </div>
       </div>
-
-      {variant === 'leaderboard' ? (
-        <div className="space-y-4 p-4 sm:p-5">
-          <div className="flex items-end gap-2 sm:gap-3">
-            <PodiumCardSkeleton />
-            <PodiumCardSkeleton highlight />
-            <PodiumCardSkeleton />
-          </div>
-          <div className="space-y-2">
-            <LeaderboardRowSkeleton />
-            <LeaderboardRowSkeleton />
-          </div>
-          <Skeleton className="h-11 w-full rounded-xl" />
+      <div className="space-y-4 p-4 sm:p-5">
+        <div className="flex items-end gap-2 sm:gap-3">
+          <PodiumCardSkeleton />
+          <PodiumCardSkeleton highlight />
+          <PodiumCardSkeleton />
         </div>
-      ) : (
-        <div className="space-y-3 p-4 sm:p-5">
-          {Array.from({ length: 5 }, (_, i) => (
-            <MatchCardSkeleton key={i} />
-          ))}
+        <div className="space-y-2">
+          <LeaderboardRowSkeleton />
+          <LeaderboardRowSkeleton />
         </div>
-      )}
+        <Skeleton className="h-11 w-full rounded-xl" />
+      </div>
     </div>
   );
 }
@@ -249,9 +220,8 @@ function CircuitSectionSkeleton() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-          <CircuitPanelSkeleton variant="leaderboard" />
-          <CircuitPanelSkeleton variant="matches" />
+        <div className="mx-auto max-w-2xl">
+          <CircuitPanelSkeleton />
         </div>
       </div>
     </section>

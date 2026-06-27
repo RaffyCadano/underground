@@ -11,7 +11,7 @@ import { tournamentToFormInitial } from '@/lib/tournament-form';
 import { tournamentsPermalinkHostFromRequest } from '@/lib/site-request';
 import { tournamentsPermalinkPrefix } from '@/lib/tournament-slug';
 import { tournamentPublicPath } from '@/lib/tournament-lookup';
-import { tournamentPlanLimitsFromSubscription } from '@/lib/tournament-plan-limits';
+import { getTournamentPlanLimitsForUser } from '@/lib/tournament-plan-limits';
 
 export default async function EditTournamentPage({
   params,
@@ -40,16 +40,7 @@ export default async function EditTournamentPage({
   const permalinkPrefix = tournamentsPermalinkPrefix(await tournamentsPermalinkHostFromRequest());
   const publicPath = tournamentPublicPath(tournament);
 
-  const billing = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { subscriptionPlan: true, subscriptionStatus: true },
-  });
-
-  const planLimits = tournamentPlanLimitsFromSubscription(
-    billing?.subscriptionPlan ?? 'free',
-    billing?.subscriptionStatus,
-    session.user.role,
-  );
+  const planLimits = await getTournamentPlanLimitsForUser(session.user.id, session.user.role);
 
   return (
     <div className="w-full min-w-0">

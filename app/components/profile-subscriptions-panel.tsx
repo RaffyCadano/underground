@@ -9,7 +9,6 @@ import { isAdminRole } from '@/lib/roles';
 import {
   COMMUNITY_SUBSCRIPTIONS_EMPTY,
   FREE_PLAN,
-  FREE_PLAN_DETAILS,
   PREMIER_PLAN,
 } from '@/lib/subscriptions';
 import type { BillingInvoice } from '@/lib/stripe-invoices';
@@ -64,6 +63,7 @@ export function ProfileSubscriptionsPanel({
   invoices = [],
   cancelAtPeriodEnd = false,
   canCancelPremier = false,
+  freePlanDetails,
 }: {
   role: string;
   subscriptionPlan?: string;
@@ -74,6 +74,7 @@ export function ProfileSubscriptionsPanel({
   invoices?: BillingInvoice[];
   cancelAtPeriodEnd?: boolean;
   canCancelPremier?: boolean;
+  freePlanDetails: string;
 }) {
   const onPremier = userHasActivePremier(subscriptionPlan, subscriptionStatus);
   const showPremierUpgrade = !isAdminRole(role) && !onPremier;
@@ -94,7 +95,7 @@ export function ProfileSubscriptionsPanel({
               {onPremier && premierBadge()}
             </div>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
-              {onPremier ? PREMIER_PLAN.description : FREE_PLAN_DETAILS}
+              {onPremier ? PREMIER_PLAN.description : freePlanDetails}
             </p>
             {onPremier && currentPeriodEnd && (
               <p className="mt-2 text-sm text-slate-500">

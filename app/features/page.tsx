@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Layers } from 'lucide-react';
 import { PlanFeaturesComparison } from '@/app/components/plan-features-comparison';
+import { getStandardMaxHostedTournaments } from '@/lib/platform-settings';
 import { SITE_NAME } from '@/lib/site';
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
   description: `Compare ${SITE_NAME} Standard and Premier features for tournaments, events, and communities.`,
 };
 
-export default function FeaturesPage() {
+export default async function FeaturesPage() {
+  const standardMaxHosted = await getStandardMaxHostedTournaments();
+
   return (
     <div className="w-full">
       <section className="relative border-b border-slate-800">
@@ -32,7 +35,7 @@ export default function FeaturesPage() {
       </section>
 
       <section className="container py-8 sm:py-12 md:py-14 lg:py-16">
-        <PlanFeaturesComparison />
+        <PlanFeaturesComparison standardMaxHosted={standardMaxHosted} />
       </section>
 
       <section className="border-t border-slate-800 bg-slate-950/40">

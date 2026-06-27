@@ -4,11 +4,11 @@ import { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, ArrowRight, CheckCircle2, Loader2, RotateCcw, Swords, UserPlus, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { joinTournament, leaveTournament, generateBracket, generateNextSwissRound, generatePlayoffs, regenerateRound1, resetBracketForRegistration } from '@/app/actions/tournaments';
+import { joinTournament, leaveTournament, generateBracket, generateNextSwissRound, generatePlayoffs, regenerateRound1, resetBracketForRegistration, completeTournament } from '@/app/actions/tournaments';
 import { reportResult, correctScore } from '@/app/actions/matches';
 import { formatPlayerCapLabel, isTournamentFull } from '@/lib/tournament-registration';
 
-type PendingAction = 'join' | 'leave' | 'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1' | 'report' | 'edit' | null;
+type PendingAction = 'join' | 'leave' | 'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1' | 'complete' | 'report' | 'edit' | null;
 
 type Player = { id: string; username: string } | null;
 
@@ -602,13 +602,161 @@ function RegenerateRound1ConfirmModal({
   );
 }
 
+function CompleteTournamentConfirmModal({
+  open,
+  onClose,
+  onConfirm,
+  isPending,
+  error,
+  pendingMatchCount,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+  error: string;
+  pendingMatchCount: number;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !isPending) onClose();
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, isPending, onClose]);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="complete-tournament-title"
+      onClick={() => !isPending && onClose()}
+    >
+      <div
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl shadow-black/50"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
+                <CheckCircle2 size={20} />
+              </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-300/80">
+                  End event
+                </p>
+                <h2 id="complete-tournament-title" className="mt-1 text-lg font-semibold text-white">
+                  Mark tournament as finished?
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Closes the event and shows final standings. Match results stay as they are.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isPending}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-white disabled:opacity-50"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 px-5 py-4">
+          {pendingMatchCount > 0 && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3.5 py-3">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-400" />
+              <p className="text-xs leading-relaxed text-amber-100/90">
+                {pendingMatchCount} match{pendingMatchCount !== 1 ? 'es' : ''} still pending. You can
+                finish anyway — standings only include completed results.
+              </p>
+            </div>
+          )}
+
+          <div>
+            <p className="text-sm text-slate-400">This will:</p>
+            <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+              {[
+                'Set the tournament status to Complete',
+                'Show podium and final standings where results exist',
+                'Prevent further bracket or roster changes',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400/80" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {error && (
+            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-200">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-800 px-5 py-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isPending}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-60"
+          >
+            {isPending ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                Finishing…
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={15} />
+                Mark as finished
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function ActionSuccessNotice({
   action,
   tournamentFormat,
   currentRound,
   onDismiss,
 }: {
-  action: 'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1';
+  action: 'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1' | 'complete';
   tournamentFormat: string;
   currentRound: number;
   onDismiss: () => void;
@@ -660,6 +808,11 @@ function ActionSuccessNotice({
         return {
           title: 'Round 1 regenerated',
           body: 'All previous rounds were cleared and new pairings are live.',
+        };
+      case 'complete':
+        return {
+          title: 'Tournament finished',
+          body: 'The event is marked complete. Final standings are now visible.',
         };
     }
   })();
@@ -745,6 +898,11 @@ function ActionLoadingModal({
           title: 'Unlocking roster',
           body: 'Clearing the bracket and reopening registration…',
         };
+      case 'complete':
+        return {
+          title: 'Finishing tournament',
+          body: 'Updating status and standings…',
+        };
       default:
         return { title: 'Please wait', body: 'Working…' };
     }
@@ -815,8 +973,9 @@ export function TournamentActions({
   const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
   const [showResetRosterConfirm, setShowResetRosterConfirm] = useState(false);
   const [showRegenerateRound1Confirm, setShowRegenerateRound1Confirm] = useState(false);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [successAction, setSuccessAction] = useState<
-    'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1' | null
+    'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1' | 'complete' | null
   >(null);
   const [error, setError] = useState('');
   const [reportingMatch, setReportingMatch] = useState<string | null>(null);
@@ -937,6 +1096,34 @@ export function TournamentActions({
     setError('');
   }
 
+  function handleCompleteTournament() {
+    setError('');
+    setShowCompleteConfirm(false);
+    setPendingAction('complete');
+    startTransition(async () => {
+      try {
+        await completeTournament(tournamentId);
+        setSuccessAction('complete');
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Failed to mark tournament complete.');
+        setShowCompleteConfirm(true);
+      } finally {
+        setPendingAction(null);
+      }
+    });
+  }
+
+  function openCompleteConfirm() {
+    setError('');
+    setShowCompleteConfirm(true);
+  }
+
+  function closeCompleteConfirm() {
+    if (isPending) return;
+    setShowCompleteConfirm(false);
+    setError('');
+  }
+
   function handleCorrectScore(matchId: string) {
     if (!editWinnerId) return;
     setError('');
@@ -1032,6 +1219,8 @@ export function TournamentActions({
     currentRound > 0 &&
     (tournamentFormat === 'swiss' || tournamentFormat === 'round_robin') &&
     !(groupStageEnabled && phase === 'group');
+  const showMarkComplete =
+    isAdmin && tournamentStatus === 'active' && currentRound > 0;
   const hasContent =
     showJoinLeave ||
     showGenerate ||
@@ -1039,6 +1228,7 @@ export function TournamentActions({
     showSwissNext ||
     showResetRoster ||
     showRegenerateRound1 ||
+    showMarkComplete ||
     showReport ||
     showEdit;
 
@@ -1077,12 +1267,22 @@ export function TournamentActions({
         participantCount={participantCount}
       />
 
+      <CompleteTournamentConfirmModal
+        open={showCompleteConfirm}
+        onClose={closeCompleteConfirm}
+        onConfirm={handleCompleteTournament}
+        isPending={isPending && pendingAction === 'complete'}
+        error={error}
+        pendingMatchCount={pendingMatches.length}
+      />
+
       {pendingAction === 'join' ||
       pendingAction === 'leave' ||
       pendingAction === 'generate' ||
       pendingAction === 'generate-next' ||
       pendingAction === 'playoffs' ||
-      pendingAction === 'reset-roster' ? (
+      pendingAction === 'reset-roster' ||
+      pendingAction === 'complete' ? (
         <ActionLoadingModal
           action={pendingAction}
           tournamentFormat={tournamentFormat}
@@ -1218,6 +1418,21 @@ export function TournamentActions({
           onClick={openResetRosterConfirm}
           disabled={isPending}
           isPending={isPending && pendingAction === 'reset-roster'}
+          tone="admin"
+        />
+      )}
+
+      {showMarkComplete && (
+        <TournamentActionCard
+          icon={CheckCircle2}
+          eyebrow="Admin"
+          title="Ready to wrap up?"
+          description="Mark the tournament as finished. Standings and podium reflect completed matches only."
+          buttonLabel="Mark as finished"
+          pendingLabel="Finishing…"
+          onClick={openCompleteConfirm}
+          disabled={isPending}
+          isPending={isPending && pendingAction === 'complete'}
           tone="admin"
         />
       )}

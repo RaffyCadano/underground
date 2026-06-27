@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { canManageTournaments } from '@/lib/roles';
-import { assertCanManageTournament } from '@/lib/tournament-host';
+import { assertCanManageTournament, canManageTournament } from '@/lib/tournament-host';
 import { generateSingleElimination, generateSwissRound, generateRoundRobinRound } from '@/lib/bracket';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
@@ -535,43 +535,73 @@ export async function addGuestPlayerToTournament(tournamentId: string, displayNa
 export async function deleteTournament(
   tournamentId: string,
 ): Promise<{ success: true; name: string } | { error: string }> {
-  try {
-    await requireTournamentHost(tournamentId);
-  } catch {
+  const session = await getServerSession(authOptions);
+  if (!session || !canManageTournaments(session.user.role)) {
     return { error: 'You do not have permission to delete this tournament.' };
   }
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
-    select: { name: true },
+    select: {
+      name: true,
+      createdById: true,
+      participants: {
+        where: { walkInName: { not: null } },
+        select: { userId: true },
+      },
+    },
   });
   if (!tournament) {
     return { error: 'Tournament not found.' };
   }
-
-  const walkInUserIds = (
-    await prisma.tournamentParticipant.findMany({
-      where: {
-        tournamentId,
-        user: { role: 'guest' },
-      },
-      select: { userId: true },
-    })
-  ).map((p) => p.userId);
-
-  await prisma.tournament.delete({ where: { id: tournamentId } });
-
-  const uniqueWalkInIds = [...new Set(walkInUserIds)];
-  if (uniqueWalkInIds.length > 0) {
-    await prisma.user.deleteMany({
-      where: { id: { in: uniqueWalkInIds }, role: 'guest' },
-    });
+  if (!canManageTournament(tournament, session.user.id, session.user.role)) {
+    return { error: 'You do not have permission to delete this tournament.' };
   }
+
+  const walkInUserIds = [...new Set(tournament.participants.map((p) => p.userId))];
+
+  await prisma.$transaction(async (tx) => {
+    await tx.match.deleteMany({ where: { tournamentId } });
+    await tx.tournamentParticipant.deleteMany({ where: { tournamentId } });
+    await tx.tournament.delete({ where: { id: tournamentId } });
+    if (walkInUserIds.length > 0) {
+      await tx.user.deleteMany({
+        where: { id: { in: walkInUserIds }, role: 'guest' },
+      });
+    }
+  });
 
   revalidatePath('/tournaments');
   revalidatePath('/dashboard/tournaments');
-  revalidatePath('/dashboard');
-  revalidatePath(`/tournaments/${tournamentId}`);
 
   return { success: true, name: tournament.name };
+}
+
+export async function completeTournament(tournamentId: string) {
+  await requireTournamentHost(tournamentId);
+
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { status: true, format: true, slug: true },
+  });
+  if (!tournament) throw new Error('Tournament not found.');
+  if (tournament.status === 'complete') {
+    throw new Error('Tournament is already marked complete.');
+  }
+  if (tournament.status === 'open') {
+    throw new Error('Generate the bracket before marking the tournament complete.');
+  }
+
+  await prisma.tournament.update({
+    where: { id: tournamentId },
+    data: {
+      status: 'complete',
+      ...(tournament.format === 'double_elimination' ? { phase: 'complete' } : {}),
+    },
+  });
+
+  revalidatePath(`/tournaments/${tournamentId}`);
+  if (tournament.slug) revalidatePath(`/tournaments/${tournament.slug}`);
+  revalidatePath('/dashboard/tournaments');
+  revalidatePath('/tournaments');
 }

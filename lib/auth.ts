@@ -60,6 +60,7 @@ export const authOptions: NextAuthOptions = {
                 role: true,
                 username: true,
                 email: true,
+                avatar: true,
                 subscriptionPlan: true,
                 subscriptionStatus: true,
               },
@@ -68,6 +69,7 @@ export const authOptions: NextAuthOptions = {
               token.role = dbUser.role;
               token.name = dbUser.username;
               token.email = dbUser.email;
+              token.avatar = dbUser.avatar;
               token.subscriptionPlan = dbUser.subscriptionPlan;
               token.subscriptionStatus = dbUser.subscriptionStatus;
             }
@@ -88,6 +90,7 @@ export const authOptions: NextAuthOptions = {
         if (token.email) session.user.email = token.email as string;
         session.user.subscriptionPlan = (token.subscriptionPlan as string | undefined) ?? 'free';
         session.user.subscriptionStatus = (token.subscriptionStatus as string | null | undefined) ?? null;
+        session.user.avatar = (token.avatar as string | null | undefined) ?? null;
       }
       return session;
     },

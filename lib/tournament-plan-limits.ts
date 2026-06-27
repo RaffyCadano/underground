@@ -1,5 +1,6 @@
 import { isAdminRole } from '@/lib/roles';
 import { userHasActivePremier } from '@/lib/sync-stripe-subscription';
+import { getStandardMaxHostedTournaments } from '@/lib/platform-settings';
 import { prisma } from '@/lib/prisma';
 
 export const STANDARD_MAX_HOSTED_TOURNAMENTS = 3;
@@ -16,6 +17,7 @@ export function tournamentPlanLimitsFromSubscription(
   subscriptionPlan: string,
   subscriptionStatus: string | null | undefined,
   role: string,
+  standardMaxHostedTournaments: number = STANDARD_MAX_HOSTED_TOURNAMENTS,
 ): TournamentPlanLimits {
   if (isAdminRole(role) || userHasActivePremier(subscriptionPlan, subscriptionStatus)) {
     return {
@@ -30,13 +32,15 @@ export function tournamentPlanLimitsFromSubscription(
     isPremier: false,
     canCreateRanked: false,
     maxPlayerCap: STANDARD_MAX_PLAYER_CAP,
-    maxHostedTournaments: STANDARD_MAX_HOSTED_TOURNAMENTS,
+    maxHostedTournaments: standardMaxHostedTournaments,
   };
 }
 
 export async function getTournamentPlanLimitsForUser(userId: string, role: string) {
+  const standardMaxHosted = await getStandardMaxHostedTournaments();
+
   if (isAdminRole(role)) {
-    return tournamentPlanLimitsFromSubscription('premier', 'active', role);
+    return tournamentPlanLimitsFromSubscription('premier', 'active', role, standardMaxHosted);
   }
 
   const user = await prisma.user.findUnique({
@@ -45,13 +49,14 @@ export async function getTournamentPlanLimitsForUser(userId: string, role: strin
   });
 
   if (!user) {
-    return tournamentPlanLimitsFromSubscription('free', null, role);
+    return tournamentPlanLimitsFromSubscription('free', null, role, standardMaxHosted);
   }
 
   return tournamentPlanLimitsFromSubscription(
     user.subscriptionPlan,
     user.subscriptionStatus,
     role,
+    standardMaxHosted,
   );
 }
 

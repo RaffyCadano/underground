@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, BarChart3, Crown, Medal, Swords } from 'lucide-react';
+import { ArrowRight, BarChart3, Crown, Medal } from 'lucide-react';
 import { PlayerAvatar } from '@/app/components/player-avatar';
 import { ScrollReveal } from '@/app/components/scroll-reveal';
 import { playerProfilePath } from '@/lib/player-profile';
@@ -11,15 +11,6 @@ export type CircuitPlayer = {
   rankPoints: number;
   wins: number;
   losses: number;
-};
-
-export type CircuitMatch = {
-  id: string;
-  score: string | null;
-  player1: { username: string } | null;
-  player2: { username: string } | null;
-  winner: { username: string } | null;
-  tournament: { id: string; name: string };
 };
 
 function rankBadge(rank: number) {
@@ -119,121 +110,11 @@ function LeaderboardRow({ player, rank }: { player: CircuitPlayer; rank: number 
   );
 }
 
-function MatchResultCard({ match }: { match: CircuitMatch }) {
-  const scoreParts = match.score ? match.score.split('-') : [];
-  const p1Score = scoreParts[0]?.trim() ?? '—';
-  const p2Score = scoreParts[1]?.trim() ?? '—';
-  const p1Name = match.player1?.username ?? 'TBD';
-  const p2Name = match.player2?.username ?? 'TBD';
-  const p1Won = match.winner?.username === p1Name;
-  const p2Won = match.winner?.username === p2Name;
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/50 transition hover:border-slate-700">
-      <Link
-        href={`/tournaments/${match.tournament.id}`}
-        className="block truncate border-b border-slate-800/80 bg-slate-900/40 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 transition hover:bg-slate-900/70 hover:text-brand-300 sm:px-4"
-      >
-        {match.tournament.name}
-      </Link>
-
-      <div className="divide-y divide-slate-800/80 sm:hidden">
-        <div
-          className={`flex items-center justify-between gap-3 px-3 py-2.5 ${p1Won ? 'bg-emerald-950/35' : ''}`}
-        >
-          <div className="flex min-w-0 items-center gap-2">
-            {p1Won && (
-              <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-300">
-                W
-              </span>
-            )}
-            <span
-              className={`min-w-0 truncate text-sm font-semibold ${
-                p1Won ? 'text-emerald-100' : 'text-slate-500'
-              }`}
-            >
-              {p1Name}
-            </span>
-          </div>
-          <span className="shrink-0 text-sm font-bold tabular-nums text-white">{p1Score}</span>
-        </div>
-        <div
-          className={`flex items-center justify-between gap-3 px-3 py-2.5 ${p2Won ? 'bg-emerald-950/35' : ''}`}
-        >
-          <div className="flex min-w-0 items-center gap-2">
-            {p2Won && (
-              <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-300">
-                W
-              </span>
-            )}
-            <span
-              className={`min-w-0 truncate text-sm font-semibold ${
-                p2Won ? 'text-emerald-100' : 'text-slate-500'
-              }`}
-            >
-              {p2Name}
-            </span>
-          </div>
-          <span className="shrink-0 text-sm font-bold tabular-nums text-white">{p2Score}</span>
-        </div>
-      </div>
-
-      <div className="hidden grid-cols-[1fr_auto_1fr] items-stretch gap-0 sm:grid">
-        <div
-          className={`flex min-w-0 items-center justify-end gap-2 px-3 py-3 sm:px-4 ${
-            p1Won ? 'bg-emerald-950/35' : ''
-          }`}
-        >
-          <span
-            className={`min-w-0 truncate text-right text-sm font-semibold ${
-              p1Won ? 'text-emerald-100' : 'text-slate-500'
-            }`}
-          >
-            {p1Name}
-          </span>
-          {p1Won && (
-            <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-300">
-              W
-            </span>
-          )}
-        </div>
-
-        <div className="flex flex-col items-center justify-center border-x border-slate-800/80 bg-slate-900/30 px-2.5 py-2 sm:px-3">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-600">Score</span>
-          <span className="mt-0.5 text-sm font-bold tabular-nums text-white">
-            {p1Score}
-            <span className="mx-1 text-slate-600">–</span>
-            {p2Score}
-          </span>
-        </div>
-
-        <div
-          className={`flex min-w-0 items-center gap-2 px-3 py-3 sm:px-4 ${p2Won ? 'bg-emerald-950/35' : ''}`}
-        >
-          {p2Won && (
-            <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-300">
-              W
-            </span>
-          )}
-          <span
-            className={`min-w-0 truncate text-sm font-semibold ${
-              p2Won ? 'text-emerald-100' : 'text-slate-500'
-            }`}
-          >
-            {p2Name}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 type Props = {
   topPlayers: CircuitPlayer[];
-  recentMatches: CircuitMatch[];
 };
 
-export function CircuitSection({ topPlayers, recentMatches }: Props) {
+export function CircuitSection({ topPlayers }: Props) {
   const podium = topPlayers.slice(0, 3);
   const rest = topPlayers.slice(3);
 
@@ -244,9 +125,9 @@ export function CircuitSection({ topPlayers, recentMatches }: Props) {
           <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
             <div className="min-w-0 max-w-xl">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Circuit pulse</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">Rankings & recent results</h2>
+              <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">Leaderboard</h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-400 sm:text-base">
-                Top bladers on the leaderboard and the latest scores from UGNCBBX events.
+                Top bladers on the UGNCBBX circuit ranked by points.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
@@ -268,10 +149,8 @@ export function CircuitSection({ topPlayers, recentMatches }: Props) {
           </div>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-          {/* Top bladers */}
-          <ScrollReveal className="min-w-0" delay={80} direction="left">
-          <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50">
+        <ScrollReveal className="min-w-0" delay={80} direction="left">
+          <div className="mx-auto min-w-0 max-w-2xl overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50">
             <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-4 sm:px-6 sm:py-5">
               <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/10 text-brand-300">
                 <BarChart3 size={18} />
@@ -283,7 +162,9 @@ export function CircuitSection({ topPlayers, recentMatches }: Props) {
             </div>
 
             {topPlayers.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-slate-400 sm:px-6">No players yet.</p>
+              <p className="px-4 py-10 text-center text-sm text-slate-400 sm:px-6">
+                No ranked points yet. Compete in ranked tournaments to claim the podium.
+              </p>
             ) : (
               <div className="space-y-4 p-4 sm:p-5">
                 {podium.length >= 3 && (
@@ -332,33 +213,7 @@ export function CircuitSection({ topPlayers, recentMatches }: Props) {
               </div>
             )}
           </div>
-          </ScrollReveal>
-
-          {/* Recent matches */}
-          <ScrollReveal className="min-w-0" delay={160} direction="right">
-          <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50">
-            <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-4 sm:px-6 sm:py-5">
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-800 text-slate-300">
-                <Swords size={18} />
-              </span>
-              <div className="min-w-0">
-                <h3 className="text-base font-semibold text-white sm:text-lg">Recent matches</h3>
-                <p className="text-xs text-slate-500">Latest results on the circuit</p>
-              </div>
-            </div>
-
-            {recentMatches.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-slate-400 sm:px-6">No completed matches yet.</p>
-            ) : (
-              <div className="space-y-3 p-4 sm:p-5">
-                {recentMatches.map((m) => (
-                  <MatchResultCard key={m.id} match={m} />
-                ))}
-              </div>
-            )}
-          </div>
-          </ScrollReveal>
-        </div>
+        </ScrollReveal>
       </div>
     </section>
   );

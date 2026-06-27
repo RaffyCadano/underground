@@ -7,6 +7,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { canManageTournaments } from '@/lib/roles';
+import { isDashboardSideNavActive } from '@/lib/dashboard-nav';
 
 export type PlayerDashboardNavItem = {
   href: string;
@@ -32,11 +33,5 @@ export function getPlayerDashboardNav(role: string | undefined): PlayerDashboard
 }
 
 export function isPlayerDashboardNavActive(pathname: string, href: string): boolean {
-  if (href === '/dashboard/tournaments') {
-    return pathname === '/dashboard/tournaments' || pathname.startsWith('/dashboard/tournaments/');
-  }
-  if (href === '/dashboard') {
-    return pathname === '/dashboard';
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
+  return isDashboardSideNavActive(pathname, href);
 }

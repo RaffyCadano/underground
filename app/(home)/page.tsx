@@ -14,7 +14,7 @@ import { ScrollReveal } from '@/app/components/scroll-reveal';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { playerProfilePath } from '@/lib/player-profile';
-import { rankedPlayerWhere } from '@/lib/rankings';
+import { rankedPlayerWhere, rankedPlayerWithPointsWhere } from '@/lib/rankings';
 import { dashboardHrefForRole } from '@/lib/roles';
 import { CircuitSection } from './circuit-section';
 import { HowItWorksSection } from './how-it-works-section';
@@ -46,7 +46,7 @@ export default async function HomePage() {
   const isLoggedIn = !!session;
   const dashboardHref = session ? dashboardHrefForRole(session.user.role) : '/dashboard';
 
-  const [upcomingTournaments, recentMatches, topPlayers, totalPlayers, totalMatches] = await Promise.all([
+  const [upcomingTournaments, topPlayers, totalPlayers, totalMatches] = await Promise.all([
     prisma.tournament.findMany({
       where: { status: { in: ['open', 'active'] } },
       orderBy: [{ status: 'asc' }, { date: 'asc' }],
@@ -56,20 +56,9 @@ export default async function HomePage() {
         createdBy: { select: { username: true } },
       },
     }),
-    prisma.match.findMany({
-      where: { status: 'complete', score: { not: null } },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-      include: {
-        player1: { select: { username: true } },
-        player2: { select: { username: true } },
-        winner: { select: { username: true } },
-        tournament: { select: { id: true, name: true } },
-      },
-    }),
     prisma.user.findMany({
-      where: rankedPlayerWhere,
-      orderBy: [{ rankPoints: 'desc' }],
+      where: rankedPlayerWithPointsWhere,
+      orderBy: [{ rankPoints: 'desc' }, { wins: 'desc' }],
       take: 5,
       select: { id: true, username: true, avatar: true, rankPoints: true, wins: true, losses: true },
     }),
@@ -288,7 +277,7 @@ export default async function HomePage() {
 
       <HowItWorksSection />
 
-      <CircuitSection topPlayers={topPlayers} recentMatches={recentMatches} />
+      <CircuitSection topPlayers={topPlayers} />
 
       <PricingPlansSection />
 

@@ -9,10 +9,11 @@ import { parsePageParam, RANKINGS_PAGE_SIZE, totalPages } from '@/lib/pagination
 import {
   rankedPlayerOrderBy,
   rankedPlayerSelect,
-  rankedPlayerWhere,
+  rankedPlayerWithPointsWhere,
+  rankingsListWhere,
 } from '@/lib/rankings';
 import { playerProfilePath } from '@/lib/player-profile';
-import { parseSearchQuery, playerSearchWhere } from '@/lib/search';
+import { parseSearchQuery } from '@/lib/search';
 
 type RankedPlayer = {
   id: string;
@@ -214,12 +215,10 @@ export default async function RankingsPage({
   const { page: pageParam, q: qParam } = await searchParams;
   const query = parseSearchQuery(qParam);
   const isSearching = query.length > 0;
-  const listWhere = playerSearchWhere(query);
+  const listWhere = rankingsListWhere(query);
 
-  const globalTotal = await prisma.user.count({ where: rankedPlayerWhere });
-  const filteredTotal = isSearching
-    ? await prisma.user.count({ where: listWhere })
-    : globalTotal;
+  const globalTotal = await prisma.user.count({ where: rankedPlayerWithPointsWhere });
+  const filteredTotal = await prisma.user.count({ where: listWhere });
 
   const pages = totalPages(filteredTotal, RANKINGS_PAGE_SIZE);
   const page = parsePageParam(pageParam, pages);
@@ -229,7 +228,7 @@ export default async function RankingsPage({
     isSearching
       ? Promise.resolve([])
       : prisma.user.findMany({
-          where: rankedPlayerWhere,
+          where: rankedPlayerWithPointsWhere,
           orderBy: rankedPlayerOrderBy,
           take: 3,
           select: rankedPlayerSelect,
@@ -242,7 +241,7 @@ export default async function RankingsPage({
       select: rankedPlayerSelect,
     }),
     prisma.user.aggregate({
-      where: rankedPlayerWhere,
+      where: rankedPlayerWithPointsWhere,
       _sum: { rankPoints: true },
     }),
     prisma.match.count({ where: { status: 'complete' } }),
@@ -304,9 +303,9 @@ export default async function RankingsPage({
           <ScrollReveal direction="scale">
             <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 px-5 py-12 text-center sm:px-8 sm:py-16">
             <BarChart3 size={36} className="mx-auto text-slate-600" />
-            <h2 className="mt-4 text-lg font-semibold text-white sm:text-xl">No ranked players yet</h2>
+            <h2 className="mt-4 text-lg font-semibold text-white sm:text-xl">No ranked points yet</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
-              Register and compete in tournaments to earn points and appear on the leaderboard.
+              Compete in ranked tournaments to earn points and appear on the leaderboard.
             </p>
             <Link
               href="/register"

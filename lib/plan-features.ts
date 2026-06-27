@@ -23,6 +23,12 @@ export type PlanFeatureCategory = {
   rows: PlanFeatureRow[];
 };
 
+export const HOSTED_TOURNAMENTS_FEATURE = 'Hosted Tournaments';
+
+export function standardHostedTournamentsLabel(limit: number): string {
+  return `Up to ${limit}`;
+}
+
 export const PLAN_FEATURE_CATEGORIES: PlanFeatureCategory[] = [
   {
     id: 'tournaments',
@@ -90,9 +96,9 @@ export const PLAN_FEATURE_CATEGORIES: PlanFeatureCategory[] = [
         premier: true,
       },
       {
-        feature: 'Hosted Tournaments',
+        feature: HOSTED_TOURNAMENTS_FEATURE,
         description: 'How many tournaments you can create and host on your account at once.',
-        standard: 'Up to 3',
+        standard: standardHostedTournamentsLabel(3),
         premier: 'Unlimited',
       },
       {
@@ -196,3 +202,15 @@ export const PLAN_FEATURE_CATEGORIES: PlanFeatureCategory[] = [
     ],
   },
 ];
+
+export function planFeatureCategoriesWithHostedLimit(
+  standardMaxHosted: number,
+): PlanFeatureCategory[] {
+  const label = standardHostedTournamentsLabel(standardMaxHosted);
+  return PLAN_FEATURE_CATEGORIES.map((category) => ({
+    ...category,
+    rows: category.rows.map((row) =>
+      row.feature === HOSTED_TOURNAMENTS_FEATURE ? { ...row, standard: label } : row,
+    ),
+  }));
+}

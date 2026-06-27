@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getStripe } from '@/lib/stripe';
 import { listCustomerInvoices } from '@/lib/stripe-invoices';
+import { getStandardMaxHostedTournaments } from '@/lib/platform-settings';
+import { freePlanDetails } from '@/lib/subscriptions';
 import { userHasActivePremier, syncCheckoutSessionForUser } from '@/lib/sync-stripe-subscription';
 
 export default async function SubscriptionsPage({
@@ -61,6 +63,7 @@ export default async function SubscriptionsPage({
     billing?.subscriptionPlan ?? 'free',
     billing?.subscriptionStatus,
   );
+  const standardMaxHosted = await getStandardMaxHostedTournaments();
 
   return (
     <div className="space-y-6">
@@ -81,6 +84,7 @@ export default async function SubscriptionsPage({
         invoices={invoices}
         cancelAtPeriodEnd={cancelAtPeriodEnd}
         canCancelPremier={onPremier && Boolean(billing?.stripeSubscriptionId) && !cancelAtPeriodEnd}
+        freePlanDetails={freePlanDetails(standardMaxHosted)}
       />
     </div>
   );

@@ -1,15 +1,17 @@
+import { Suspense } from 'react';
 import { headers } from 'next/headers';
-import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth';
+import { getCachedServerSession } from '@/lib/auth-session';
 import { canManageTournaments, isAdminRole } from '@/lib/roles';
 import { AdminSideNav } from '../admin-side-nav';
 import { PlayerSideNav } from '../player-side-nav';
+import { DashboardMainSkeleton } from '../dashboard-main-skeleton';
 
 const ADMIN_ONLY_PREFIXES = [
   '/dashboard/overview',
   '/dashboard/clubs',
   '/dashboard/accounts',
+  '/dashboard/settings',
 ];
 
 const TOURNAMENT_STAFF_PREFIX = '/dashboard/tournaments';
@@ -19,7 +21,7 @@ function matchesPrefix(pathname: string, prefixes: string[]) {
 }
 
 export default async function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession(authOptions);
+  const session = await getCachedServerSession();
   if (!session) redirect('/login');
 
   const pathname = (await headers()).get('x-pathname') ?? '';
@@ -42,8 +44,10 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
     return (
       <section className="container py-8 lg:py-12">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-          <PlayerSideNav />
-          <div className="min-w-0 flex-1">{children}</div>
+          <PlayerSideNav role={role} initialPathname={pathname} />
+          <div className="min-w-0 flex-1">
+            <Suspense fallback={<DashboardMainSkeleton />}>{children}</Suspense>
+          </div>
         </div>
       </section>
     );
@@ -52,8 +56,10 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   return (
     <section className="container py-8 lg:py-12">
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-        <AdminSideNav />
-        <div className="min-w-0 flex-1">{children}</div>
+        <AdminSideNav role={role} initialPathname={pathname} />
+        <div className="min-w-0 flex-1">
+          <Suspense fallback={<DashboardMainSkeleton />}>{children}</Suspense>
+        </div>
       </div>
     </section>
   );
