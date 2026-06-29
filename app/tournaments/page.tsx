@@ -25,6 +25,7 @@ import { TournamentsEmptyState } from './tournaments-empty-state';
 import { TournamentsHero } from './tournaments-hero';
 import { TournamentsSearchSection } from './tournaments-search-section';
 import { descriptionPlainText } from '@/lib/description-markdown';
+import { tournamentPublicPath } from '@/lib/tournament-lookup';
 
 const STATUS_FILTER_OPTIONS = [
   { value: 'all', label: 'All statuses' },
@@ -129,7 +130,7 @@ function TournamentCard({
           </span>
         </div>
 
-        <Link href={`/tournaments/${t.id}`} className="mt-3 block min-w-0 sm:mt-4">
+        <Link href={tournamentPublicPath(t)} className="mt-3 block min-w-0 sm:mt-4">
           <h2 className="line-clamp-2 min-h-[2.75rem] break-words text-lg font-semibold leading-snug text-white transition group-hover:text-brand-200 sm:min-h-[3.25rem] sm:text-xl">
             {t.name}
           </h2>
@@ -184,7 +185,7 @@ function TournamentCard({
           }`}
         >
           <Link
-            href={`/tournaments/${t.id}`}
+            href={tournamentPublicPath(t)}
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-brand-500/35 bg-brand-500/10 px-4 py-2.5 text-sm font-semibold text-brand-200 transition hover:border-brand-400/50 hover:bg-brand-500/20 sm:border-0 sm:bg-transparent sm:p-0 sm:text-brand-300 sm:hover:text-brand-200"
           >
             {t.status === 'complete' ? 'View results' : 'View bracket'}
@@ -405,7 +406,7 @@ export default async function TournamentsPage({
                       >
                         <div className="min-w-0 flex-1">
                           <Link
-                            href={`/tournaments/${t.id}`}
+                            href={tournamentPublicPath(t)}
                             className="break-words font-semibold text-white transition hover:text-brand-300"
                           >
                             {t.name}
@@ -446,7 +447,7 @@ export default async function TournamentsPage({
                         </div>
                         <div className="flex shrink-0 items-center gap-3 border-t border-slate-800/80 pt-3 sm:border-0 sm:pt-0">
                           <Link
-                            href={`/tournaments/${t.id}`}
+                            href={tournamentPublicPath(t)}
                             className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white sm:flex-none sm:border-0 sm:bg-transparent sm:p-0 sm:text-slate-400 sm:hover:text-white"
                           >
                             View results

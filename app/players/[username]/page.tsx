@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 import { PlayerAvatar } from '@/app/components/player-avatar';
+import { tournamentPublicPath } from '@/lib/tournament-lookup';
 import { authOptions } from '@/lib/auth';
 import {
   usernameFromProfileParam,
@@ -48,14 +49,14 @@ export default async function PlayerProfile({
     include: {
       tournaments: {
         include: {
-          tournament: { select: { id: true, name: true, date: true, status: true } },
+          tournament: { select: { id: true, slug: true, name: true, date: true, status: true } },
         },
         orderBy: { createdAt: 'desc' },
         take: 10,
       },
       winsAsWinner: {
         include: {
-          tournament: { select: { id: true, name: true } },
+          tournament: { select: { id: true, slug: true, name: true } },
         },
         orderBy: { createdAt: 'desc' },
         take: 6,
@@ -255,7 +256,7 @@ export default async function PlayerProfile({
                   {player.tournaments.map((tp) => (
                     <Link
                       key={tp.id}
-                      href={`/tournaments/${tp.tournament.id}`}
+                      href={tournamentPublicPath(tp.tournament)}
                       className="flex flex-col gap-3 px-4 py-4 transition hover:bg-slate-900/80 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6"
                     >
                       <div className="min-w-0">
@@ -292,7 +293,7 @@ export default async function PlayerProfile({
                   {player.winsAsWinner.map((m) => (
                     <Link
                       key={m.id}
-                      href={`/tournaments/${m.tournament.id}`}
+                      href={tournamentPublicPath(m.tournament)}
                       className="rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 transition hover:border-brand-500/30 hover:bg-slate-900"
                     >
                       <p className="truncate text-sm font-semibold text-white">{m.tournament.name}</p>

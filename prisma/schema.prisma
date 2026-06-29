@@ -53,6 +53,7 @@ model User {
   hostedTournaments       Tournament[]            @relation("TournamentCreator")
   hostedEvents            Event[]                 @relation("EventHost")
   tournamentTemplates     TournamentTemplate[]
+  tournamentDiscussionPosts TournamentDiscussionPost[]
   createdAt               DateTime                @default(now())
 
   @@index([role, rankPoints(sort: Desc), wins(sort: Desc)])
@@ -293,6 +294,7 @@ model Tournament {
   createdById         String?
   participants        TournamentParticipant[]
   matches             Match[]
+  discussionPosts     TournamentDiscussionPost[]
   createdAt           DateTime                @default(now())
 
   @@index([createdById])
@@ -366,6 +368,27 @@ model Match {
   createdAt      DateTime   @default(now())
 
   @@index([tournamentId, bracketSide, round, matchIndex])
+}
+
+model TournamentDiscussionPost {
+  id             String                    @id @default(cuid())
+  tournament     Tournament                @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId   String
+  user           User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  parent         TournamentDiscussionPost?   @relation("DiscussionReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId       String?
+  replies        TournamentDiscussionPost[]  @relation("DiscussionReplies")
+  content        String
+  isPinned       Boolean                   @default(false)
+  isAnnouncement Boolean                   @default(false)
+  editedAt       DateTime?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  @@index([tournamentId, parentId, createdAt])
+  @@index([tournamentId, isPinned, createdAt(sort: Desc)])
+  @@index([userId])
 }
 
 model PlatformSettings {

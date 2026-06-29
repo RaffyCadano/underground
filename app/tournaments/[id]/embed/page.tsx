@@ -9,6 +9,7 @@ import { TournamentSingleElimTabs } from '@/app/tournaments/[id]/tournament-sing
 import { BracketSwiss } from '@/app/tournaments/[id]/bracket-swiss';
 import { TournamentDoubleElimTabs } from '@/app/tournaments/[id]/tournament-double-elim-tabs';
 import { buildPlayerNameMap } from '@/lib/tournament-participant';
+import { tournamentPublicPath } from '@/lib/tournament-lookup';
 import { SITE_NAME } from '@/lib/site';
 import { swissScoringFromTournament } from '@/lib/swiss-scoring';
 import { parseRoundRobinRankBy } from '@/lib/tournament-options';
@@ -95,7 +96,7 @@ export default async function TournamentEmbedPage({
           </p>
         </div>
         <Link
-          href={`/tournaments/${tournament.id}`}
+          href={tournamentPublicPath(tournament)}
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs font-semibold text-brand-300 hover:text-brand-200"

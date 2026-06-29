@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
@@ -29,6 +30,8 @@ import { swissScoringFromTournament } from '@/lib/swiss-scoring';
 import { parseRoundRobinRankBy } from '@/lib/tournament-options';
 import { formatUsdDisplay } from '@/lib/money';
 import { buildPlayerNameMap } from '@/lib/tournament-participant';
+import { TournamentDiscussionPanel } from './tournament-discussion-panel';
+import { TournamentDiscussionSkeleton } from './tournament-discussion-skeleton';
 
 export const dynamic = 'force-dynamic';
 
@@ -367,6 +370,15 @@ export default async function TournamentDetail({
               <TournamentParticipantList participants={tournament.participants} />
             )}
           </div>
+
+          <Suspense fallback={<TournamentDiscussionSkeleton />}>
+            <TournamentDiscussionPanel
+              tournamentId={tournament.id}
+              isLoggedIn={isLoggedIn}
+              isAdmin={isAdmin}
+              currentUserId={session?.user.id ?? null}
+            />
+          </Suspense>
         </div>
       </div>
     </div>

@@ -12,7 +12,7 @@ export async function checkTournamentSlugAvailability(slug: string, excludeTourn
 
   const existing = await prisma.tournament.findFirst({
     where: {
-      slug: normalized,
+      OR: [{ slug: normalized }, { id: normalized }],
       ...(excludeTournamentId ? { NOT: { id: excludeTournamentId } } : {}),
     },
     select: { id: true },

@@ -179,6 +179,7 @@ export async function createTournament(_prev: { error?: string } | null, formDat
 
   const t = await prisma.tournament.create({
     data: {
+      id: planApplied.slug,
       slug: planApplied.slug,
       name: planApplied.name,
       description: planApplied.description,

@@ -20,6 +20,7 @@ import { CircuitSection } from './circuit-section';
 import { HowItWorksSection } from './how-it-works-section';
 import { PricingPlansSection } from './pricing-plans-section';
 import { UnderDevelopmentNotice } from './under-development-notice';
+import { tournamentPublicPath } from '@/lib/tournament-lookup';
 
 function formatShortDate(date: Date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -217,7 +218,7 @@ export default async function HomePage() {
                     </ul>
 
                     <Link
-                      href={`/tournaments/${featuredTournament.id}`}
+                      href={tournamentPublicPath(featuredTournament)}
                       className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-brand-500/35 bg-brand-500/10 px-4 py-2.5 text-sm font-semibold text-brand-200 transition hover:border-brand-400/50 hover:bg-brand-500/20 sm:mt-5"
                     >
                       View bracket
@@ -253,7 +254,7 @@ export default async function HomePage() {
                     {moreUpcoming.map((t) => (
                       <Link
                         key={t.id}
-                        href={`/tournaments/${t.id}`}
+                        href={tournamentPublicPath(t)}
                         className="flex items-center justify-between gap-3 rounded-lg px-2 py-2.5 text-sm transition hover:bg-slate-900 sm:px-3"
                       >
                         <div className="min-w-0 flex-1">

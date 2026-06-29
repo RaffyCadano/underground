@@ -1,3 +1,5 @@
+import { TournamentDiscussionSkeleton } from './tournament-discussion-skeleton';
+
 function Skeleton({ className }: { className?: string }) {
   return <div className={`animate-pulse rounded bg-slate-800 ${className ?? ''}`} />;
 }
@@ -116,6 +118,10 @@ export default function TournamentDetailLoading() {
                 </div>
               </section>
             </div>
+          </div>
+
+          <div className="mt-4 sm:mt-6">
+            <TournamentDiscussionSkeleton />
           </div>
         </div>
       </div>
