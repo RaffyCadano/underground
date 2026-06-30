@@ -2,7 +2,9 @@ import { prisma } from '@/lib/prisma';
 import { generateSeedPairs, nextPowerOf2 } from '@/lib/bracket-seeding';
 import {
   buildRoundRobinSchedule,
+  roundRobinPairingKey,
   roundRobinRoundCount,
+  roundRobinTotalPairings,
 } from '@/lib/round-robin-schedule';
 import {
   computeSwissPlayerStats,
@@ -319,9 +321,21 @@ export async function generateRoundRobinRound(
   const nextRound = currentMaxRound + 1;
   const playerIds = playoffParticipants.map((p) => p.userId);
   const totalRounds = roundRobinRoundCount(playerIds.length);
+  const totalPairings = roundRobinTotalPairings(playerIds.length);
 
   if (nextRound > totalRounds) {
     throw new Error('All round robin rounds have been generated.');
+  }
+
+  const existingPairingKeys = new Set<string>();
+  for (const match of existingMatches) {
+    if (match.player1Id && match.player2Id) {
+      existingPairingKeys.add(roundRobinPairingKey(match.player1Id, match.player2Id));
+    }
+  }
+
+  if (existingPairingKeys.size >= totalPairings) {
+    throw new Error('All round robin pairings are already on the bracket.');
   }
 
   const schedule = buildRoundRobinSchedule(playerIds);
@@ -331,34 +345,32 @@ export async function generateRoundRobinRound(
     throw new Error('Could not build pairings for this round.');
   }
 
-  for (let i = 0; i < pairs.length; i++) {
-    const [p1, p2] = pairs[i];
+  let matchIndex = 0;
+  for (const [p1, p2] of pairs) {
+    if (existingPairingKeys.has(roundRobinPairingKey(p1, p2))) {
+      continue;
+    }
     await prisma.match.create({
       data: {
         tournamentId,
         round: nextRound,
-        matchIndex: i,
+        matchIndex,
         player1Id: p1,
         player2Id: p2,
         status: 'pending',
       },
     });
+    matchIndex++;
+  }
+
+  if (matchIndex === 0) {
+    throw new Error('All pairings for this round already exist on the bracket.');
   }
 
   await prisma.tournament.update({
     where: { id: tournamentId },
     data: { status: 'active' },
   });
-}
-
-function roundRobinPairings(playerIds: string[]): [string, string][] {
-  const pairs: [string, string][] = [];
-  for (let i = 0; i < playerIds.length; i++) {
-    for (let j = i + 1; j < playerIds.length; j++) {
-      pairs.push([playerIds[i], playerIds[j]]);
-    }
-  }
-  return pairs;
 }
 
 export async function generateRoundRobinBracket(
@@ -374,19 +386,22 @@ export async function generateRoundRobinBracket(
     await prisma.match.deleteMany({ where: { tournamentId } });
   }
 
-  const pairings = roundRobinPairings(participantIds);
-  for (let i = 0; i < pairings.length; i++) {
-    const [p1, p2] = pairings[i];
-    await prisma.match.create({
-      data: {
-        tournamentId,
-        round: 1,
-        matchIndex: i,
-        player1Id: p1,
-        player2Id: p2,
-        status: 'pending',
-      },
-    });
+  const schedule = buildRoundRobinSchedule(participantIds);
+  for (let roundIndex = 0; roundIndex < schedule.length; roundIndex++) {
+    const pairs = schedule[roundIndex];
+    for (let matchIndex = 0; matchIndex < pairs.length; matchIndex++) {
+      const [p1, p2] = pairs[matchIndex];
+      await prisma.match.create({
+        data: {
+          tournamentId,
+          round: roundIndex + 1,
+          matchIndex,
+          player1Id: p1,
+          player2Id: p2,
+          status: 'pending',
+        },
+      });
+    }
   }
 
   await prisma.tournament.update({

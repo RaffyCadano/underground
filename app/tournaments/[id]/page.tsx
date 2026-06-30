@@ -245,6 +245,7 @@ export default async function TournamentDetail({
                 <div className="space-y-4 p-4 sm:p-5">
                   <TournamentActions
                     tournamentId={tournament.id}
+                    tournamentName={tournament.name}
                     tournamentStatus={tournament.status}
                     tournamentFormat={tournament.format}
                     participantCount={tournament.participants.length}

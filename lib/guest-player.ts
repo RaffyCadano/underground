@@ -1,6 +1,20 @@
 import { randomBytes } from 'crypto';
 import type { PrismaClient } from '@prisma/client';
 
+export function parseBulkParticipantLines(raw: string): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const part of raw.split(/[\n,]+/)) {
+    const normalized = normalizeGuestDisplayName(part);
+    if (!normalized) continue;
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(normalized);
+  }
+  return result;
+}
+
 export function normalizeGuestDisplayName(name: string): string {
   return name.trim().replace(/\s+/g, ' ');
 }
@@ -66,4 +80,16 @@ export async function uniqueInternalWalkInUsername(prisma: PrismaClient): Promis
 
 export function guestEmail(username: string): string {
   return `guest+${username.toLowerCase()}@guest.underground.local`;
+}
+
+/** Walk-in guest credentials without DB lookups (collision-safe for batch inserts). */
+export function generateInternalWalkInCredentials(): {
+  username: string;
+  email: string;
+} {
+  const username = `walkin_${randomBytes(12).toString('hex')}`;
+  return {
+    username,
+    email: guestEmail(`${username}-${randomBytes(4).toString('hex')}`),
+  };
 }

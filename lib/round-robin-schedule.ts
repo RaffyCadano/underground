@@ -46,6 +46,10 @@ function pairingKey(player1Id: string, player2Id: string): string {
   return player1Id < player2Id ? `${player1Id}:${player2Id}` : `${player2Id}:${player1Id}`;
 }
 
+export function roundRobinPairingKey(player1Id: string, player2Id: string): string {
+  return pairingKey(player1Id, player2Id);
+}
+
 export type RoundRobinMatchProgress = {
   round: number;
   status: string;

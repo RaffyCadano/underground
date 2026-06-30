@@ -2,13 +2,17 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, ArrowRight, CheckCircle2, Loader2, RotateCcw, Swords, UserPlus, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight, BookmarkPlus, CheckCircle2, Loader2, RotateCcw, Swords, UserPlus, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 import { joinTournament, leaveTournament, generateBracket, generateNextSwissRound, generatePlayoffs, regenerateRound1, resetBracketForRegistration, completeTournament } from '@/app/actions/tournaments';
+import { saveTournamentAsTemplate } from '@/app/actions/tournament-templates';
+import { roundRobinRoundCount } from '@/lib/round-robin-schedule';
 import { reportResult, correctScore } from '@/app/actions/matches';
+import { MatchResultInlineForm } from './match-result-modal';
 import { formatPlayerCapLabel, isTournamentFull } from '@/lib/tournament-registration';
 
-type PendingAction = 'join' | 'leave' | 'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1' | 'complete' | 'report' | 'edit' | null;
+type PendingAction = 'join' | 'leave' | 'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1' | 'complete' | 'save-template' | 'report' | 'edit' | null;
 
 type Player = { id: string; username: string } | null;
 
@@ -116,6 +120,147 @@ function TournamentActionCard({
         )}
       </button>
     </div>
+  );
+}
+
+function SaveTemplateModal({
+  open,
+  onClose,
+  onConfirm,
+  isPending,
+  error,
+  defaultName,
+  templateName,
+  onTemplateNameChange,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+  error: string;
+  defaultName: string;
+  templateName: string;
+  onTemplateNameChange: (value: string) => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !isPending) onClose();
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, isPending, onClose]);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="save-template-title"
+      onClick={() => !isPending && onClose()}
+    >
+      <div
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl shadow-black/50"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-violet-500/20 bg-violet-500/5 px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-300">
+                <BookmarkPlus size={20} />
+              </span>
+              <div>
+                <h2 id="save-template-title" className="text-lg font-semibold text-white">
+                  Save as template
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Reuse this format, fees, and rules when creating future tournaments.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isPending}
+              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-800 hover:text-slate-300 disabled:opacity-50"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 px-5 py-4">
+          <div>
+            <label htmlFor="template-save-name" className="mb-1.5 block text-xs font-semibold text-slate-400">
+              Template name
+            </label>
+            <input
+              id="template-save-name"
+              type="text"
+              value={templateName}
+              onChange={(e) => onTemplateNameChange(e.target.value)}
+              placeholder={defaultName}
+              disabled={isPending}
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white placeholder:text-slate-600 focus:border-violet-500/50 focus:outline-none focus:ring-1 focus:ring-violet-500/30 disabled:opacity-60"
+            />
+          </div>
+          <p className="text-xs leading-relaxed text-slate-500">
+            Saves format, game, ranking, fees, player cap, group stage, and double-elim settings — not
+            date, location, or registered players.
+          </p>
+          {error && (
+            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-200">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-800 px-5 py-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isPending || !templateName.trim()}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-60"
+          >
+            {isPending ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                Saving…
+              </>
+            ) : (
+              <>
+                <BookmarkPlus size={15} />
+                Save template
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -451,6 +596,7 @@ function RegenerateRound1ConfirmModal({
   error,
   tournamentFormat,
   currentRound,
+  targetRound,
   participantCount,
 }: {
   open: boolean;
@@ -460,10 +606,12 @@ function RegenerateRound1ConfirmModal({
   error: string;
   tournamentFormat: string;
   currentRound: number;
+  targetRound: number;
   participantCount: number;
 }) {
   const [mounted, setMounted] = useState(false);
   const formatLabel = tournamentFormat === 'round_robin' ? 'round robin' : 'Swiss';
+  const keepsEarlierRounds = tournamentFormat === 'round_robin' && targetRound > 1;
 
   useEffect(() => setMounted(true), []);
 
@@ -509,10 +657,12 @@ function RegenerateRound1ConfirmModal({
                   Bracket reset
                 </p>
                 <h2 id="regenerate-round-1-title" className="mt-1 text-lg font-semibold text-white">
-                  Regenerate Round 1?
+                  Regenerate Round {targetRound}?
                 </h2>
                 <p className="mt-1 text-sm text-slate-400">
-                  Wipe all rounds and scores, then build fresh Round 1 pairings for this {formatLabel} event.
+                  {keepsEarlierRounds
+                    ? `Clear round ${targetRound} and any later rounds, then build fresh Round ${targetRound} pairings. Earlier rounds stay as-is.`
+                    : `Wipe all rounds and scores, then build fresh Round ${targetRound} pairings for this ${formatLabel} event.`}
                 </p>
               </div>
             </div>
@@ -542,9 +692,11 @@ function RegenerateRound1ConfirmModal({
             <p className="text-sm text-slate-400">This will:</p>
             <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
               {[
-                'Delete every match and reported score from all rounds',
+                keepsEarlierRounds
+                  ? `Delete round ${targetRound} and all later matches and scores`
+                  : 'Delete every match and reported score from all rounds',
                 'Keep registration closed with the same roster',
-                'Generate new Round 1 pairings immediately',
+                `Generate new Round ${targetRound} pairings immediately`,
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-rose-400/80" />
@@ -591,7 +743,7 @@ function RegenerateRound1ConfirmModal({
             ) : (
               <>
                 <RotateCcw size={15} />
-                Regenerate Round 1
+                Regenerate Round {targetRound}
               </>
             )}
           </button>
@@ -754,11 +906,13 @@ function ActionSuccessNotice({
   action,
   tournamentFormat,
   currentRound,
+  regeneratedRound,
   onDismiss,
 }: {
   action: 'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1' | 'complete';
   tournamentFormat: string;
   currentRound: number;
+  regeneratedRound?: number;
   onDismiss: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -804,11 +958,16 @@ function ActionSuccessNotice({
           title: 'Roster unlocked',
           body: 'Add or remove players on the Bracket tab, then generate again.',
         };
-      case 'regenerate-round-1':
+      case 'regenerate-round-1': {
+        const round = regeneratedRound ?? 1;
         return {
-          title: 'Round 1 regenerated',
-          body: 'All previous rounds were cleared and new pairings are live.',
+          title: `Round ${round} regenerated`,
+          body:
+            round > 1
+              ? `Round ${round} pairings were rebuilt. Earlier round results were kept.`
+              : 'All previous rounds were cleared and new pairings are live.',
         };
+      }
       case 'complete':
         return {
           title: 'Tournament finished',
@@ -929,6 +1088,7 @@ function ActionLoadingModal({
 
 interface Props {
   tournamentId: string;
+  tournamentName: string;
   tournamentStatus: string;
   tournamentFormat: string;
   participantCount: number;
@@ -950,6 +1110,7 @@ interface Props {
 
 export function TournamentActions({
   tournamentId,
+  tournamentName,
   tournamentStatus,
   tournamentFormat,
   participantCount,
@@ -971,18 +1132,20 @@ export function TournamentActions({
   const [isPending, startTransition] = useTransition();
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [templateSaveName, setTemplateSaveName] = useState('');
+  const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null);
+  const defaultTemplateName = `${tournamentName} (template)`;
   const [showResetRosterConfirm, setShowResetRosterConfirm] = useState(false);
   const [showRegenerateRound1Confirm, setShowRegenerateRound1Confirm] = useState(false);
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [successAction, setSuccessAction] = useState<
     'generate' | 'generate-next' | 'playoffs' | 'reset-roster' | 'regenerate-round-1' | 'complete' | null
   >(null);
+  const [regeneratedRound, setRegeneratedRound] = useState(1);
   const [error, setError] = useState('');
   const [reportingMatch, setReportingMatch] = useState<string | null>(null);
-  const [score, setScore] = useState('');
   const [editingMatch, setEditingMatch] = useState<string | null>(null);
-  const [editScore, setEditScore] = useState('');
-  const [editWinnerId, setEditWinnerId] = useState<string | null>(null);
 
   function handleJoin() {
     setError('');
@@ -1040,6 +1203,38 @@ export function TournamentActions({
     setError('');
   }
 
+  function openSaveTemplateModal() {
+    setError('');
+    setTemplateSaveName(defaultTemplateName);
+    setShowSaveTemplateModal(true);
+  }
+
+  function closeSaveTemplateModal() {
+    if (isPending) return;
+    setShowSaveTemplateModal(false);
+    setError('');
+  }
+
+  function handleSaveTemplate() {
+    setError('');
+    setPendingAction('save-template');
+    startTransition(async () => {
+      try {
+        const result = await saveTournamentAsTemplate(tournamentId, templateSaveName);
+        if ('error' in result) {
+          setError(result.error ?? 'Failed to save template.');
+          return;
+        }
+        setSavedTemplateId(result.templateId);
+        setShowSaveTemplateModal(false);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Failed to save template.');
+      } finally {
+        setPendingAction(null);
+      }
+    });
+  }
+
   function handleResetRoster() {
     setError('');
     setShowResetRosterConfirm(false);
@@ -1072,12 +1267,15 @@ export function TournamentActions({
     setError('');
     setShowRegenerateRound1Confirm(false);
     setPendingAction('regenerate-round-1');
+    setRegeneratedRound(regenerationRound);
     startTransition(async () => {
       try {
-        await regenerateRound1(tournamentId);
+        await regenerateRound1(tournamentId, regenerationRound);
         setSuccessAction('regenerate-round-1');
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'Failed to regenerate Round 1.');
+        setError(
+          e instanceof Error ? e.message : `Failed to regenerate Round ${regenerationRound}.`,
+        );
         setShowRegenerateRound1Confirm(true);
       } finally {
         setPendingAction(null);
@@ -1124,15 +1322,12 @@ export function TournamentActions({
     setError('');
   }
 
-  function handleCorrectScore(matchId: string) {
-    if (!editWinnerId) return;
+  function handleCorrectScore(matchId: string, winnerId: string, updatedScore: string) {
     setError('');
     startTransition(async () => {
       try {
-        await correctScore(matchId, editScore, editWinnerId);
+        await correctScore(matchId, updatedScore, winnerId);
         setEditingMatch(null);
-        setEditScore('');
-        setEditWinnerId(null);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to update score.');
       }
@@ -1169,13 +1364,12 @@ export function TournamentActions({
     });
   }
 
-  function handleReport(matchId: string, winnerId: string) {
+  function handleReport(matchId: string, winnerId: string, reportedScore: string) {
     setError('');
     startTransition(async () => {
       try {
-        await reportResult(matchId, winnerId, score);
+        await reportResult(matchId, winnerId, reportedScore);
         setReportingMatch(null);
-        setScore('');
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to report result.');
       }
@@ -1199,6 +1393,7 @@ export function TournamentActions({
   const playerCountLabel = formatPlayerCapLabel(participantCount, playerCap);
   const showGenerate =
     isAdmin && tournamentStatus === 'open' && !(groupStageEnabled && phase === 'group');
+  const showSaveTemplate = isAdmin && tournamentStatus !== 'complete';
   const showStartPlayoffs =
     isAdmin &&
     groupStageEnabled &&
@@ -1213,6 +1408,14 @@ export function TournamentActions({
   const showReport = myPendingMatches.length > 0 && !inlineBracketFormat;
   const showEdit = isAdmin && completedMatches.length > 0 && !inlineBracketFormat;
   const showResetRoster = isAdmin && canResetRoster && tournamentStatus === 'active';
+  const roundRobinTotalRounds =
+    tournamentFormat === 'round_robin' ? roundRobinRoundCount(participantCount) : 0;
+  const regenerationRound =
+    tournamentFormat === 'round_robin' &&
+    allCurrentRoundComplete &&
+    currentRound < roundRobinTotalRounds
+      ? currentRound + 1
+      : currentRound;
   const showRegenerateRound1 =
     isAdmin &&
     tournamentStatus === 'active' &&
@@ -1224,6 +1427,7 @@ export function TournamentActions({
   const hasContent =
     showJoinLeave ||
     showGenerate ||
+    showSaveTemplate ||
     showStartPlayoffs ||
     showSwissNext ||
     showResetRoster ||
@@ -1236,6 +1440,17 @@ export function TournamentActions({
 
   return (
     <div className="space-y-4">
+      <SaveTemplateModal
+        open={showSaveTemplateModal}
+        onClose={closeSaveTemplateModal}
+        onConfirm={handleSaveTemplate}
+        isPending={isPending && pendingAction === 'save-template'}
+        error={error}
+        defaultName={defaultTemplateName}
+        templateName={templateSaveName}
+        onTemplateNameChange={setTemplateSaveName}
+      />
+
       <GenerateBracketConfirmModal
         open={showGenerateConfirm}
         onClose={closeGenerateConfirm}
@@ -1264,6 +1479,7 @@ export function TournamentActions({
         error={error}
         tournamentFormat={tournamentFormat}
         currentRound={currentRound}
+        targetRound={regenerationRound}
         participantCount={participantCount}
       />
 
@@ -1295,11 +1511,35 @@ export function TournamentActions({
           action={successAction}
           tournamentFormat={tournamentFormat}
           currentRound={currentRound}
+          regeneratedRound={regeneratedRound}
           onDismiss={() => setSuccessAction(null)}
         />
       ) : null}
 
-      {error && (
+      {savedTemplateId && (
+        <div className="overflow-hidden rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+          <p className="text-sm font-semibold text-white">Template saved</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">
+            Reuse these settings when creating your next tournament.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href={`/profile/tournament-templates/${savedTemplateId}/edit`}
+              className="inline-flex items-center rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
+            >
+              Edit template
+            </Link>
+            <Link
+              href="/profile/tournament-templates"
+              className="inline-flex items-center rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white"
+            >
+              All templates
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {error && !showSaveTemplateModal && (
         <p className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>
       )}
 
@@ -1392,13 +1632,38 @@ export function TournamentActions({
         />
       )}
 
+      {showSaveTemplate && (
+        <button
+          type="button"
+          onClick={openSaveTemplateModal}
+          disabled={isPending}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:border-violet-500/40 hover:bg-violet-500/10 hover:text-violet-100 disabled:opacity-60"
+        >
+          {isPending && pendingAction === 'save-template' ? (
+            <>
+              <Loader2 size={15} className="animate-spin" />
+              Saving template…
+            </>
+          ) : (
+            <>
+              <BookmarkPlus size={15} />
+              Save as tournament template
+            </>
+          )}
+        </button>
+      )}
+
       {showRegenerateRound1 && (
         <TournamentActionCard
           icon={RotateCcw}
           eyebrow="Admin"
           title="Fix pairings or start over?"
-          description="Clear all rounds and scores, then regenerate Round 1 with the current roster. Registration stays closed."
-          buttonLabel="Regenerate Round 1"
+          description={
+            regenerationRound > 1
+              ? `Clear round ${regenerationRound} and any later scores, then regenerate Round ${regenerationRound}. Earlier rounds are kept.`
+              : 'Clear all rounds and scores, then regenerate Round 1 with the current roster. Registration stays closed.'
+          }
+          buttonLabel={`Regenerate Round ${regenerationRound}`}
           pendingLabel="Regenerating…"
           onClick={openRegenerateRound1Confirm}
           disabled={isPending}
@@ -1472,41 +1737,17 @@ export function TournamentActions({
                 {matchLabel(m, tournamentFormat)}
               </p>
               {reportingMatch === m.id ? (
-                <div className="mt-3 space-y-3">
-                  <input
-                    type="text"
-                    placeholder="Score (e.g. 3-1)"
-                    value={score}
-                    onChange={(e) => setScore(e.target.value)}
-                    className="input"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    {m.player1 && (
-                      <button
-                        onClick={() => handleReport(m.id, m.player1!.id)}
-                        disabled={isPending}
-                        className="rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-500 disabled:opacity-60"
-                      >
-                        {m.player1.username} wins
-                      </button>
-                    )}
-                    {m.player2 && (
-                      <button
-                        onClick={() => handleReport(m.id, m.player2!.id)}
-                        disabled={isPending}
-                        className="rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-500 disabled:opacity-60"
-                      >
-                        {m.player2.username} wins
-                      </button>
-                    )}
-                    <button
-                      onClick={() => { setReportingMatch(null); setScore(''); }}
-                      className="rounded-lg px-4 py-2 text-xs text-slate-400 transition hover:text-slate-200"
-                    >
-                      Cancel
-                    </button>
+                m.player1 && m.player2 ? (
+                  <div className="mt-3">
+                    <MatchResultInlineForm
+                      player1={m.player1}
+                      player2={m.player2}
+                      onSave={(winnerId, reportedScore) => handleReport(m.id, winnerId, reportedScore)}
+                      onCancel={() => setReportingMatch(null)}
+                      isPending={isPending}
+                    />
                   </div>
-                </div>
+                ) : null
               ) : (
                 <button
                   onClick={() => setReportingMatch(m.id)}
@@ -1534,69 +1775,25 @@ export function TournamentActions({
                 {m.score && <span className="text-xs text-slate-400">{m.score}</span>}
               </div>
               {editingMatch === m.id ? (
-                <div className="mt-3 space-y-3">
-                  <input
-                    type="text"
-                    placeholder="New score (e.g. 3-1)"
-                    value={editScore}
-                    onChange={(e) => setEditScore(e.target.value)}
-                    className="input w-full"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    {m.player1 && (
-                      <button
-                        type="button"
-                        onClick={() => setEditWinnerId(m.player1!.id)}
-                        className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-                          editWinnerId === m.player1.id
-                            ? 'border-brand-500 bg-brand-500/15 text-brand-200'
-                            : 'border-slate-700 text-slate-300 hover:border-slate-600'
-                        }`}
-                      >
-                        {m.player1.username} wins
-                      </button>
-                    )}
-                    {m.player2 && (
-                      <button
-                        type="button"
-                        onClick={() => setEditWinnerId(m.player2!.id)}
-                        className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-                          editWinnerId === m.player2.id
-                            ? 'border-brand-500 bg-brand-500/15 text-brand-200'
-                            : 'border-slate-700 text-slate-300 hover:border-slate-600'
-                        }`}
-                      >
-                        {m.player2.username} wins
-                      </button>
-                    )}
+                m.player1 && m.player2 ? (
+                  <div className="mt-3">
+                    <MatchResultInlineForm
+                      key={m.id}
+                      player1={m.player1}
+                      player2={m.player2}
+                      score={m.score ?? ''}
+                      winnerId={m.winner?.id ?? null}
+                      onSave={(winnerId, updatedScore) =>
+                        handleCorrectScore(m.id, winnerId, updatedScore)
+                      }
+                      onCancel={() => setEditingMatch(null)}
+                      isPending={isPending}
+                    />
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleCorrectScore(m.id)}
-                      disabled={isPending || !editWinnerId}
-                      className="rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-500 disabled:opacity-60"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingMatch(null);
-                        setEditScore('');
-                        setEditWinnerId(null);
-                      }}
-                      className="rounded-lg px-3 py-2 text-xs text-slate-400 transition hover:text-slate-200"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
+                ) : null
               ) : (
                 <button
-                  onClick={() => {
-                    setEditingMatch(m.id);
-                    setEditScore(m.score ?? '');
-                    setEditWinnerId(m.winner?.id ?? null);
-                  }}
+                  onClick={() => setEditingMatch(m.id)}
                   className="mt-2 text-xs font-semibold text-slate-400 transition hover:text-brand-300"
                 >
                   Edit score

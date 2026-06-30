@@ -17,6 +17,8 @@ export type BracketMatch = {
   player2: Player;
   player1Id?: string | null;
   player2Id?: string | null;
+  player1Hint?: string;
+  player2Hint?: string;
   winner: Player;
   score: string | null;
   status: string;
@@ -84,11 +86,11 @@ function MatchCard({
 
   const canEdit = interactive && isDone && isAdmin && match.player1 && match.player2;
 
-  function handleReport(winnerId: string) {
+  function handleReport(winnerId: string, reportedScore: string) {
     setError('');
     startTransition(async () => {
       try {
-        await reportResult(match.id, winnerId, score);
+        await reportResult(match.id, winnerId, reportedScore);
         setReporting(false);
         setScore('');
       } catch (e: unknown) {
@@ -97,12 +99,11 @@ function MatchCard({
     });
   }
 
-  function handleEdit() {
-    if (!editWinnerId) return;
+  function handleEdit(winnerId: string, updatedScore: string) {
     setError('');
     startTransition(async () => {
       try {
-        await correctScore(match.id, editScore, editWinnerId);
+        await correctScore(match.id, updatedScore, winnerId);
         setEditing(false);
         setEditScore('');
         setEditWinnerId(null);

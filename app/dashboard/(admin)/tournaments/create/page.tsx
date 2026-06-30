@@ -10,6 +10,7 @@ import { redirect } from 'next/navigation';
 import { templateToFormInitial, templateToTournamentInitial } from '@/lib/tournament-template';
 import { tournamentsPermalinkHostFromRequest } from '@/lib/site-request';
 import { tournamentsPermalinkPrefix } from '@/lib/tournament-slug';
+import { TournamentTemplatePicker } from '@/app/components/tournament-template-picker';
 import {
   countHostedTournaments,
   getTournamentPlanLimitsForUser,
@@ -38,9 +39,21 @@ export default async function CreateTournamentPage({
 
   const permalinkPrefix = tournamentsPermalinkPrefix(await tournamentsPermalinkHostFromRequest());
 
-  const [planLimits, hostedCount] = await Promise.all([
+  const [planLimits, hostedCount, templates] = await Promise.all([
     getTournamentPlanLimitsForUser(session.user.id, session.user.role),
     countHostedTournaments(session.user.id),
+    prisma.tournamentTemplate.findMany({
+      where: { userId: session.user.id },
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        format: true,
+        gameType: true,
+        isRanked: true,
+        groupStageEnabled: true,
+      },
+    }),
   ]);
 
   return (
@@ -62,6 +75,11 @@ export default async function CreateTournamentPage({
             : 'Set up format, schedule, and rules. You can add players and generate the bracket after creation.'}
         </p>
       </div>
+
+      <TournamentTemplatePicker
+        templates={templates}
+        selectedTemplateId={templateId && templateInitial ? templateId : undefined}
+      />
 
       <CreateTournamentForm
         imageUploadEnabled={imageUploadEnabled}

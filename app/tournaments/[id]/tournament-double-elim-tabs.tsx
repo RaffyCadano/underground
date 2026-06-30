@@ -182,6 +182,7 @@ export function TournamentDoubleElimTabs({
               <p className="mb-4 text-xs text-slate-500">{gfLabel}</p>
               <BracketDoubleElim
                 matches={matches}
+                participants={participants}
                 isAdmin={isAdmin}
                 userId={userId}
                 view={bracketView}

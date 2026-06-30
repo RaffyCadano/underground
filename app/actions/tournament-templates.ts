@@ -8,6 +8,8 @@ import { canManageTournaments } from '@/lib/roles';
 import { parseGameType, parseRoundRobinRankBy } from '@/lib/tournament-options';
 import { parseSwissScoringFromForm, swissScoringToPrismaData } from '@/lib/swiss-scoring';
 import { redirect } from 'next/navigation';
+import { assertCanManageTournament } from '@/lib/tournament-host';
+import { tournamentToTemplateData } from '@/lib/tournament-template';
 import {
   getTournamentPlanLimitsForUser,
   normalizeIsRankedForPlan,
@@ -142,4 +144,40 @@ export async function deleteTournamentTemplate(templateId: string) {
   await prisma.tournamentTemplate.delete({ where: { id: templateId } });
   revalidatePath('/profile/tournament-templates');
   return { success: true };
+}
+
+export async function saveTournamentAsTemplate(
+  tournamentId: string,
+  templateName?: string,
+): Promise<{ success: true; templateId: string } | { error: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || !canManageTournaments(session.user.role)) {
+    return { error: 'Unauthorized.' };
+  }
+
+  await assertCanManageTournament(tournamentId, session.user.id, session.user.role);
+
+  const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+  if (!tournament) return { error: 'Tournament not found.' };
+
+  const name = templateName?.trim() || tournamentToTemplateData(tournament).name;
+  if (!name) return { error: 'Template name is required.' };
+
+  const base = tournamentToTemplateData(tournament);
+  const limits = await getTournamentPlanLimitsForUser(session.user.id, session.user.role);
+  const capError = playerCapLimitError(base.playerCap, limits);
+  if (capError) return { error: capError };
+
+  const template = await prisma.tournamentTemplate.create({
+    data: {
+      ...base,
+      name,
+      isRanked: normalizeIsRankedForPlan(base.isRanked, limits),
+      playerCap: normalizePlayerCapForPlan(base.playerCap, limits),
+      userId: session.user.id,
+    },
+  });
+
+  revalidatePath('/profile/tournament-templates');
+  return { success: true, templateId: template.id };
 }

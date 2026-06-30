@@ -14,6 +14,9 @@
     "prisma:generate": "prisma generate",
     "seed:players": "npx tsx prisma/seed-players.ts",
     "seed:single-elim-10p": "npx tsx prisma/seed-single-elim-10p.ts",
+    "seed:round-robin-3v3": "npx tsx prisma/seed-round-robin-3v3.ts",
+    "seed:round-robin-3v3-2": "npx tsx prisma/seed-round-robin-3v3-2.ts",
+    "seed:round-robin-3v3-11p": "npx tsx prisma/seed-round-robin-3v3-11p.ts",
     "cleanup:demo-accounts": "npx tsx prisma/cleanup-demo-accounts.ts",
     "setup:storage": "node scripts/ensure-tournament-images-bucket.mjs"
   },

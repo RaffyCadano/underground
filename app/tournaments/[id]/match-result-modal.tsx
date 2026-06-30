@@ -6,17 +6,159 @@ import { Loader2, X } from 'lucide-react';
 
 type Player = { id: string; username: string };
 
+function parseMatchScore(score: string): [string, string] {
+  const idx = score.indexOf('-');
+  if (idx === -1) return [score.trim(), ''];
+  return [score.slice(0, idx).trim(), score.slice(idx + 1).trim()];
+}
+
+function formatMatchScore(p1: string, p2: string): string {
+  const a = p1.trim();
+  const b = p2.trim();
+  if (a && b) return `${a}-${b}`;
+  return a || b || '';
+}
+
+function PlayerScoreRow({
+  username,
+  score,
+  onScoreChange,
+  isWinner,
+  onSelectWinner,
+  disabled,
+  autoFocus,
+}: {
+  username: string;
+  score: string;
+  onScoreChange: (value: string) => void;
+  isWinner: boolean;
+  onSelectWinner: () => void;
+  disabled: boolean;
+  autoFocus?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-white">{username}</span>
+      <button
+        type="button"
+        onClick={onSelectWinner}
+        disabled={disabled}
+        aria-label={`${username} wins`}
+        aria-pressed={isWinner}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-xs font-bold transition disabled:opacity-60 ${
+          isWinner
+            ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300'
+            : 'border-slate-700 bg-slate-900 text-slate-500 hover:border-slate-600 hover:text-slate-300'
+        }`}
+      >
+        W
+      </button>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={score}
+        onChange={(e) => onScoreChange(e.target.value)}
+        disabled={disabled}
+        autoFocus={autoFocus}
+        placeholder="0"
+        className="input w-14 shrink-0 px-2 text-center tabular-nums"
+      />
+    </div>
+  );
+}
+
+export function MatchResultInlineForm({
+  player1,
+  player2,
+  score = '',
+  winnerId: initialWinnerId = null,
+  onSave,
+  onCancel,
+  isPending,
+}: {
+  player1: Player;
+  player2: Player;
+  score?: string;
+  winnerId?: string | null;
+  onSave: (winnerId: string, score: string) => void;
+  onCancel: () => void;
+  isPending: boolean;
+}) {
+  const [p1Score, setP1Score] = useState('');
+  const [p2Score, setP2Score] = useState('');
+  const [winnerId, setWinnerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const [s1, s2] = parseMatchScore(score);
+    setP1Score(s1);
+    setP2Score(s2);
+    setWinnerId(initialWinnerId);
+  }, [score, initialWinnerId, player1.id, player2.id]);
+
+  function handleSave() {
+    if (!winnerId) return;
+    onSave(winnerId, formatMatchScore(p1Score, p2Score));
+  }
+
+  return (
+    <div className="space-y-3">
+      <PlayerScoreRow
+        username={player1.username}
+        score={p1Score}
+        onScoreChange={setP1Score}
+        isWinner={winnerId === player1.id}
+        onSelectWinner={() => setWinnerId(player1.id)}
+        disabled={isPending}
+        autoFocus
+      />
+      <PlayerScoreRow
+        username={player2.username}
+        score={p2Score}
+        onScoreChange={setP2Score}
+        isWinner={winnerId === player2.id}
+        onSelectWinner={() => setWinnerId(player2.id)}
+        disabled={isPending}
+      />
+      <div className="flex gap-2 pt-1">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isPending || !winnerId}
+          className="btn-primary flex-1 disabled:opacity-60"
+        >
+          {isPending ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 size={14} className="animate-spin" />
+              Saving…
+            </span>
+          ) : (
+            'Save'
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isPending}
+          className="btn-secondary disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 type Props = {
   open: boolean;
   mode: 'report' | 'edit';
   player1: Player | null;
   player2: Player | null;
   score: string;
-  onScoreChange: (value: string) => void;
-  onReport: (winnerId: string) => void;
+  onScoreChange?: (value: string) => void;
+  onReport: (winnerId: string, score: string) => void;
   editWinnerId?: string | null;
   onEditWinnerChange?: (winnerId: string) => void;
-  onSaveEdit: () => void;
+  onSaveEdit: (winnerId: string, score: string) => void;
   onClose: () => void;
   isPending: boolean;
   error: string;
@@ -55,7 +197,7 @@ export function MatchResultModal({
     };
   }, [open, onClose, isPending]);
 
-  if (!mounted || !open) return null;
+  if (!mounted || !open || !player1 || !player2) return null;
 
   return createPortal(
     <div
@@ -70,14 +212,9 @@ export function MatchResultModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 border-b border-slate-800 px-5 py-4">
-          <div>
-            <p id="match-result-title" className="text-lg font-semibold text-white">
-              {mode === 'report' ? 'Report result' : 'Edit score'}
-            </p>
-            <p className="mt-1 text-sm text-slate-400">
-              {player1?.username ?? 'TBD'} vs {player2?.username ?? 'TBD'}
-            </p>
-          </div>
+          <p id="match-result-title" className="text-lg font-semibold text-white">
+            {mode === 'report' ? 'Report result' : 'Edit score'}
+          </p>
           <button
             type="button"
             onClick={onClose}
@@ -96,116 +233,21 @@ export function MatchResultModal({
             </p>
           )}
 
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Set score
-          </label>
-          <input
-            autoFocus
-            type="text"
-            value={score}
-            onChange={(e) => onScoreChange(e.target.value)}
-            placeholder="e.g. 3-1"
-            disabled={isPending}
-            className="input mt-2"
+          <MatchResultInlineForm
+            key={`${mode}-${player1.id}-${player2.id}-${score}-${editWinnerId ?? ''}`}
+            player1={player1}
+            player2={player2}
+            score={score}
+            winnerId={editWinnerId}
+            onSave={(winnerId, combined) => {
+              onScoreChange?.(combined);
+              onEditWinnerChange?.(winnerId);
+              if (mode === 'report') onReport(winnerId, combined);
+              else onSaveEdit(winnerId, combined);
+            }}
+            onCancel={onClose}
+            isPending={isPending}
           />
-
-          {mode === 'report' ? (
-            <div className="mt-4 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Winner</p>
-              {player1 && (
-                <button
-                  type="button"
-                  onClick={() => onReport(player1.id)}
-                  disabled={isPending}
-                  className="btn-primary w-full disabled:opacity-60"
-                >
-                  {isPending ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2 size={14} className="animate-spin" />
-                      Saving…
-                    </span>
-                  ) : (
-                    `${player1.username} wins`
-                  )}
-                </button>
-              )}
-              {player2 && (
-                <button
-                  type="button"
-                  onClick={() => onReport(player2.id)}
-                  disabled={isPending}
-                  className="btn-primary w-full disabled:opacity-60"
-                >
-                  {isPending ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2 size={14} className="animate-spin" />
-                      Saving…
-                    </span>
-                  ) : (
-                    `${player2.username} wins`
-                  )}
-                </button>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="mt-4 space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Winner</p>
-                {player1 && (
-                  <button
-                    type="button"
-                    onClick={() => onEditWinnerChange?.(player1.id)}
-                    disabled={isPending}
-                    className={`w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition disabled:opacity-60 ${
-                      editWinnerId === player1.id
-                        ? 'border-brand-500 bg-brand-500/15 text-brand-200'
-                        : 'border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-600'
-                    }`}
-                  >
-                    {player1.username}
-                  </button>
-                )}
-                {player2 && (
-                  <button
-                    type="button"
-                    onClick={() => onEditWinnerChange?.(player2.id)}
-                    disabled={isPending}
-                    className={`w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition disabled:opacity-60 ${
-                      editWinnerId === player2.id
-                        ? 'border-brand-500 bg-brand-500/15 text-brand-200'
-                        : 'border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-600'
-                    }`}
-                  >
-                    {player2.username}
-                  </button>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={onSaveEdit}
-                disabled={isPending || !editWinnerId}
-                className="btn-primary mt-4 w-full disabled:opacity-60"
-              >
-                {isPending ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Loader2 size={14} className="animate-spin" />
-                    Saving…
-                  </span>
-                ) : (
-                  'Save changes'
-                )}
-              </button>
-            </>
-          )}
-
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isPending}
-            className="mt-3 w-full py-2 text-sm text-slate-400 transition hover:text-slate-200 disabled:opacity-50"
-          >
-            Cancel
-          </button>
         </div>
       </div>
     </div>,

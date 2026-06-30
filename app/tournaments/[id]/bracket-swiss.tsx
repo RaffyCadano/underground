@@ -103,12 +103,12 @@ export function BracketSwiss({
     setError('');
   }
 
-  function handleReport(winnerId: string) {
+  function handleReport(winnerId: string, reportedScore: string) {
     if (!modalMatch) return;
     setError('');
     startTransition(async () => {
       try {
-        await reportResult(modalMatch.id, winnerId, score);
+        await reportResult(modalMatch.id, winnerId, reportedScore);
         closeModal();
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to report result.');
@@ -116,12 +116,12 @@ export function BracketSwiss({
     });
   }
 
-  function handleEditScore() {
-    if (!modalMatch || !editWinnerId) return;
+  function handleEditScore(winnerId: string, updatedScore: string) {
+    if (!modalMatch) return;
     setError('');
     startTransition(async () => {
       try {
-        await correctScore(modalMatch.id, score, editWinnerId);
+        await correctScore(modalMatch.id, updatedScore, winnerId);
         closeModal();
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to update score.');

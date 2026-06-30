@@ -63,3 +63,50 @@ export function templateToTournamentInitial(
     location: '',
   };
 }
+
+/** Copy tournament settings (not date/location/roster) into a new template. */
+export function tournamentToTemplateData(tournament: {
+  name: string;
+  description: string | null;
+  format: string;
+  groupStageEnabled: boolean;
+  groupSize: number;
+  advancePerGroup: number;
+  grandFinalsModifier: string;
+  deSplitLosersBracket: boolean;
+  deBreakTiesPlacement: boolean;
+  entryFee: string | null;
+  prizePool: string | null;
+  playerCap: number | null;
+  isRanked: boolean;
+  gameType: string;
+  swissPointsPerMatchWin: number;
+  swissPointsPerMatchTie: number;
+  swissPointsPerGameWin: number;
+  swissPointsPerGameTie: number;
+  swissPointsPerBye: number;
+  roundRobinRankBy: string;
+}) {
+  return {
+    name: `${tournament.name} (template)`,
+    description: tournament.description,
+    format: tournament.format,
+    groupStageEnabled: tournament.groupStageEnabled,
+    groupSize: tournament.groupSize,
+    advancePerGroup: tournament.advancePerGroup,
+    grandFinalsModifier: tournament.grandFinalsModifier,
+    deSplitLosersBracket: tournament.deSplitLosersBracket,
+    deBreakTiesPlacement: tournament.deBreakTiesPlacement,
+    entryFee: tournament.entryFee,
+    prizePool: tournament.prizePool,
+    playerCap: tournament.playerCap,
+    isRanked: tournament.isRanked,
+    gameType: tournament.gameType,
+    swissPointsPerMatchWin: tournament.swissPointsPerMatchWin,
+    swissPointsPerMatchTie: tournament.swissPointsPerMatchTie,
+    swissPointsPerGameWin: tournament.swissPointsPerGameWin,
+    swissPointsPerGameTie: tournament.swissPointsPerGameTie,
+    swissPointsPerBye: tournament.swissPointsPerBye,
+    roundRobinRankBy: tournament.roundRobinRankBy,
+  };
+}

@@ -67,16 +67,84 @@ function createWinnersBracket(bracketSize: number, rounds: number, idFactory: ()
   return matches;
 }
 
-function computeLosersRoundCounts(winnersRounds: number, dualWBR1Count: number): number[] {
-  const lbR1 = Math.max(1, Math.ceil(dualWBR1Count / 2));
-  const counts: number[] = [lbR1];
+function countLbR1PairMatches(winnersMatches: DeMatch[], bracketSize: number): number {
+  let count = 0;
+  for (let i = 0; i < bracketSize / 2; i += 2) {
+    const m0 = winnersMatches.find((m) => m.round === 1 && m.matchIndex === i);
+    const m1 = winnersMatches.find((m) => m.round === 1 && m.matchIndex === i + 1);
+    if (!m0 || !m1) continue;
+    if (m0.player1Id && m0.player2Id && m1.player1Id && m1.player2Id) count++;
+  }
+  return count;
+}
+
+function countSoloWBR1Drops(winnersMatches: DeMatch[], bracketSize: number): number {
+  let count = 0;
+  for (let i = 0; i < bracketSize / 2; i += 2) {
+    const m0 = winnersMatches.find((m) => m.round === 1 && m.matchIndex === i);
+    const m1 = winnersMatches.find((m) => m.round === 1 && m.matchIndex === i + 1);
+    if (!m0 || !m1) continue;
+    const dual0 = !!(m0.player1Id && m0.player2Id);
+    const dual1 = !!(m1.player1Id && m1.player2Id);
+    if (dual0 && dual1) continue;
+    if (dual0) count++;
+    if (dual1) count++;
+  }
+  return count;
+}
+
+function countLbR1OpenerMatches(winnersMatches: DeMatch[], bracketSize: number): number {
+  const lbR1PairMatches = countLbR1PairMatches(winnersMatches, bracketSize);
+  if (lbR1PairMatches > 0) return lbR1PairMatches;
+
+  const dualR1 = winnersMatches.filter(
+    (m) => m.round === 1 && m.player1Id && m.player2Id,
+  );
+  if (dualR1.length > 0) {
+    let maxPos = 0;
+    for (const m of dualR1) {
+      maxPos = Math.max(maxPos, Math.floor(m.matchIndex / 2));
+    }
+    return maxPos + 1;
+  }
+
+  const soloDrops = countSoloWBR1Drops(winnersMatches, bracketSize);
+  return Math.max(1, Math.ceil(soloDrops / 2));
+}
+
+function computeLosersRoundCounts(
+  winnersRounds: number,
+  winnersMatches: DeMatch[],
+  bracketSize: number,
+): number[] {
+  const lbR1PairMatches = countLbR1PairMatches(winnersMatches, bracketSize);
+  const soloDrops = countSoloWBR1Drops(winnersMatches, bracketSize);
+  const dualLosers = countDualWinnersRoundOne(winnersMatches);
+  const openerMatches = countLbR1OpenerMatches(winnersMatches, bracketSize);
+  const counts: number[] = [openerMatches];
 
   for (let lbRound = 2; lbRound <= (winnersRounds - 1) * 2; lbRound++) {
-    const prev = counts[counts.length - 1];
+    const prev = counts[counts.length - 1] ?? 0;
     if (lbRound % 2 === 0) {
       const wbRound = lbRound / 2 + 1;
       const wbMatchCount = Math.pow(2, winnersRounds - wbRound);
-      counts.push(Math.min(prev, wbMatchCount));
+      let next: number;
+      if (lbRound === 2) {
+        const byeSideMatches = wbMatchCount / 2;
+        if (soloDrops === 0 && openerMatches * 2 === dualLosers) {
+          next = wbMatchCount;
+        } else {
+          const evenDualTrim = dualLosers % 2 === 0 ? 1 : 0;
+          const oddSoloTrim = soloDrops % 2 === 1 ? 1 : 0;
+          next = openerMatches + byeSideMatches - evenDualTrim - oddSoloTrim;
+          next = Math.max(next, wbMatchCount / 2);
+        }
+      } else if (openerMatches >= wbMatchCount) {
+        next = wbMatchCount;
+      } else {
+        next = wbMatchCount / 2;
+      }
+      counts.push(Math.max(prev, next, 1));
     } else {
       counts.push(Math.max(1, Math.ceil(prev / 2)));
     }
@@ -183,25 +251,98 @@ function wireLoserRouting(
   }
 }
 
-/** Pair WB R1 losers into LB R1 matches sequentially (handles byes in padded brackets). */
-function wireWBR1LosersToLBR1(winnersMatches: DeMatch[], losersMatches: DeMatch[]) {
-  const dualWBR1 = winnersMatches
-    .filter((m) => m.round === 1 && m.player1Id && m.player2Id)
-    .sort((a, b) => a.matchIndex - b.matchIndex);
+/** Pair WB R1 losers by bracket slot (matches 0+1, 2+3, …), not dual-game order. */
+function wireWBR1LosersToLBR1(
+  winnersMatches: DeMatch[],
+  losersMatches: DeMatch[],
+  bracketSize: number,
+) {
+  const lbR1PairMatches = countLbR1PairMatches(winnersMatches, bracketSize);
 
   const lbR1 = losersMatches
     .filter((m) => m.round === 1)
     .sort((a, b) => a.matchIndex - b.matchIndex);
 
-  dualWBR1.forEach((wb, i) => {
-    const lbIdx = Math.floor(i / 2);
-    const slot = (i % 2) + 1;
-    const target = lbR1[lbIdx];
-    if (target) {
-      wb.loserNextId = target.id;
-      wb.loserNextSlot = slot;
+  if (lbR1PairMatches === 0) {
+    const lbR1ByPos = new Map(lbR1.map((m) => [m.matchIndex, m]));
+    for (const wb of winnersMatches) {
+      if (wb.round !== 1 || !wb.player1Id || !wb.player2Id) continue;
+      const lbPosition = Math.floor(wb.matchIndex / 2);
+      const slot = (wb.matchIndex % 2) + 1;
+      const target = lbR1ByPos.get(lbPosition) ?? lbR1[lbPosition];
+      if (target) {
+        wb.loserNextId = target.id;
+        wb.loserNextSlot = slot;
+      }
     }
-  });
+    return;
+  }
+
+  const soloTargetRound = 2;
+  const soloTargets = losersMatches
+    .filter((m) => m.round === soloTargetRound)
+    .sort((a, b) => a.matchIndex - b.matchIndex);
+
+  let lbR1Idx = 0;
+  let soloIdx = 0;
+  const soloPending: DeMatch[] = [];
+
+  function pairSoloDrop(wb: DeMatch) {
+    soloPending.push(wb);
+    if (soloPending.length >= 2) {
+      const a = soloPending.shift()!;
+      const b = soloPending.shift()!;
+      const target = soloTargets[soloIdx++];
+      if (target) {
+        a.loserNextId = target.id;
+        a.loserNextSlot = 1;
+        b.loserNextId = target.id;
+        b.loserNextSlot = 2;
+      }
+    }
+  }
+
+  for (let i = 0; i < bracketSize / 2; i += 2) {
+    const m0 = winnersMatches.find((m) => m.round === 1 && m.matchIndex === i);
+    const m1 = winnersMatches.find((m) => m.round === 1 && m.matchIndex === i + 1);
+    if (!m0 || !m1) continue;
+
+    const dual0 = !!(m0.player1Id && m0.player2Id);
+    const dual1 = !!(m1.player1Id && m1.player2Id);
+
+    if (dual0 && dual1) {
+      const target = lbR1[lbR1Idx++];
+      if (target) {
+        m0.loserNextId = target.id;
+        m0.loserNextSlot = 1;
+        m1.loserNextId = target.id;
+        m1.loserNextSlot = 2;
+      }
+    } else if (dual0) {
+      pairSoloDrop(m0);
+    } else if (dual1) {
+      pairSoloDrop(m1);
+    }
+  }
+
+  for (const wb of soloPending) {
+    if (lbR1PairMatches > 0) {
+      const target = soloTargets[soloIdx++];
+      if (target) {
+        wb.loserNextId = target.id;
+        wb.loserNextSlot = 1;
+      }
+    } else {
+      const lbR2 = losersMatches
+        .filter((m) => m.round === 2)
+        .sort((a, b) => a.matchIndex - b.matchIndex);
+      const target = lbR2[soloIdx++];
+      if (target) {
+        wb.loserNextId = target.id;
+        wb.loserNextSlot = 1;
+      }
+    }
+  }
 }
 
 function mapWinnersLoserToDropInRound(
@@ -234,9 +375,76 @@ function mapWinnersLoserToDropInRound(
 
   return {
     lbRound: nextLbRound,
-    lbPosition: Math.min(lbMatchCount - 1, nextCount - 1),
+    lbPosition: Math.min(wbPosition, nextCount - 1),
     slot: 2,
   };
+}
+
+function countSoloMergeSlots(losersRoundCounts: number[], lbRound: number): number {
+  if (lbRound <= 1) return 0;
+  const prev = losersRoundCounts[lbRound - 2] ?? 0;
+  const curr = losersRoundCounts[lbRound - 1] ?? 0;
+  if (curr >= prev) return 0;
+  return curr - Math.floor(prev / 2);
+}
+
+function dropLbRoundForWbRelativeRound(
+  relativeRound: number,
+  losersRoundCounts: number[],
+): number {
+  let wbDropsSeen = 0;
+  for (let i = 1; i < losersRoundCounts.length; i++) {
+    const prev = losersRoundCounts[i - 1] ?? 0;
+    const curr = losersRoundCounts[i] ?? 0;
+    if (curr >= prev) {
+      wbDropsSeen++;
+      if (wbDropsSeen === relativeRound - 1) return i + 1;
+    }
+  }
+  return losersRoundCounts.length;
+}
+
+function routeMergeRoundWbLosers(
+  wbPosition: number,
+  wbMatchCount: number,
+  mergeRound: number,
+  losersRoundCounts: number[],
+): { lbRound: number; lbPosition: number; slot: number } | null {
+  const soloSlots = countSoloMergeSlots(losersRoundCounts, mergeRound);
+  if (soloSlots <= 0) return null;
+
+  const half = wbMatchCount / 2;
+  const mergeStart = half - soloSlots;
+  if (wbPosition < mergeStart || wbPosition >= half) return null;
+
+  const prev = losersRoundCounts[mergeRound - 2] ?? 0;
+  const lbPosition = Math.floor(prev / 2) + (wbPosition - mergeStart);
+  const mergeCount = losersRoundCounts[mergeRound - 1] ?? 0;
+  if (lbPosition < mergeCount) {
+    return { lbRound: mergeRound, lbPosition, slot: 2 };
+  }
+  return null;
+}
+
+function routeByeSideWbLosers(
+  wbPosition: number,
+  wbMatchCount: number,
+  dropRound: number,
+  dropRoundCount: number,
+  openerCount: number,
+): { lbRound: number; lbPosition: number; slot: number } | null {
+  const extraMatches = dropRoundCount - openerCount;
+  if (extraMatches <= 0) return null;
+
+  const half = wbMatchCount / 2;
+  if (wbPosition >= half) return null;
+
+  const lbPosition = openerCount + Math.floor(wbPosition / 2);
+  const slot = (wbPosition % 2) + 1;
+  if (lbPosition < dropRoundCount) {
+    return { lbRound: dropRound, lbPosition, slot };
+  }
+  return null;
 }
 
 function getLoserDestination(
@@ -267,21 +475,69 @@ function getLoserDestination(
   }
 
   if (relativeRound === 2) {
+    const dropRound = dropLbRoundForWbRelativeRound(relativeRound, losersRoundCounts);
+    const wbMatchCount = Math.pow(2, totalWbRounds - wbRound);
+    const dropRoundCount = losersRoundCounts[dropRound - 1] ?? 0;
+    const openerCount = losersRoundCounts[0] ?? 0;
+
+    const byeSide = routeByeSideWbLosers(
+      wbPosition,
+      wbMatchCount,
+      dropRound,
+      dropRoundCount,
+      openerCount,
+    );
+    if (byeSide) return byeSide;
+
+    if (dropRoundCount >= wbMatchCount && dropRoundCount > 0) {
+      const half = wbMatchCount / 2;
+      if (wbPosition < half) {
+        const lbPosition = half + Math.floor(wbPosition / 2);
+        const slot = (wbPosition % 2) + 1;
+        if (lbPosition < dropRoundCount) {
+          return { lbRound: dropRound, lbPosition, slot };
+        }
+      }
+    }
+
     return mapWinnersLoserToDropInRound(
       wbRound,
       wbPosition,
       totalWbRounds,
-      2,
+      dropRound,
       losersRoundCounts,
     );
   }
 
-  const lbRound = (relativeRound - 2) * 2 + 2;
+  const dropRound = dropLbRoundForWbRelativeRound(relativeRound, losersRoundCounts);
+  const wbMatchCount = Math.pow(2, totalWbRounds - wbRound);
+  const mergeRound = dropRound - 1;
+
+  const mergeRoute = routeMergeRoundWbLosers(
+    wbPosition,
+    wbMatchCount,
+    mergeRound,
+    losersRoundCounts,
+  );
+  if (mergeRoute) return mergeRoute;
+
+  const dropRoundCount = losersRoundCounts[dropRound - 1] ?? 0;
+  const prevRoundCount = losersRoundCounts[dropRound - 2] ?? 0;
+
+  const byeSide = routeByeSideWbLosers(
+    wbPosition,
+    wbMatchCount,
+    dropRound,
+    dropRoundCount,
+    prevRoundCount,
+  );
+  if (byeSide) return byeSide;
+
   return mapWinnersLoserToDropInRound(
     wbRound,
     wbPosition,
     totalWbRounds,
-    lbRound,
+    dropRound,
     losersRoundCounts,
   );
 }
@@ -349,7 +605,8 @@ function processRound1Byes(matches: DeMatch[]) {
   }
 }
 
-function buildDoubleElimStructure(
+/** @internal Exported for bracket structure verification scripts. */
+export function buildDoubleElimStructure(
   participantIds: string[],
   grandFinalsModifier: GrandFinalsModifier = 'default',
 ): DeMatch[] {
@@ -367,15 +624,14 @@ function buildDoubleElimStructure(
   placeParticipants(winnersMatches, participantIds, bracketSize);
   processRound1Byes(winnersMatches);
 
-  const dualWBR1 = countDualWinnersRoundOne(winnersMatches);
-  const losersRoundCounts = computeLosersRoundCounts(winnersRounds, dualWBR1);
+  const losersRoundCounts = computeLosersRoundCounts(winnersRounds, winnersMatches, bracketSize);
   const losersRounds = losersRoundCounts.length;
 
   const losersMatches =
     losersRounds > 0 ? createLosersBracket(losersRoundCounts, idFactory) : [];
 
   if (losersMatches.length > 0) {
-    wireWBR1LosersToLBR1(winnersMatches, losersMatches);
+    wireWBR1LosersToLBR1(winnersMatches, losersMatches, bracketSize);
     wireLoserRouting(
       winnersMatches,
       losersMatches,
@@ -428,11 +684,7 @@ async function placeLoserInBracket(
     return;
   }
 
-  const otherSlot = loserNextSlot === 1 ? 2 : 1;
-  const otherField = otherSlot === 1 ? 'player1Id' : 'player2Id';
-  if (!target[otherField]) {
-    await placeInSlot(loserNextId, otherSlot, loserId);
-  }
+  // Designated slot already filled — do not place in the opposite slot (causes scrambled pairings).
 }
 
 /** Auto-advance solo players and collapse dead-end matches (e.g. winners byes). */
@@ -441,7 +693,7 @@ export async function resolveSoloByeMatches(tournamentId: string) {
     const matches = await findAdvancementMatches(tournamentId);
     let changed = false;
 
-    // Matches that will never receive players because all feeders were byes
+    // Matches that will never receive players because all feeders were byes or are unreachable
     for (const match of matches) {
       if (match.status === 'complete' || match.status === 'bye') continue;
       if (match.player1Id || match.player2Id) continue;
@@ -450,7 +702,11 @@ export async function resolveSoloByeMatches(tournamentId: string) {
       const incoming = matches.filter(
         (m) => m.winnerNextId === match.id || m.loserNextId === match.id,
       );
-      if (incoming.length === 0) continue;
+      if (incoming.length === 0) {
+        await updateAdvancementMatch(match.id, { status: 'bye' });
+        changed = true;
+        break;
+      }
       if (!incoming.every((m) => m.status === 'complete' || m.status === 'bye')) continue;
 
       await updateAdvancementMatch(match.id, { status: 'bye' });
@@ -473,12 +729,36 @@ export async function resolveSoloByeMatches(tournamentId: string) {
           (m.winnerNextId === match.id && m.winnerNextSlot === emptySlot),
       );
 
-      // No wired feeder for the empty slot (orphan drop-in) — advance the waiting player
+      const pendingIncoming = matches.filter(
+        (m) =>
+          (m.winnerNextId === match.id || m.loserNextId === match.id) &&
+          m.status !== 'complete' &&
+          m.status !== 'bye',
+      );
+      if (pendingIncoming.length > 0) continue;
+
+      // Orphan drop-in on winners bracket only — losers bracket must wait for the paired slot.
       if (feeders.length === 0) {
-        await updateAdvancementMatch(match.id, { status: 'complete', winnerId: soloId });
-        await advanceDoubleElimMatch(match.id, soloId, { resolveByes: false });
-        changed = true;
-        break;
+        if (match.bracketSide === 'losers') {
+          const allIncoming = matches.filter(
+            (m) => m.winnerNextId === match.id || m.loserNextId === match.id,
+          );
+          if (
+            allIncoming.length > 0 &&
+            allIncoming.every((m) => m.status === 'complete' || m.status === 'bye')
+          ) {
+            await updateAdvancementMatch(match.id, { status: 'complete', winnerId: soloId });
+            await advanceDoubleElimMatch(match.id, soloId, { resolveByes: false });
+            changed = true;
+            break;
+          }
+        } else {
+          await updateAdvancementMatch(match.id, { status: 'complete', winnerId: soloId });
+          await advanceDoubleElimMatch(match.id, soloId, { resolveByes: false });
+          changed = true;
+          break;
+        }
+        continue;
       }
 
       if (!feeders.every((m) => m.status === 'complete' || m.status === 'bye')) continue;

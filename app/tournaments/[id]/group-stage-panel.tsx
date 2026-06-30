@@ -50,12 +50,12 @@ export function GroupStagePanel({ groups, isAdmin, userId, advancePerGroup }: Pr
     setError('');
   }
 
-  function handleReport(winnerId: string) {
+  function handleReport(winnerId: string, reportedScore: string) {
     if (!activeMatch) return;
     setError('');
     startTransition(async () => {
       try {
-        await reportResult(activeMatch.id, winnerId, score);
+        await reportResult(activeMatch.id, winnerId, reportedScore);
         setActiveMatch(null);
         setScore('');
       } catch (e: unknown) {

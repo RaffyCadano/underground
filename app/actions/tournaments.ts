@@ -11,8 +11,10 @@ import { revalidatePath } from 'next/cache';
 import { parseGameType, parseRoundRobinRankBy } from '@/lib/tournament-options';
 import { assertCanRegister, isTournamentPickablePlayer } from '@/lib/tournament-registration';
 import {
+  generateInternalWalkInCredentials,
   guestEmail,
   normalizeGuestDisplayName,
+  parseBulkParticipantLines,
   uniqueInternalWalkInUsername,
   validateGuestDisplayName,
 } from '@/lib/guest-player';
@@ -22,6 +24,7 @@ import {
   normalizeTournamentSlug,
   validateTournamentSlug,
 } from '@/lib/tournament-slug';
+import { roundRobinRoundCount } from '@/lib/round-robin-schedule';
 import { checkTournamentSlugAvailability } from '@/app/actions/tournament-slug';
 import { tournamentPublicPath } from '@/lib/tournament-lookup';
 import {
@@ -341,12 +344,15 @@ export async function generateNextSwissRound(tournamentId: string) {
   revalidatePath(`/tournaments/${tournamentId}`);
 }
 
-export async function regenerateRound1(tournamentId: string) {
+export async function regenerateRound1(tournamentId: string, targetRound = 1) {
   await requireTournamentHost(tournamentId);
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
-    include: { _count: { select: { matches: true } } },
+    include: {
+      _count: { select: { matches: true } },
+      participants: { select: { userId: true } },
+    },
   });
   if (!tournament) throw new Error('Tournament not found.');
   if (tournament.status === 'complete') {
@@ -363,6 +369,29 @@ export async function regenerateRound1(tournamentId: string) {
   }
 
   const playoffsOnly = tournament.groupStageEnabled && tournament.phase === 'playoffs';
+  const round = Math.max(1, Math.floor(targetRound));
+
+  if (tournament.format === 'round_robin') {
+    const totalRounds = roundRobinRoundCount(tournament.participants.length);
+    if (round > totalRounds) {
+      throw new Error(`Round ${round} is not valid for this roster.`);
+    }
+
+    if (round > 1) {
+      const matchScope = playoffsOnly
+        ? { tournamentId, bracketSide: { not: 'group' as const }, round: { gte: round } }
+        : { tournamentId, round: { gte: round } };
+      await prisma.match.deleteMany({ where: matchScope });
+      await prisma.tournament.update({
+        where: { id: tournamentId },
+        data: { status: 'active' },
+      });
+      await generateRoundRobinRound(tournamentId, { playoffsOnly });
+      revalidatePath(`/tournaments/${tournamentId}`);
+      revalidatePath('/dashboard');
+      return;
+    }
+  }
 
   if (playoffsOnly) {
     await prisma.match.deleteMany({ where: { tournamentId, bracketSide: { not: 'group' } } });
@@ -451,26 +480,43 @@ export async function removePlayerFromTournament(tournamentId: string, userId: s
 }
 
 export async function addPlayerToTournament(tournamentId: string, userId: string) {
+  await addPlayersToTournament(tournamentId, [userId]);
+}
+
+export async function addPlayersToTournament(tournamentId: string, userIds: string[]) {
   await requireTournamentHost(tournamentId);
+
+  const uniqueIds = [...new Set(userIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return;
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
     include: { _count: { select: { participants: true } } },
   });
   if (!tournament) throw new Error('Tournament not found.');
-  assertCanRegister(tournament, tournament._count.participants, 1, { exemptCap: true });
+  assertCanRegister(tournament, tournament._count.participants, uniqueIds.length, { exemptCap: true });
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw new Error('Player not found.');
-  if (!isTournamentPickablePlayer(user)) {
+  const users = await prisma.user.findMany({
+    where: { id: { in: uniqueIds } },
+    select: { id: true, role: true, username: true },
+  });
+  if (users.length !== uniqueIds.length) {
+    throw new Error('One or more players were not found.');
+  }
+  const invalid = users.find((user) => !isTournamentPickablePlayer(user));
+  if (invalid) {
     throw new Error('That account cannot be added as a tournament player.');
   }
 
-  await prisma.tournamentParticipant.upsert({
-    where: { tournamentId_userId: { tournamentId, userId } },
-    update: {},
-    create: { tournamentId, userId },
-  });
+  await prisma.$transaction(
+    uniqueIds.map((userId) =>
+      prisma.tournamentParticipant.upsert({
+        where: { tournamentId_userId: { tournamentId, userId } },
+        update: {},
+        create: { tournamentId, userId },
+      }),
+    ),
+  );
 
   revalidatePath(`/tournaments/${tournamentId}`);
   revalidatePath('/dashboard');
@@ -531,6 +577,134 @@ export async function addGuestPlayerToTournament(tournamentId: string, displayNa
 
   revalidatePath(`/tournaments/${tournamentId}`);
   revalidatePath('/dashboard');
+}
+
+export async function addBulkParticipantsToTournament(
+  tournamentId: string,
+  rawInput: string,
+): Promise<{ added: number; accounts: number; walkIns: number }> {
+  await requireTournamentHost(tournamentId);
+
+  const lines = parseBulkParticipantLines(rawInput);
+  if (lines.length === 0) {
+    throw new Error('Enter at least one name.');
+  }
+
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      _count: { select: { participants: true } },
+      participants: {
+        select: {
+          userId: true,
+          walkInName: true,
+          user: { select: { username: true } },
+        },
+      },
+    },
+  });
+  if (!tournament) throw new Error('Tournament not found.');
+  assertCanRegister(tournament, tournament._count.participants, lines.length, { exemptCap: true });
+
+  const existingUserIds = new Set(tournament.participants.map((p) => p.userId));
+  const existingNames = new Set<string>();
+  for (const p of tournament.participants) {
+    const walkIn = p.walkInName?.trim();
+    if (walkIn) existingNames.add(walkIn.toLowerCase());
+    existingNames.add(p.user.username.toLowerCase());
+  }
+
+  type Resolved =
+    | { kind: 'account'; userId: string; label: string }
+    | { kind: 'walkin'; name: string };
+
+  const resolved: Resolved[] = [];
+
+  const matchedUsers = await prisma.user.findMany({
+    where: {
+      OR: lines.map((line) => ({ username: { equals: line, mode: 'insensitive' as const } })),
+    },
+    select: { id: true, username: true, role: true },
+  });
+  const userByName = new Map(
+    matchedUsers.map((user) => [user.username.toLowerCase(), user]),
+  );
+
+  for (const line of lines) {
+    const key = line.toLowerCase();
+    if (existingNames.has(key)) {
+      throw new Error(`"${line}" is already registered in this tournament.`);
+    }
+
+    const user = userByName.get(key);
+
+    if (user) {
+      if (!isTournamentPickablePlayer(user)) {
+        throw new Error(`"${line}" cannot be added as a tournament player.`);
+      }
+      if (existingUserIds.has(user.id)) {
+        throw new Error(`"${line}" is already registered in this tournament.`);
+      }
+      resolved.push({ kind: 'account', userId: user.id, label: user.username });
+      existingUserIds.add(user.id);
+      existingNames.add(user.username.toLowerCase());
+      continue;
+    }
+
+    const nameError = validateGuestDisplayName(line);
+    if (nameError) throw new Error(`"${line}": ${nameError}`);
+    const normalized = normalizeGuestDisplayName(line);
+    resolved.push({ kind: 'walkin', name: normalized });
+    existingNames.add(normalized.toLowerCase());
+  }
+
+  const walkInCredentials = resolved
+    .filter((item): item is { kind: 'walkin'; name: string } => item.kind === 'walkin')
+    .map(() => generateInternalWalkInCredentials());
+
+  const guestPasswordHash = walkInCredentials.length
+    ? await bcrypt.hash(randomBytes(32).toString('hex'), 10)
+    : null;
+
+  await prisma.$transaction(
+    async (tx) => {
+      const accountItems = resolved.filter((item) => item.kind === 'account');
+      if (accountItems.length > 0) {
+        await tx.tournamentParticipant.createMany({
+          data: accountItems.map((item) => ({
+            tournamentId,
+            userId: item.userId,
+          })),
+        });
+      }
+
+      let walkInIdx = 0;
+      for (const item of resolved) {
+        if (item.kind !== 'walkin') continue;
+        const creds = walkInCredentials[walkInIdx++];
+        const user = await tx.user.create({
+          data: {
+            username: creds.username,
+            email: creds.email,
+            password: guestPasswordHash!,
+            role: 'guest',
+          },
+        });
+        await tx.tournamentParticipant.create({
+          data: { tournamentId, userId: user.id, walkInName: item.name },
+        });
+      }
+    },
+    { timeout: 30_000 },
+  );
+
+  const accounts = resolved.filter((r) => r.kind === 'account').length;
+  const walkIns = resolved.length - accounts;
+
+  revalidatePath(`/tournaments/${tournamentId}`);
+  revalidatePath('/dashboard');
+
+  return { added: resolved.length, accounts, walkIns };
 }
 
 export async function deleteTournament(
